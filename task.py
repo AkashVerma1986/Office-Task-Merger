@@ -11,46 +11,52 @@ DB_URL = f"{DB_BASE_URL}.json"
 ADMIN_PASSWORD = "1586"
 STAFF_PASSWORD = "1234"
 
-# --- 2. PAGE CONFIG ---
+# --- 2. PAGE CONFIG & MIDNIGHT THEME ---
 st.set_page_config(page_title="Report Correction Ledger Pro", page_icon="🍎", layout="wide")
 
-# --- 3. PRO MIDNIGHT & RED THEME ---
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: #E0E0E0; }
+    /* Midnight Palette */
+    .stApp { background-color: #000000; color: #E0E0E0; }
     [data-testid="stSidebar"] { background-color: #0A0A0A; border-right: 1px solid #1A1A1A; }
+    
+    /* Pro Task Cards */
+    .task-card { 
+        background: #0A0A0A; padding: 20px; border-radius: 12px; 
+        margin-bottom: 12px; border-left: 8px solid #B71C1C;
+        border-top: 1px solid #1A1A1A; border-right: 1px solid #1A1A1A;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+    }
+    
+    /* Midnight Red Buttons */
     .stButton>button { 
         background-color: #B71C1C !important; color: white !important; 
-        border-radius: 8px; font-weight: bold; height: 3em; width: 100%;
+        border-radius: 8px; font-weight: bold; border: none; height: 3em; width: 100%;
     }
-    .task-card { 
-        background: #0D0D0D; padding: 20px; border-radius: 12px; 
-        margin-bottom: 12px; border-left: 8px solid #B71C1C;
-        border-top: 1px solid #1A1A1A; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-    }
+    .stTextInput>div>div>input { background-color: #000000 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. LOGIN SYSTEM ---
+# --- 3. AUTHENTICATION ---
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
     with st.container():
-        st.title("🍎 Office Ledger Pro Login")
+        st.title("🍎 Midnight Ledger Login")
         u_name = st.text_input("Full Name").upper()
         u_pass = st.text_input("Password", type="password")
         if st.button("LOGIN"):
             if u_pass == ADMIN_PASSWORD:
-                st.session_state.auth, st.session_state.role, st.session_state.user = True, "ADMIN", u_name
+                st.session_state.update({"auth": True, "role": "ADMIN", "user": u_name})
                 st.rerun()
             elif u_pass == STAFF_PASSWORD:
-                st.session_state.auth, st.session_state.role, st.session_state.user = True, "STAFF", u_name
+                st.session_state.update({"auth": True, "role": "STAFF", "user": u_name})
                 st.rerun()
             else: st.error("Invalid Password")
     st.stop()
 
-# --- 5. DATA & SETTINGS FETCHING ---
+# --- 4. DATA & SETTINGS FETCHING ---
 def fetch_all():
     try:
         t_res = requests.get(DB_URL, timeout=5).json() or {}
@@ -62,32 +68,32 @@ tasks_dict, g_settings = fetch_all()
 hidden_finances = set(g_settings.get("hidden", []))
 renamed_finances = g_settings.get("renamed", {})
 
-# --- 6. SIDEBAR (FILTERS & ADMIN TOOLS) ---
+# --- 5. SIDEBAR (FILTERS & PRO TOOLS) ---
 st.sidebar.title(f"🍎 {st.session_state.user}")
 search = st.sidebar.text_input("🔍 Search Records", "")
 
-# Finance Filter Logic (Rename/Hide applied)
-all_raw = sorted(list(set(t.get('finance', 'N/A').upper() for t in tasks_dict.values())))
+# Finance Filter logic
+all_raw = sorted(list(set(t.get('finance', 'N/A').upper() for t in tasks_dict.values() if t.get('finance'))))
 display_list = [renamed_finances.get(f, f) for f in all_raw if f not in hidden_finances]
 filter_fin = st.sidebar.selectbox("Filter Ledger", ["--- ALL ---"] + sorted(list(set(display_list))))
 
 show_pending = st.sidebar.checkbox("🕒 Show Pending Only", value=True)
 sort_priority = st.sidebar.checkbox("📌 Sort by High Priority")
 
-# --- 7. MAIN INTERFACE ---
+# --- 6. MAIN UI ---
 tab1, tab2 = st.tabs(["📝 New Entry", "📊 Active Ledger"])
 
 with tab1:
-    with st.form("pro_form"):
+    with st.form("pro_entry_form"):
         c1, c2 = st.columns(2)
         with c1:
-            f_input = st.text_input("Finance Name (e.g. NANDAWATA)").upper()
+            f_input = st.text_input("Finance Name").upper()
             cat = st.selectbox("Category", ["1. Rate Correction", "2. Spelling/Address", "3. Digital Sign", "4. Report Upload", "5. Photos/Drafting"])
         with c2:
             pri = st.selectbox("Priority", ["Normal", "Medium", "High"])
             details = st.text_area("Correction Details")
         
-        if st.form_submit_button("ADD TO CLOUD LEDGER"):
+        if st.form_submit_button("ADD TO CLOUD"):
             if f_input and details:
                 pld = {
                     "finance": f_input, "task": f"[{cat}] {details}", 
@@ -95,7 +101,7 @@ with tab1:
                     "status": "Pending", "assigned_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")
                 }
                 requests.post(DB_URL, json=pld)
-                st.success("Task Added!")
+                st.success("Task Synchronized!")
                 st.rerun()
 
 with tab2:
@@ -127,31 +133,29 @@ with tab2:
             
             if status == "Pending":
                 c1, c2 = st.columns([4, 1])
-                note = c1.text_input("Note", key=f"n_{tid}", placeholder="Completion note...")
+                note = c1.text_input("Note", key=f"n_{tid}", placeholder="Status note...")
                 if c2.button("DONE", key=f"b_{tid}"):
                     if note:
                         upd = {"status": "Completed", "comment": note, "completed_by": st.session_state.user, "finished_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")}
                         requests.patch(f"{DB_BASE_URL}/{tid}.json", json=upd)
                         st.rerun()
 
-# --- 8. ADMIN MANAGEMENT TOOLS ---
+# --- 7. ADMIN TOOLS (Rename/Hide) ---
 if st.session_state.role == "ADMIN":
     st.sidebar.markdown("---")
     st.sidebar.subheader("⚙️ Finance Management")
-    
-    target_fin = st.sidebar.selectbox("Select Finance to Edit", ["--- Select ---"] + all_raw)
+    target_fin = st.sidebar.selectbox("Select Finance", ["--- Select ---"] + all_raw)
     if target_fin != "--- Select ---":
-        new_name = st.sidebar.text_input(f"Rename {target_fin}")
-        if st.sidebar.button("Update Name"):
-            renamed_finances[target_fin] = new_name.upper()
+        new_n = st.sidebar.text_input(f"New name for {target_fin}")
+        if st.sidebar.button("Update"):
+            renamed_finances[target_fin] = new_n.upper()
             requests.put(SETTINGS_URL, json={"hidden": list(hidden_finances), "renamed": renamed_finances})
             st.rerun()
-            
-        if st.sidebar.button(f"Hide {target_fin} Globally"):
+        if st.sidebar.button("Hide Globally"):
             hidden_finances.add(target_fin)
             requests.put(SETTINGS_URL, json={"hidden": list(hidden_finances), "renamed": renamed_finances})
             st.rerun()
 
-if st.sidebar.button("📊 Export Excel Report"):
+if st.sidebar.button("📊 Export Excel"):
     df = pd.DataFrame.from_dict(tasks_dict, orient='index')
-    st.sidebar.download_button("Download Now", df.to_csv(), "Office_Ledger.csv")
+    st.sidebar.download_button("Download Now", df.to_csv(), "Ledger_Export.csv")
