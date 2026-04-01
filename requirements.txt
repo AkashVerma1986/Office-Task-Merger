@@ -1,4 +1,3 @@
 streamlit
 pandas
 openpyxl
-# firebase-admin (uncomment if you are using Firebase)
