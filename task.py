@@ -1,110 +1,164 @@
 import streamlit as st
 import pandas as pd
 import requests
+import json
 from datetime import datetime
 
-# --- CONFIG (Your Original Firebase) ---
+# --- 1. CONFIGURATION (From your Original Pro Script) ---
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app/tasks"
+SETTINGS_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app/settings.json"
 DB_URL = f"{DB_BASE_URL}.json"
+STAFF_PASSWORD = "1234"
 ADMIN_PASSWORD = "1586"
 
-# --- PAGE CONFIG ---
+# --- 2. PAGE SETTINGS ---
 st.set_page_config(page_title="Report Correction Ledger Pro", page_icon="🍎", layout="wide")
 
-# --- PRO DARK RED THEME (Matching your Midnight Palette) ---
+# --- 3. PRO THEME CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #050505; color: #E0E0E0; }
     [data-testid="stSidebar"] { background-color: #0A0A0A; border-right: 1px solid #1A1A1A; }
     .stButton>button { 
         background-color: #B71C1C !important; color: white !important; 
-        border-radius: 8px; font-weight: bold; border: none;
+        border-radius: 8px; font-weight: bold; border: none; height: 3em; width: 100%;
     }
     .task-card { 
-        background: #0A0A0A; padding: 20px; border-radius: 12px; 
+        background: #0D0D0D; padding: 20px; border-radius: 12px; 
         margin-bottom: 12px; border-left: 8px solid #B71C1C;
-        border-top: 1px solid #1A1A1A; border-right: 1px solid #1A1A1A;
+        border-top: 1px solid #1A1A1A; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
     }
-    .priority-high { color: #FF5252; font-weight: bold; }
+    .stTextInput>div>div>input { background-color: #000000 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. AUTHENTICATION LOGIC ---
+# --- 4. AUTHENTICATION ---
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.title("🍎 Office Ledger Pro Login")
-    user = st.text_input("User Name")
-    passwd = st.text_input("Password", type="password")
-    if st.button("LOGIN"):
-        if passwd in ["1234", "1586"]:
-            st.session_state.auth = True
-            st.session_state.user = user.upper()
-            st.rerun()
+    with st.container():
+        st.title("🍎 Office Ledger Pro Login")
+        u_name = st.text_input("Full Name").upper()
+        u_pass = st.text_input("Password", type="password")
+        if st.button("LOGIN"):
+            if u_pass == ADMIN_PASSWORD:
+                st.session_state.auth, st.session_state.role, st.session_state.user = True, "ADMIN", u_name
+                st.rerun()
+            elif u_pass == STAFF_PASSWORD:
+                st.session_state.auth, st.session_state.role, st.session_state.user = True, "STAFF", u_name
+                st.rerun()
+            else: st.error("Invalid Password")
     st.stop()
 
-# --- 2. DATA FETCHING ---
-@st.cache_data(ttl=5) # Auto-refresh data every 5 seconds
-def fetch_tasks():
+# --- 5. GLOBAL SETTINGS (Rename/Hide Logic) ---
+def fetch_settings():
     try:
-        return requests.get(DB_URL).json() or {}
+        res = requests.get(SETTINGS_URL, timeout=5)
+        return res.json() or {"hidden": [], "renamed": {}}
+    except: return {"hidden": [], "renamed": {}}
+
+g_settings = fetch_settings()
+hidden_finances = set(g_settings.get("hidden", []))
+renamed_finances = g_settings.get("renamed", {})
+
+# --- 6. DATA FETCHING ---
+def fetch_data():
+    try:
+        res = requests.get(DB_URL, timeout=5)
+        return res.json() or {}
     except: return {}
 
-tasks_dict = fetch_tasks()
+tasks_dict = fetch_data()
 
-# --- 3. PRO FILTERS (The Search & Toggle logic) ---
+# --- 7. SIDEBAR (PRO CONTROLS) ---
 st.sidebar.title(f"🍎 {st.session_state.user}")
-search_query = st.sidebar.text_input("🔍 Search Ledger", "")
-filter_dept = st.sidebar.selectbox("Finance Filter", ["All Finances"] + sorted(list(set(t.get('finance', 'N/A') for t in tasks_dict.values()))))
+st.sidebar.write(f"Access: {st.session_state.role}")
+
+search = st.sidebar.text_input("🔍 Search Records", "")
+all_raw_finances = sorted(list(set(t.get('finance', 'N/A').upper() for t in tasks_dict.values())))
+# Apply rename/hide logic to the filter list
+display_finances = [renamed_finances.get(f, f) for f in all_raw_finances if f not in hidden_finances]
+filter_fin = st.sidebar.selectbox("Filter Ledger", ["--- ALL ---"] + sorted(list(set(display_finances))))
+
+show_pending = st.sidebar.checkbox("🕒 Show Pending Only", value=True)
 sort_priority = st.sidebar.checkbox("📌 Sort by High Priority")
 
-# --- 4. MAIN UI ---
+# --- 8. MAIN UI ---
 tab1, tab2 = st.tabs(["📝 New Entry", "📊 Active Ledger"])
 
 with tab1:
-    with st.form("new_task"):
-        f_name = st.text_input("Finance Name").upper()
-        cat = st.selectbox("Category", ["Rate Correction", "Spelling/Address", "Digital Sign", "Report Upload"])
-        pri = st.select_slider("Priority", options=["Normal", "Medium", "High"])
-        detail = st.text_area("Task Details")
-        if st.form_submit_button("ADD TO LEDGER"):
-            pld = {"finance": f_name, "task": f"[{cat}] {detail}", "priority": pri, "assigner": st.session_state.user, "status": "Pending", "assigned_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")}
-            requests.post(DB_URL, json=pld)
-            st.toast("Task Added Successfully!")
-            st.rerun()
+    with st.form("pro_add_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            f_input = st.text_input("Finance Name (e.g., NANDAWATA)").upper()
+            cat = st.selectbox("Category", ["1. Rate Correction", "2. Spelling/Address", "3. Digital Sign", "4. Report Upload", "5. Photos/Drafting"])
+        with c2:
+            pri = st.selectbox("Priority", ["Normal", "Medium", "High"])
+            details = st.text_area("Correction Details")
+        
+        if st.form_submit_button("ADD TO CLOUD LEDGER"):
+            if f_input and details:
+                pld = {
+                    "finance": f_input, "task": f"[{cat}] {details}", 
+                    "priority": pri, "assigner": st.session_state.user, 
+                    "status": "Pending", "assigned_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")
+                }
+                requests.post(DB_URL, json=pld)
+                st.success(f"Task for {f_input} saved to Firebase!")
+                st.rerun()
 
 with tab2:
-    # Sorting logic
+    # Prepare and Sort Items
     items = list(tasks_dict.items())
     if sort_priority:
-        items.sort(key=lambda x: ({"High": 3, "Medium": 2, "Normal": 1}.get(x[1].get('priority'), 1)), reverse=True)
+        items.sort(key=lambda x: ({"High": 3, "Medium": 2, "Normal": 1}.get(x[1].get('priority', 'Normal'), 1)), reverse=True)
     else:
-        items.reverse() # Show newest first
+        items.reverse()
 
     for tid, t in items:
-        # Filter Logic
-        if filter_dept != "All Finances" and t.get('finance') != filter_dept: continue
-        if search_query.lower() not in t.get('task','').lower() and search_query.lower() not in t.get('finance','').lower(): continue
+        # Safety extractions
+        f_raw = t.get('finance', 'N/A').upper()
+        f_display = renamed_finances.get(f_raw, f_raw)
+        status = t.get('status', 'Pending')
+        p_raw = t.get('priority', 'Normal')
+        
+        # Filtering
+        if f_raw in hidden_finances or f_display in hidden_finances: continue
+        if filter_fin != "--- ALL ---" and f_display != filter_fin: continue
+        if show_pending and status != "Pending": continue
+        if search.lower() not in t.get('task','').lower() and search.lower() not in f_display.lower(): continue
 
-        # Display Card
+        # Card Display
         with st.container():
+            p_color = "#B71C1C" if p_raw.upper() == "HIGH" else "#3E91D4"
             st.markdown(f"""
             <div class="task-card">
-                <small style='color:#808080;'>{t.get('assigned_at')} | {t.get('assigner')}</small>
-                <h3 style='margin:5px 0; color:#E0E0E0;'>{t.get('finance')}</h3>
-                <p style='color:#B0B0B0;'>{t.get('task')}</p>
-                <p style='color:{"#FF5252" if t.get("priority")=="High" else "#3E91D4"}; font-weight:bold;'>PRIORITY: {t.get('priority').upper()}</p>
+                <small style='color:#808080;'>{t.get('assigned_at', '')} | By: {t.get('assigner', 'System')}</small>
+                <h3 style='margin:5px 0; color:#E0E0E0;'>{f_display}</h3>
+                <p style='font-size:16px;'>{t.get('task', '')}</p>
+                <p style='color:{p_color}; font-weight:bold;'>PRIORITY: {p_raw.upper()}</p>
+                {f"<small style='color:#1B5E20;'>✓ {status.upper()} by {t.get('completed_by')} on {t.get('finished_at')}</small>" if status != "Pending" else ""}
             </div>
             """, unsafe_allow_html=True)
             
-            # Action Row
-            col1, col2 = st.columns([3, 1])
-            if t.get('status') == "Pending":
-                with col1:
-                    note = st.text_input("Completion Note", key=f"n_{tid}", label_visibility="collapsed", placeholder="Enter note...")
-                with col2:
-                    if st.button("DONE", key=f"d_{tid}"):
+            if status == "Pending":
+                c1, c2 = st.columns([4, 1])
+                note = c1.text_input("Completion Note", key=f"n_{tid}", placeholder="Add status note...")
+                if c2.button("DONE", key=f"b_{tid}"):
+                    if note:
                         upd = {"status": "Completed", "comment": note, "completed_by": st.session_state.user, "finished_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")}
                         requests.patch(f"{DB_BASE_URL}/{tid}.json", json=upd)
                         st.rerun()
+                    else: st.warning("Note required.")
+
+# --- 9. EXPORT & ADMIN TOOLS ---
+st.sidebar.markdown("---")
+if st.sidebar.button("📊 Export Full Excel"):
+    df = pd.DataFrame.from_dict(tasks_dict, orient='index')
+    st.sidebar.download_button("Download Now", df.to_csv(), "Office_Ledger.csv")
+
+if st.session_state.role == "ADMIN":
+    st.sidebar.subheader("Admin Tools")
+    if st.sidebar.button("🗑 Clear Completed Tasks"):
+        st.sidebar.warning("Feature coming soon...")
