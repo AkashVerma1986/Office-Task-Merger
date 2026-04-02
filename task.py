@@ -13,9 +13,9 @@ TASKS_URL = f"{DB_BASE_URL}/tasks.json"
 USERS_URL = f"{DB_BASE_URL}/users.json"
 IST = pytz.timezone('Asia/Kolkata') 
 
-st.set_page_config(page_title="RAAS Ledger Pro", layout="wide")
+st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 
-# --- 2. SLEEK CSS (Galloping Bar + 22px Font) ---
+# --- 2. THE ULTIMATE CSS (Galloping Bar + 22px Font) ---
 st.markdown("""
     <style>
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { font-size: 22px !important; } 
@@ -25,44 +25,36 @@ st.markdown("""
     .sleek-card {
         display: flex;
         background-color: #0A0A0A;
-        border: 1px solid #333;
+        border: 1px solid #333333;
         border-radius: 15px;
         margin-bottom: 25px;
         overflow: hidden;
     }
     .galloping-bar { width: 25px; flex-shrink: 0; }
     .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-    .card-text { padding: 25px; border-bottom: 1px solid #222; }
-    .card-footer { background-color: #111; padding: 20px; }
+    .card-text { padding: 25px; border-bottom: 1px solid #222222; }
+    .card-footer { background-color: #111111; padding: 20px; border-top: 1px solid #222222; }
     
-    /* STATUS COLORS */
+    .edit-zone { background-color: #161616; padding: 20px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
+    
     .status-pending { background-color: #C29100 !important; }
     .status-completed { background-color: #1B5E20 !important; }
     .status-hold { background-color: #C71585 !important; }
     .status-high { background-color: #B71C1C !important; }
     
-    .completion-text { color: #4CAF50; font-weight: bold; font-size: 22px; }
-    .edit-box-inline { background-color: #1A1A1A; border: 1px dashed #444; padding: 15px; border-radius: 8px; margin-top: 10px; }
+    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 15px; border-radius: 10px; color: #81C784; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. BRANDING ---
-with st.container():
-    if os.path.exists("image_0.png"):
-        st.image("image_0.png", width=240)
-    st.markdown('<h1 style="color:white; letter-spacing:5px; font-size:55px; text-align:center;">RAAS</h1>', unsafe_allow_html=True)
-
-# --- 4. AUTH & SESSION STATE ---
+# --- 3. AUTH & HARDWARE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
-if "edit_fin" not in st.session_state: st.session_state.edit_fin = "--- SELECT ---"
-if "edit_dtl" not in st.session_state: st.session_state.edit_dtl = ""
 
 def get_now_ist(): return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
 
 if not st.session_state.authenticated:
-    st.title("🔐 RAAS AUTHORIZED LOGIN")
+    st.title("🔐 RAAS SECURE ACCESS")
     name_in = st.text_input("Name").upper().strip()
     pwd_in = st.text_input("Password", type="password")
     if st.button("LOGIN"):
@@ -70,130 +62,149 @@ if not st.session_state.authenticated:
         is_admin = (pwd_in == "1586")
         if name_in and (is_admin or pwd_in == "1234"):
             if name_in not in users_db and not is_admin:
-                st.error("🚫 No Slot. Contact Admin.")
+                st.error("🚫 Access Denied. No Slot.")
             else:
                 st.session_state.user_data = {"name": name_in, "role": "ADMIN" if is_admin else "STAFF"}
-                st.session_state.authenticated = True; st.rerun()
+                st.session_state.authenticated = True
+                st.toast(f"Welcome, {name_in}!")
+                st.rerun()
     st.stop()
 
-# --- 5. DATA & ADMIN SLOTS ---
+# --- 4. DATA FETCH ---
 user = st.session_state.user_data
 tasks_dict = requests.get(TASKS_URL).json() or {}
+all_fins = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values() if t.get('finance'))))
 
+# --- 5. ADMIN SIDEBAR (Slots & Finance Master) ---
 if user['role'] == "ADMIN":
     with st.sidebar:
-        st.header("⚙️ ADMIN PANEL")
-        with st.expander("👤 Create User Slots"):
-            nu = st.text_input("New Name").upper().strip()
-            if st.button("Add Slot"): 
+        st.header("⚙️ MASTER CONTROL")
+        with st.expander("👤 User Slot Management"):
+            nu = st.text_input("New Staff Name").upper().strip()
+            if st.button("Authorize Name"):
                 requests.patch(f"{DB_BASE_URL}/users/{nu}.json", json={"role":"STAFF"})
-                st.success(f"Slot for {nu} Created!")
+                st.toast(f"Slot Created for {nu}")
+        
+        with st.expander("🛠️ Finance Category Master"):
+            target_f = st.selectbox("Global Finance", ["---"] + all_fins)
+            if target_f != "---":
+                rename_f = st.text_input("Global Rename To").upper()
+                if st.button("Apply Global Rename"):
+                    for tid, d in tasks_dict.items():
+                        if d.get('finance') == target_f: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": rename_f})
+                    st.toast("Global Rename Complete!")
+                    st.rerun()
+                if st.checkbox("Confirm Global Wipe?"):
+                    if st.button("DELETE ENTIRE CATEGORY"):
+                        for tid, d in tasks_dict.items():
+                            if d.get('finance') == target_f: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                        st.toast("Category Deleted.")
+                        st.rerun()
 
-# --- 6. LEDGER FORM ---
+# --- 6. TOP FORM (Add New / Jump-to-Edit) ---
 st.subheader("📝 Report Correction Ledger")
-with st.expander("Open Ledger Form", expanded=True):
+with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c3 = st.columns([1.5, 1, 1])
-    with c1:
-        fins = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values() if t.get('finance'))))
-        try: f_idx = (["--- SELECT ---", "ADD NEW+"] + fins).index(st.session_state.edit_fin)
-        except: f_idx = 0
-        f_sel = st.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + fins, index=f_idx)
-        fin = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
-    with c2:
-        cat = st.selectbox("Category", ["---", "1. Rate Correction", "2. Spelling/Address", "3. Digital Sign", "4. Report Upload", "5. Photos/Drafting"])
-    with c3:
-        prio = st.select_slider("Priority", ["Normal", "Medium", "High"])
+    f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins)
+    fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
+    cat = c2.selectbox("Category", ["---", "Rate Correction", "Spelling", "Digital Sign", "Upload", "Drafting"])
+    prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
+    dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    dtl = st.text_area("Task Details", value=st.session_state.edit_dtl)
-    
-    btn_label = "💾 UPDATE TASK" if st.session_state.edit_mode else "🚀 ADD TO LEDGER"
-    if st.button(btn_label, use_container_width=True):
-        if fin != "--- SELECT ---" and dtl:
-            payload = {"finance": fin, "task": f"[{cat}] {dtl}", "priority": prio, "assigner": user['name'], "status": "Pending", "assigned_at": get_now_ist()}
-            if st.session_state.edit_mode:
-                requests.patch(f"{DB_BASE_URL}/tasks/{st.session_state.edit_tid}.json", json=payload)
-            else:
-                requests.post(TASKS_URL, json=payload)
-            st.session_state.edit_mode, st.session_state.edit_fin, st.session_state.edit_dtl = False, "--- SELECT ---", ""
+    if st.button("🚀 PUSH TO LEDGER", use_container_width=True):
+        if fin_active != "--- SELECT ---" and dtl_main:
+            requests.post(TASKS_URL, json={"finance": fin_active, "task": f"[{cat}] {dtl_main}", "priority": prio, "assigner": user['name'], "status": "Pending", "assigned_at": get_now_ist()})
+            st.session_state.edit_dtl_top = ""
+            st.toast("Task Pushed to Database!")
             st.rerun()
 
-# --- 7. EXPORT & SEARCH ---
+# --- 7. SEARCH & EXCEL EXPORT ---
 st.divider()
-s1, s2, s3, s4 = st.columns([2, 1.5, 0.5, 1])
-search = s1.text_input("🔍 Search Ledger").lower()
-export_range = s2.date_input("Export Dates", [datetime.now(IST), datetime.now(IST)])
-if s3.button("🔄"): st.rerun()
-if s4 and tasks_dict:
+s1, s2, s3 = st.columns([2, 1, 1])
+search = s1.text_input("🔍 Search (Finance, Task, or Staff)").lower()
+if s2.button("🔄 Refresh Data"): st.rerun()
+if s3.button("📥 Export to Excel", use_container_width=True):
     df = pd.DataFrame.from_dict(tasks_dict, orient='index')
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine='openpyxl') as wr: df.to_excel(wr)
-    st.download_button("📥 Export Excel", buf.getvalue(), "RAAS_Report.xlsx", use_container_width=True)
+    st.download_button("Download RAAS_Report.xlsx", buf.getvalue(), "RAAS_Report.xlsx")
 
-# --- 8. THE SLEEK TASK WINDOWS ---
-st.subheader("📋 RECENT ENTRIES")
+# --- 8. THE UNIFIED TASK CARDS (150-Item Buffer) ---
 keys = list(tasks_dict.keys()); keys.reverse()
 
 for tid in keys[:150]:
     task = tasks_dict[tid]
-    t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): continue
 
+    t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
     if t_status == "Completed": s_color = "status-completed"
     elif t_status == "Hold": s_color = "status-hold"
     elif t_prio == "High" and t_status == "Pending": s_color = "status-high"
-
-    # Priority Badge Logic
-    p_badge = f'<span style="padding:4px 12px; border-radius:15px; font-size:14px; background:#333;">{t_prio}</span>'
-    if t_prio == "High": p_badge = f'<span style="padding:4px 12px; border-radius:15px; font-size:14px; background:#B71C1C;">HIGH</span>'
 
     st.markdown(f'''
         <div class="sleek-card">
             <div class="galloping-bar {s_color}"></div>
             <div class="card-body">
                 <div class="card-text">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:28px;">{task.get('finance')}</strong> {p_badge}
-                    </div>
-                    <small style="color:#888;">{task.get('assigned_at')}</small><br>
+                    <strong style="font-size:28px;">{task.get('finance')}</strong> | <small>{task.get('assigned_at')}</small><br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
     ''', unsafe_allow_html=True)
 
     with st.container():
-        st.markdown('<div class="card-footer">', unsafe_allow_html=True)
-        if t_status == "Completed":
-            st.markdown(f'<span class="completion-text">✅ COMPLETED [{task.get("work_type", "N/A")}]</span><br><small>By: {task.get("completed_by")} | Note: {task.get("comment", "N/A")}</small>', unsafe_allow_html=True)
-            if user['role'] == "ADMIN":
-                if st.button("🗑️ Admin Delete", key=f"del_{tid}"):
-                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json"); st.rerun()
-        else:
-            c_n, c_t, c_h, c_c = st.columns([1.5, 0.8, 0.7, 1])
-            note = c_n.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-            w_type = c_t.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-            
-            if c_h.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
-                new_s = "Hold" if t_status != "Hold" else "Pending"
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note}); st.rerun()
-                
-            if c_c.button("✅ Done", key=f"done_{tid}", use_container_width=True):
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()}); st.rerun()
-
-            # LOGIC: Inline Edit Toggle
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                if st.button("✏️ EDIT", key=f"edit_btn_{tid}", use_container_width=True):
-                    st.session_state.edit_mode, st.session_state.edit_tid = True, tid
-                    st.session_state.edit_fin = task.get('finance')
-                    st.session_state.edit_dtl = task.get('task').split('] ', 1)[-1] if '] ' in task.get('task', '') else task.get('task', '')
+        # --- INLINE EDIT SUITE (The Integrated Feature) ---
+        if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
+            if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
+                st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
+                ec1, ec2 = st.columns(2)
+                e_fin = ec1.text_input("Update Finance", value=task.get('finance'), key=f"ef_{tid}")
+                e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
+                e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
+                if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": e_fin, "task": e_dtl, "priority": e_prio})
+                    st.toast("Changes Saved Successfully!")
+                    st.rerun()
+                if st.button("⬆️ SEND TO TOP FORM", key=f"top_{tid}", use_container_width=True):
+                    st.session_state.edit_dtl_top = task.get('task')
                     components.html("<script>window.parent.document.querySelector('section.main').scrollTo(0, 0);</script>", height=0)
                     st.rerun()
-                    
-                if st.checkbox("🗑️ Delete?", key=f"chk_{tid}"):
-                    if st.button("CONFIRM DELETE", key=f"btn_{tid}"):
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card-footer">', unsafe_allow_html=True)
+        if t_status == "Completed":
+            st.markdown(f'''
+                <div class="completion-box">
+                    👤 <b>{task.get("completed_by")}</b> closed this <b>{task.get("work_type")}</b> task at {task.get("finished_at")}<br>
+                    📝 <i>Note: {task.get("comment", "N/A")}</i>
+                </div>
+            ''', unsafe_allow_html=True)
+            if user['role'] == "ADMIN":
+                if st.button("🗑️ Admin Delete Record", key=f"adm_del_{tid}"):
+                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json"); st.rerun()
+        else:
+            c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
+            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
+            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+            
+            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Play", key=f"h_{tid}", use_container_width=True):
+                new_s = "Hold" if t_status != "Hold" else "Pending"
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
+                st.toast(f"Status changed to {new_s}")
+                st.rerun()
+                
+            if c_done.button("✅ Mark Done", key=f"d_{tid}", use_container_width=True):
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()})
+                st.toast("Task Completed!")
+                st.rerun()
+                
+            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                if st.checkbox("🗑️", key=f"del_chk_{tid}"):
+                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json"); st.rerun()
-        
+
         st.markdown('</div></div></div>', unsafe_allow_html=True)
     st.divider()
 
-if st.sidebar.button("🚪 Logout"):
+if st.sidebar.button("🚪 LOGOUT"):
     st.session_state.authenticated = False; st.rerun()
