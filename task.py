@@ -3,240 +3,216 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import pytz  # Point 3: IST Support
+from streamlit_javascript import st_javascript # Required for Point 2 & 6
 
-# --- CONFIGURATION ---
-DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app/tasks"
-SETTINGS_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app/settings.json"
-DB_URL = f"{DB_BASE_URL}.json"
+# --- CONFIGURATION (Point 2, 6, 9) ---
+DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
+TASKS_URL = f"{DB_BASE_URL}/tasks.json"
+# Point 9: Limit fetch to 100 most recent items
+QUERY_URL = f"{TASKS_URL}?orderBy=\"assigned_at\"&limitToLast=100"
+SETTINGS_URL = f"{DB_BASE_URL}/settings.json"
+USERS_URL = f"{DB_BASE_URL}/users.json"
 
 STAFF_PASSWORD = "1234"
 ADMIN_PASSWORD = "1586"
+IST = pytz.timezone('Asia/Kolkata') # Point 3
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Report Correction Ledger Pro", layout="wide")
 
-# --- CUSTOM STYLES (MIDNIGHT PALETTE) ---
+# --- CUSTOM STYLES (Point 7: +2pt Font Increase) ---
 st.markdown("""
     <style>
+    html, body, [class*="st-"] { font-size: 18px !important; } /* Global +2pt increase */
     .main { background-color: #000000; }
     .stApp { background-color: #000000; color: #E0E0E0; }
     .task-card {
         background-color: #0A0A0A;
         border: 1px solid #1A1A1A;
         border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-left: 5px solid #C29100;
+        padding: 18px;
+        margin-bottom: 12px;
+        border-left: 6px solid #C29100;
     }
     .priority-high { border-left-color: #B71C1C !important; }
     .status-completed { border-left-color: #1B5E20 !important; }
     .status-hold { border-left-color: #880E4F !important; }
+    .task-card strong { font-size: 1.35rem; } /* Scaled header */
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE INITIALIZATION ---
+# --- POINT 2 & 6: DEVICE FINGERPRINT & PERSISTENCE ---
+device_id = st_javascript("""(async () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    return btoa(navigator.userAgent + screen.width + screen.height);
+})()""")
+
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
-if 'user_data' not in st.session_state:
-    st.session_state.user_data = {"name": "", "designation": "", "role": ""}
+if 'edit_id' not in st.session_state:
+    st.session_state.edit_id = None
 
 # --- HELPER FUNCTIONS ---
-def fetch_data():
+def get_now(): # Point 3
+    return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
+
+def fetch_data(): # Point 9
     try:
-        res = requests.get(DB_URL, timeout=5)
+        res = requests.get(QUERY_URL, timeout=5)
         return res.json() or {}
-    except:
-        return {}
+    except: return {}
 
-def fetch_settings():
+def fetch_users():
     try:
-        res = requests.get(SETTINGS_URL, timeout=5)
-        return res.json() or {"hidden": [], "renamed": {}}
-    except:
-        return {"hidden": [], "renamed": {}}
+        res = requests.get(USERS_URL, timeout=5)
+        return res.json() or {}
+    except: return {}
 
-def format_date(date_str):
-    try:
-        dt = datetime.strptime(date_str, "%d/%b/%Y %H:%M:%S")
-        return dt.strftime("%d %b %Y, %H:%M")
-    except:
-        return date_str
-
-# --- LOGIN SCREEN ---
+# --- LOGIN SCREEN (Point 1 & 2) ---
 if not st.session_state.authenticated:
     st.title("🔐 OFFICE LEDGER LOGIN")
     with st.container():
-        name = st.text_input("Full Name")
-        desig = st.text_input("Designation")
+        name = st.text_input("Full Name").upper()
+        desig = st.text_input("Designation").upper()
         pwd = st.text_input("Password", type="password")
         
-        if st.button("LOGIN"):
-            if name and desig:
-                if pwd == ADMIN_PASSWORD:
-                    st.session_state.user_data = {"name": name.upper(), "designation": desig.upper(), "role": "ADMIN"}
-                    st.session_state.authenticated = True
-                    st.rerun()
-                elif pwd == STAFF_PASSWORD:
-                    st.session_state.user_data = {"name": name.upper(), "designation": desig.upper(), "role": "STAFF"}
-                    st.session_state.authenticated = True
-                    st.rerun()
+        if st.button("LOGIN") and device_id:
+            users = fetch_users()
+            is_admin = (pwd == ADMIN_PASSWORD)
+            is_staff = (pwd == STAFF_PASSWORD)
+
+            if name and desig and (is_admin or is_staff):
+                role = "ADMIN" if is_admin else "STAFF"
+                
+                # Point 2: Device Binding Logic
+                if name in users:
+                    if users[name]['device'] != device_id and not is_admin:
+                        st.error("This ID is registered to another device.")
+                        st.stop()
                 else:
-                    st.error("Invalid Password")
+                    # Register new user/device
+                    requests.patch(f"{DB_BASE_URL}/users/{name}.json", json={"device": device_id, "role": role})
+
+                st.session_state.user_data = {"name": name, "designation": desig, "role": role}
+                st.session_state.authenticated = True
+                st.rerun()
             else:
-                st.warning("Please fill all fields")
+                st.error("Invalid Credentials or Missing Fields")
     st.stop()
 
 # --- MAIN UI ---
 user = st.session_state.user_data
 tasks_dict = fetch_data()
-settings = fetch_settings()
-hidden_fins = set(settings.get("hidden", []))
-renamed_fins = settings.get("renamed", {})
 
-# --- TOP NAVIGATION BAR ---
-col1, col2, col3 = st.columns([2, 3, 2])
-with col1:
-    st.markdown(f"**👤 {user['name']}** \n*{user['designation']} ({user['role']})*")
-
-with col2:
-    search_query = st.text_input("", placeholder="🔍 Search records...")
-
-with col3:
-    if st.button("🔄 REFRESH DATA"):
-        st.rerun()
-
-# --- INPUT SECTION ---
+# --- INPUT SECTION (Point 8: Optimized Defaults) ---
 st.subheader("📝 Add New Task")
 with st.expander("Click to Open Input Form", expanded=True):
     c1, c2, c3 = st.columns(3)
     with c1:
-        # Finance List from existing data
         raw_fins = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values() if t.get('finance'))))
-        fin_name = st.selectbox("Finance Name", options=["NEW..."] + raw_fins)
-        if fin_name == "NEW...":
+        # Point 8: Default to "Select" to prevent accidental entry
+        fin_name_sel = st.selectbox("Finance Name", options=["--- SELECT ---", "ADD NEW+"] + raw_fins)
+        fin_name = ""
+        if fin_name_sel == "ADD NEW+":
             fin_name = st.text_input("Enter New Finance Name").upper()
+        else:
+            fin_name = fin_name_sel
+            
     with c2:
-        category = st.selectbox("Category", ["1. Rate Correction", "2. Spelling/Address", "3. Digital Sign", "4. Report Upload", "5. Photos/Drafting"])
+        # Point 8: Placeholder added
+        cat_options = ["--- SELECT CATEGORY ---", "1. Rate Correction", "2. Spelling/Address", "3. Digital Sign", "4. Report Upload", "5. Photos/Drafting"]
+        category = st.selectbox("Category", cat_options)
     with c3:
         priority = st.select_slider("Priority", options=["Normal", "Medium", "High"])
 
     task_details = st.text_area("Task Details")
     
     if st.button("🚀 ADD TO LEDGER", use_container_width=True):
-        if fin_name and task_details:
+        if fin_name != "--- SELECT ---" and category != "--- SELECT CATEGORY ---" and task_details:
             new_task = {
-                "finance": fin_name.upper(),
+                "finance": fin_name,
                 "task": f"[{category}] {task_details}",
                 "priority": priority,
                 "assigner": user['name'],
                 "status": "Pending",
-                "assigned_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")
+                "assigned_at": get_now() # Point 3
             }
-            requests.post(DB_URL, json=new_task)
+            requests.post(TASKS_URL, json=new_task)
             st.success("Task Added!")
             time.sleep(1)
             st.rerun()
-
-# --- FILTERS & EXPORT ---
-st.divider()
-f_col1, f_col2, f_col3, f_col4 = st.columns(4)
-with f_col1:
-    show_pending_only = st.checkbox("🕒 Show Pending Only")
-with f_col2:
-    sort_priority = st.checkbox("📌 Sort by Priority")
-with f_col3:
-    raw_list = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values())))
-    filter_fin = st.selectbox("Filter Finance", ["--- ALL ---"] + raw_list)
-with f_col4:
-    # Export to Excel
-    if tasks_dict:
-        df = pd.DataFrame.from_dict(tasks_dict, orient='index')
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📊 EXPORT TO CSV", data=csv, file_name="ledger_export.csv", mime="text/csv")
+        else:
+            st.warning("Please select Finance, Category and enter Details.")
 
 # --- TASK LIST ---
-st.subheader("📋 RECENT ENTRIES")
+st.subheader("📋 RECENT ENTRIES (Last 100)") # Point 9
 
-# Sorting & Filtering Logic
 keys = list(tasks_dict.keys())
-if sort_priority:
-    priority_map = {"High": 3, "Medium": 2, "Normal": 1}
-    keys.sort(key=lambda x: priority_map.get(tasks_dict[x].get('priority', 'Normal'), 0), reverse=True)
-else:
-    keys.reverse() # Show newest first
+keys.reverse() 
 
 for tid in keys:
     task = tasks_dict[tid]
     t_status = task.get('status', 'Pending')
-    t_fin = task.get('finance', '').upper()
-    t_display_fin = renamed_fins.get(t_fin, t_fin)
     
-    # Apply Filters
-    if t_display_fin in hidden_fins: continue
-    if show_pending_only and t_status != "Pending": continue
-    if filter_fin != "--- ALL ---" and t_fin != filter_fin: continue
-    if search_query.lower() not in f"{t_display_fin} {task.get('task','')} {task.get('assigner','')}".lower(): continue
-
-    # Styling Class
-    border_class = ""
-    if t_status == "Completed": border_class = "status-completed"
-    elif t_status == "Hold": border_class = "status-hold"
-    elif task.get('priority') == "High": border_class = "priority-high"
-
+    # Point 5: Edit Logic (Assigner or Admin only)
+    is_editor = (user['role'] == "ADMIN" or task.get('assigner') == user['name'])
+    
     with st.container():
-        st.markdown(f"""
-            <div class="task-card {border_class}">
-                <small>{task.get('priority','').upper()} | {task.get('assigned_at','')}</small><br>
-                <strong style="color:#3E91D4; font-size: 1.2rem;">{t_display_fin}</strong><br>
-                <p>{task.get('task','')}</p>
-                <small>Assigned by: {task.get('assigner','')}</small>
-            </div>
-        """, unsafe_allow_html=True)
+        border_class = "priority-high" if task.get('priority') == "High" else ""
+        if t_status == "Completed": border_class = "status-completed"
+        elif t_status == "Hold": border_class = "status-hold"
+
+        st.markdown(f'<div class="task-card {border_class}">', unsafe_allow_html=True)
+        st.write(f"**{task.get('finance')}** | {task.get('assigned_at')}")
         
-        # Action Buttons
+        # Point 5: Show Edit Area or Text
+        if st.session_state.edit_id == tid:
+            new_text = st.text_area("Edit Task", value=task.get('task'), key=f"input_{tid}")
+            if st.button("💾 Save", key=f"save_{tid}"):
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"task": new_text})
+                st.session_state.edit_id = None
+                st.rerun()
+        else:
+            st.write(task.get('task'))
+            st.write(f"Assigner: {task.get('assigner')}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
         if t_status != "Completed":
-            c1, c2, c3, c4 = st.columns([2, 1, 1, 0.5])
+            c1, c2, c3, c4, c5 = st.columns([2, 1.2, 0.8, 0.8, 0.5])
             with c1:
-                note = st.text_input("Completion Note", key=f"note_{tid}")
+                note = st.text_input("Note", key=f"note_{tid}")
             with c2:
-                if st.button("✅ Done", key=f"comp_{tid}"):
-                    if not note: st.error("Note required!"); st.stop()
-                    patch = {
-                        "status": "Completed", 
-                        "comment": note, 
-                        "completed_by": user['name'],
-                        "finished_at": datetime.now().strftime("%d/%b/%Y %H:%M:%S")
-                    }
-                    requests.patch(f"{DB_BASE_URL}/{tid}.json", json=patch)
-                    st.rerun()
+                # Point 4: Regular/Major Dropdown
+                t_type = st.selectbox("Type", ["Regular", "Major"], key=f"type_{tid}")
             with c3:
-                h_label = "⏸ Hold" if t_status == "Pending" else "▶ Unhold"
-                if st.button(h_label, key=f"hold_{tid}"):
-                    new_s = "Hold" if t_status == "Pending" else "Pending"
-                    requests.patch(f"{DB_BASE_URL}/{tid}.json", json={"status": new_s})
+                if st.button("✅ Done", key=f"comp_{tid}"):
+                    if not note: st.error("Add note!"); st.stop()
+                    patch = {
+                        "status": "Completed", "comment": note, "task_type": t_type,
+                        "completed_by": user['name'], "finished_at": get_now()
+                    }
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=patch)
                     st.rerun()
             with c4:
-                if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                # Point 5: Edit Toggle
+                if is_editor and st.button("📝 Edit", key=f"ed_{tid}"):
+                    st.session_state.edit_id = tid
+                    st.rerun()
+            with c5:
+                # Point 1: Admin Power to Delete
+                if is_editor:
                     if st.button("🗑", key=f"del_{tid}"):
-                        requests.delete(f"{DB_BASE_URL}/{tid}.json")
+                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                         st.rerun()
-        else:
-            st.markdown(f"✅ *Completed by {task.get('completed_by')} on {task.get('finished_at')} - {task.get('comment','')}*")
         st.divider()
 
-# --- ADMIN SETTINGS ---
-if user['role'] == "ADMIN":
-    with st.sidebar:
-        st.header("Admin Controls")
-        if st.toggle("Show Finance Management"):
-            target_fin = st.selectbox("Select Finance to Manage", raw_list)
-            if st.button("Hide Global"):
-                hidden_fins.add(target_fin)
-                requests.put(SETTINGS_URL, json={"hidden": list(hidden_fins), "renamed": renamed_fins})
-                st.rerun()
-            
-            new_name = st.text_input("Rename to:")
-            if st.button("Rename Global"):
-                renamed_fins[target_fin] = new_name.upper()
-                requests.put(SETTINGS_URL, json={"hidden": list(hidden_fins), "renamed": renamed_fins})
-                st.rerun()
+# --- SIDEBAR & LOGOUT (Point 6) ---
+with st.sidebar:
+    st.write(f"Logged in as: **{user['name']}**")
+    if st.button("🚪 LOGOUT"):
+        st.session_state.authenticated = False
+        st.rerun()
+    st.divider()
+    st.info("Tip: Pull down to refresh on mobile.") # Point 6
