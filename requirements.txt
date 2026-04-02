@@ -1,5 +1,6 @@
-streamlit  
-requests  
-pandas  
-pytz  
-streamlit-javascript 
+streamlit
+requests
+pandas
+openpyxl
+pytz
+streamlit-javascript
