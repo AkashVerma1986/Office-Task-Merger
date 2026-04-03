@@ -20,7 +20,7 @@ st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 # --- 2. THE ULTIMATE CSS (Galloping Bar + 22px Font) ---
 st.markdown("""
     <style>
-    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { font-size: 24px !important; } 
+    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { font-size: 22px !important; } 
     .main { background-color: #000000; }
     .stApp { background-color: #000000; color: #E0E0E0; }
     
@@ -29,29 +29,22 @@ st.markdown("""
         background-color: #0A0A0A;
         border: 1px solid #333333;
         border-radius: 15px;
-        margin-bottom: 12px;
+        margin-bottom: 25px;
         overflow: hidden;
     }
-    .galloping-bar { width: 7px; flex-shrink: 5; }
+    .galloping-bar { width: 25px; flex-shrink: 0; }
     .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-    .card-text { padding: 12px; border-bottom: 1px solid #222222; }
-    .card-footer { background-color: #111111; padding: 7px; border-top: 1px solid #222222; }
+    .card-text { padding: 25px; border-bottom: 1px solid #222222; }
+    .card-footer { background-color: #111111; padding: 20px; border-top: 1px solid #222222; }
     
-    .edit-zone { background-color: #161616; padding: 7px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
+    .edit-zone { background-color: #161616; padding: 20px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
     
     .status-pending { background-color: #C29100 !important; }
     .status-completed { background-color: #1B5E20 !important; }
     .status-hold { background-color: #C71585 !important; }
     .status-high { background-color: #B71C1C !important; }
-    /* Fix for dropdown visibility */
-    div[data-baseweb="select"] > div, 
-    div[aria-selected="true"], 
-    li[role="option"] { 
-        color: #FFFFFF !important; 
-        background-color: #1A1A1A !important; 
-    }
-
-    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 10px; border-radius: 5px; color: #81C784; }
+    
+    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 15px; border-radius: 10px; color: #81C784; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -200,7 +193,7 @@ with st.expander("Ledger Entry Form", expanded=True):
             # Save the record including the new 'lan' field
             payload = {
                 "finance": fin_active, 
-                "lAN": lan_no,
+                "lan": lan_no,
                 "task": f"[{cat}] {dtl_main}", 
                 "priority": prio, 
                 "assigner": user['name'], 
