@@ -73,11 +73,11 @@ if not st.session_state.authenticated:
 
 # --- 4. DATA FETCH ---
 user = st.session_state.user_data
-tasks_dict = requests.get(TASKS_URL).json() or {}
+tasks_dict = requests.get(TASKS_URL, verify=False).json() or {}
 
 # NEW: Fetch the Master Finance List directly
 FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
-master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
+master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
 # Convert the dictionary keys into a sorted list
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
@@ -224,7 +224,7 @@ for tid in keys[:150]:
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Play", key=f"h_{tid}", use_container_width=True):
+            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
                 new_s = "Hold" if t_status != "Hold" else "Pending"
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
                 st.toast(f"Status changed to {new_s}")
