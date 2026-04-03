@@ -136,7 +136,36 @@ if user['role'] == "ADMIN":
                     if st.button(f"🗑️ DELETE FROM DROPDOWN", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
                         st.rerun()
+# --- FEATURE 3: CATEGORY MASTER LIST (Dropdown Control) ---
+        with st.expander("📝 Category Master List", expanded=False):
+            st.markdown("### Add Category")
+            new_c_name = st.text_input("New Category Name", key="add_cat_input").upper().strip()
+            if st.button("➕ Add Category", use_container_width=True):
+                if new_c_name:
+                    requests.patch(CATEGORIES_URL, json={new_c_name: True})
+                    st.rerun()
 
+            st.divider()
+            st.markdown("### Edit/Delete Existing")
+            target_c = st.selectbox("Select Category", ["---"] + all_cats, key="admin_cat_sel")
+            if target_c != "---":
+                rename_c = st.text_input(f"Rename '{target_c}' to:", key="ren_cat_input").upper().strip()
+                if st.button(f"Update Category Globally", use_container_width=True):
+                    # Update Master List
+                    requests.patch(CATEGORIES_URL, json={rename_c: True})
+                    requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
+                    
+                    # Update all existing tasks that use this category label
+                    for tid, d in tasks_dict.items():
+                        if f"[{target_c}]" in d.get('task', ''):
+                            new_text = d.get('task').replace(f"[{target_c}]", f"[{rename_c}]")
+                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"task": new_text})
+                    st.rerun()
+
+                if st.checkbox(f"Remove '{target_c}' from List?", key="del_cat_chk"):
+                    if st.button(f"🗑️ DELETE CATEGORY", use_container_width=True):
+                        requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
+                        st.rerun()
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
 st.subheader("📝 Report Correction Ledger")
 with st.expander("Ledger Entry Form", expanded=True):
