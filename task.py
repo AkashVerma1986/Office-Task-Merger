@@ -236,7 +236,10 @@ for tid in keys[:150]:
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
                 ec1, ec2 = st.columns(2)
-                e_fin = ec1.text_input("Update Finance", value=task.get('finance'), key=f"ef_{tid}")
+                f_idx = all_fins.index(task.get('finance'))
+except (ValueError, IndexError):
+    f_idx = 0
+                e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f_idx_tid if 'f_idx_tid' in locals() else f"ef_{tid}")
                 e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
                 if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
