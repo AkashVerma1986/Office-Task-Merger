@@ -194,10 +194,8 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    if st.button(" SUBMIT", use_container_width=True):
-        # Logic Check: Ensure Finance, LAN No, and Details are present
+    if st.button("🚀    SUBMIT", use_container_width=True):
         if fin_active != "--- SELECT ---" and lan_no and dtl_main:
-            # Save the record including the new 'lan' field
             payload = {
                 "finance": fin_active, 
                 "lan": lan_no,
@@ -208,13 +206,18 @@ with st.expander("Ledger Entry Form", expanded=True):
                 "assigned_at": get_now_ist()
             }
             requests.post(TASKS_URL, json=payload)
-            
-            # Update Master Finance List
             requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
             
+            # --- CORRECT RESET LOGIC ---
+            # We clear the text area state
             st.session_state.edit_dtl_top = ""
-            if "main_finance_picker" in st.session_state: st.session_state.main_finance_picker = "--- SELECT ---"
-            if "main_cat_picker" in st.session_state: st.session_state.main_cat_picker = "---"
+            
+            # To reset the dropdowns without the "StreamlitAPIException", 
+            # we simply clear their values from state so they revert to default on rerun
+            for key in ["main_finance_picker", "main_cat_picker"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            
             st.toast(f"Pushed Task for LAN: {lan_no}!")
             st.rerun()
         elif not lan_no:
@@ -334,7 +337,11 @@ for tid in keys[:150]:
                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                         "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
                     })
+                    # Clear top form state
                     st.session_state.edit_dtl_top = ""
+                    for key in ["main_finance_picker", "main_cat_picker"]:
+                        if key in st.session_state:
+                            del st.session_state[key]
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
