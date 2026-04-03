@@ -245,9 +245,9 @@ search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar"
 filtered_df = df_all.copy()
 if search:
     filtered_df = filtered_df[
-        filtered_df['finance'].str.contains(search, case=False, na=False) | 
-        filtered_df['task'].str.contains(search, case=False, na=False)
-	filtered_df['lan'].astype(str).str.contains(search, case=False, na=False)) # Added LAN search
+        (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
+        (filtered_df['task'].str.contains(search, case=False, na=False)) |
+	(filtered_df['lan'].astype(str).str.contains(search, case=False, na=False)) # Added LAN search
     ]
 
 if s2.button("🔄 Refresh Data"): 
