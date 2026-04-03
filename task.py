@@ -194,13 +194,13 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    if st.button("🚀 PUSH TO LEDGER", use_container_width=True):
+    if st.button("🚀   SUBMIT", use_container_width=True):
         # Logic Check: Ensure Finance, LAN No, and Details are present
         if fin_active != "--- SELECT ---" and lan_no and dtl_main:
             # Save the record including the new 'lan' field
             payload = {
                 "finance": fin_active, 
-                "lAN": lan_no,
+                "lan": lan_no,
                 "task": f"[{cat}] {dtl_main}", 
                 "priority": prio, 
                 "assigner": user['name'], 
@@ -247,6 +247,7 @@ if search:
     filtered_df = filtered_df[
         filtered_df['finance'].str.contains(search, case=False, na=False) | 
         filtered_df['task'].str.contains(search, case=False, na=False)
+	filtered_df['lan'].astype(str).str.contains(search, case=False, na=False) # Added LAN search
     ]
 
 if s2.button("🔄 Refresh Data"): 
