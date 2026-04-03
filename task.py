@@ -72,17 +72,19 @@ if not st.session_state.authenticated:
 
 # --- 4. DATA FETCH ---
 user = st.session_state.user_data
+# This pulls the entire database into the app
 tasks_dict = requests.get(TASKS_URL).json() or {}
-all_fins = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values() if t.get('finance'))))
+
+# GLOBAL LIST GENERATOR: This scans every task and creates the unique list of Finance names
+all_fins = sorted(list(set(str(t.get('finance', '')).upper() for t in tasks_dict.values() if t.get('finance'))))
 
 # --- 5. ADMIN SIDEBAR (Master Control: User & Finance Lists) ---
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
         
-        # --- 1. USER MANAGEMENT LIST ---
+        # --- 1. USER MANAGEMENT ---
         with st.expander("👤 User Slot Management", expanded=False):
-            # Fetch current users from DB to show in a list
             users_db = requests.get(USERS_URL).json() or {}
             all_users = sorted([u for u in users_db.keys() if u != "ADMIN"])
             
@@ -103,25 +105,24 @@ if user['role'] == "ADMIN":
                     st.toast(f"Slot Created for {nu}")
                     st.rerun()
 
-        # --- 2. FINANCE CATEGORY MASTER ---
+        # --- 2. FINANCE CATEGORY MASTER (Global Updates) ---
         with st.expander("🛠️ Finance Category Master", expanded=False):
             st.subheader("Existing Categories")
-            # This 'all_fins' list is updated every time the page refreshes
             target_f = st.selectbox("Select Category to Edit", ["---"] + all_fins)
             
             if target_f != "---":
-                # Rename Section
+                # Rename Section: This updates the name in every task in the DB
                 st.markdown(f"**Action: Rename {target_f}**")
                 rename_f = st.text_input(f"New Name for {target_f}").upper()
                 if st.button(f"Update Name to {rename_f}", use_container_width=True):
                     for tid, d in tasks_dict.items():
                         if d.get('finance') == target_f: 
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": rename_f})
-                    st.toast("Rename Complete!")
-                    st.rerun()
+                    st.toast("✅ Global Rename Complete!")
+                    st.rerun() # Forces the app to rebuild 'all_fins'
 
                 st.divider()
-                # Delete Section
+                # Delete Section: This wipes the category from the DB
                 st.markdown(f"**Action: Wipe {target_f}**")
                 if st.checkbox(f"Confirm Delete all {target_f}?"):
                     if st.button(f"🔥 WIPE ALL {target_f} RECORDS", use_container_width=True):
