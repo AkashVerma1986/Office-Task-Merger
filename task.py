@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
 TASKS_URL = f"{DB_BASE_URL}/tasks.json"
 USERS_URL = f"{DB_BASE_URL}/users.json"
+CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
 FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
 IST = pytz.timezone('Asia/Kolkata') 
 
@@ -78,6 +79,9 @@ tasks_dict = requests.get(TASKS_URL, verify=False).json() or {}
 # NEW: Fetch the Master Finance List directly
 FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
 master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
+CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
+master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
+all_cats = sorted([c.upper() for c in master_cat_data.keys()])
 # Convert the dictionary keys into a sorted list
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
@@ -139,7 +143,7 @@ with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c3 = st.columns([1.5, 1, 1])
     f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins, key="main_finance_picker")
     fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
-    cat = c2.selectbox("Category", ["---", "Rate Correction", "Spelling", "Digital Sign", "Upload", "Drafting"])
+    cat = c2.selectbox("Category", ["---"] + all_cats)
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
