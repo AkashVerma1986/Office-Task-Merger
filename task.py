@@ -194,7 +194,7 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    if st.button("🚀   SUBMIT", use_container_width=True):
+    if st.button(" SUBMIT", use_container_width=True):
         # Logic Check: Ensure Finance, LAN No, and Details are present
         if fin_active != "--- SELECT ---" and lan_no and dtl_main:
             # Save the record including the new 'lan' field
@@ -332,6 +332,7 @@ for tid in keys[:150]:
                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                         "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
                     })
+                    st.session_state.edit_dtl_top = ""
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
