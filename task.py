@@ -81,9 +81,13 @@ FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
 master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
 CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
 master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
-all_cats = sorted([c.upper() for c in master_cat_data.keys()])
+all_cats = sorted([c for c in master_cat_data.keys()])
 # Convert the dictionary keys into a sorted list
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
+# --- 4. DATA FETCH (INSERT HERE) ---
+CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
+master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
+all_cats = sorted([c for c in master_cat_data.keys()]) # Removed .upper() to save as typed
 
 # --- 5. ADMIN SIDEBAR (Master Control: All Features) ---
 if user['role'] == "ADMIN":
@@ -136,11 +140,12 @@ if user['role'] == "ADMIN":
                     if st.button(f"🗑️ DELETE FROM DROPDOWN", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
                         st.rerun()
-# --- FEATURE 3: CATEGORY MASTER LIST (Dropdown Control) ---
+
+         # --- FEATURE 3: CATEGORY MASTER LIST (INSERT HERE) ---
         with st.expander("📝 Category Master List", expanded=False):
             st.markdown("### Add Category")
-            new_c_name = st.text_input("New Category Name", key="add_cat_input").upper().strip()
-            if st.button("➕ Add Category", use_container_width=True):
+            new_c_name = st.text_input("New Category Name", key="add_cat_input").strip()
+            if st.button("➕ Add Category", key="btn_add_cat", use_container_width=True):
                 if new_c_name:
                     requests.patch(CATEGORIES_URL, json={new_c_name: True})
                     st.rerun()
@@ -149,13 +154,11 @@ if user['role'] == "ADMIN":
             st.markdown("### Edit/Delete Existing")
             target_c = st.selectbox("Select Category", ["---"] + all_cats, key="admin_cat_sel")
             if target_c != "---":
-                rename_c = st.text_input(f"Rename '{target_c}' to:", key="ren_cat_input").upper().strip()
-                if st.button(f"Update Category Globally", use_container_width=True):
-                    # Update Master List
+                rename_c = st.text_input(f"Rename '{target_c}' to:", key="ren_cat_input").strip()
+                if st.button(f"Update Category Globally", key="btn_upd_cat", use_container_width=True):
                     requests.patch(CATEGORIES_URL, json={rename_c: True})
                     requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
-                    
-                    # Update all existing tasks that use this category label
+                    # Update existing tasks
                     for tid, d in tasks_dict.items():
                         if f"[{target_c}]" in d.get('task', ''):
                             new_text = d.get('task').replace(f"[{target_c}]", f"[{rename_c}]")
@@ -163,16 +166,17 @@ if user['role'] == "ADMIN":
                     st.rerun()
 
                 if st.checkbox(f"Remove '{target_c}' from List?", key="del_cat_chk"):
-                    if st.button(f"🗑️ DELETE CATEGORY", use_container_width=True):
+                    if st.button(f"🗑️ DELETE CATEGORY", key="btn_final_del_cat", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
                         st.rerun()
+
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
 st.subheader("📝 Report Correction Ledger")
 with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c3 = st.columns([1.5, 1, 1])
     f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins, key="main_finance_picker")
     fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
-    cat = c2.selectbox("Category", ["---"] + all_cats)
+    cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
