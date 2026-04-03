@@ -89,10 +89,10 @@ master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
 CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
 master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
-@st.dialog("Edit Task Details")
+@st.dialog("Edit Task Details", width="large")
 def edit_task_dialog(tid, task):
     # Added a 4th column for Category
-    ec1, ec_cat, ec_l, ec2 = st.columns([1.1, 1, 1, 1])
+    ec1, ec_cat, ec_l, ec2 = st.columns([2, 2, 2, 2])
     
     # --- 1. Finance Logic ---
     current_f = task.get('finance', "")
