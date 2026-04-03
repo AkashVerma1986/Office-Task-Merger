@@ -91,23 +91,49 @@ master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
 @st.dialog("Edit Task Details")
 def edit_task_dialog(tid, task):
-    ec1, ec_l, ec2 = st.columns([1, 1, 1])
+    # Added a 4th column for Category
+    ec1, ec_cat, ec_l, ec2 = st.columns([1.1, 1, 1, 1])
     
-    current_val = task.get('finance', "")
-    try:
-        f_idx = all_fins.index(current_val)
-    except (ValueError, IndexError):
-        f_idx = 0
-
+    # --- 1. Finance Logic ---
+    current_f = task.get('finance', "")
+    f_idx = all_fins.index(current_f) if current_f in all_fins else 0
     e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_dlg_{tid}")
+    
+    # --- 2. Category Logic (Extract [Cat] from the existing task string) ---
+    full_task_text = task.get('task', "")
+    current_c = "---"
+    clean_task_text = full_task_text
+    
+    # If the task starts with [Category], we pull it out for the dropdown
+    if "]" in full_task_text and full_task_text.startswith("["):
+        try:
+            current_c = full_task_text.split("]")[0].replace("[", "").strip()
+            clean_task_text = full_task_text.split("]", 1)[1].strip()
+        except:
+            pass
+    
+    # Find the index for the dropdown, default to 0 if not found
+    all_cats_with_default = ["---"] + all_cats
+    c_idx = all_cats_with_default.index(current_c) if current_c in all_cats_with_default else 0
+    e_cat = ec_cat.selectbox("Update Category", all_cats_with_default, index=c_idx, key=f"ec_dlg_{tid}")
+    
+    # --- 3. LAN & Priority ---
     e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_dlg_{tid}")
     e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], 
                           index=["Normal", "Medium", "High"].index(task.get('priority', 'Normal')), key=f"ep_dlg_{tid}")
-    e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_dlg_{tid}", height=250)
+    
+    # --- 4. Task Details ---
+    e_dtl = st.text_area("Update Details", value=clean_task_text, key=f"ed_dlg_{tid}", height=200)
     
     if st.button("💾 SAVE CHANGES", key=f"sv_dlg_{tid}", use_container_width=True):
+        # Re-wrap the category into the task string before saving
+        final_task_string = f"[{e_cat}] {e_dtl}" if e_cat != "---" else e_dtl
+        
         requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-            "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
+            "finance": e_fin, 
+            "lan": e_lan, 
+            "task": final_task_string, 
+            "priority": e_prio
         })
         st.rerun()
 # Convert the dictionary keys into a sorted list
