@@ -28,16 +28,16 @@ st.markdown("""
         display: flex;
         background-color: #0A0A0A;
         border: 1px solid #333333;
-        border-radius: 5px;
+        border-radius: 15px;
         margin-bottom: 12px;
         overflow: hidden;
     }
-    .galloping-bar { width: 12px; flex-shrink: 1; }
+    .galloping-bar { width: 7px; flex-shrink: 5; }
     .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
     .card-text { padding: 12px; border-bottom: 1px solid #222222; }
-    .card-footer { background-color: #111111; padding: 10px; border-top: 1px solid #222222; }
+    .card-footer { background-color: #111111; padding: 7px; border-top: 1px solid #222222; }
     
-    .edit-zone { background-color: #161616; padding: 10px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
+    .edit-zone { background-color: #161616; padding: 7px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
     
     .status-pending { background-color: #C29100 !important; }
     .status-completed { background-color: #1B5E20 !important; }
@@ -51,7 +51,7 @@ st.markdown("""
         background-color: #1A1A1A !important; 
     }
 
-    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 15px; border-radius: 10px; color: #81C784; }
+    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 10px; border-radius: 5px; color: #81C784; }
     </style>
 """, unsafe_allow_html=True)
 
