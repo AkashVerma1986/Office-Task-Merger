@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
 TASKS_URL = f"{DB_BASE_URL}/tasks.json"
 USERS_URL = f"{DB_BASE_URL}/users.json"
+FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
 IST = pytz.timezone('Asia/Kolkata') 
 
 st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
@@ -72,76 +73,64 @@ if not st.session_state.authenticated:
 
 # --- 4. DATA FETCH ---
 user = st.session_state.user_data
-# Pull fresh from Firebase
 tasks_dict = requests.get(TASKS_URL).json() or {}
 
-# This rebuilt logic ensures NO empty or 'None' categories stay in your list
-all_fins = sorted(list(set(
-    str(t.get('finance', '')).upper().strip() 
-    for t in tasks_dict.values() 
-    if t.get('finance') and str(t.get('finance')).strip() != ""
-)))
+# NEW: Fetch the Master Finance List directly
+FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
+master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
+# Convert the dictionary keys into a sorted list
+all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
 # --- 5. ADMIN SIDEBAR (Master Control: All Features) ---
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
         
-        # --- FEATURE 1: USER SLOT MANAGEMENT (LIST + ADD/DELETE) ---
+        # --- FEATURE 1: USER SLOT MANAGEMENT ---
         with st.expander("👤 User Slot Management", expanded=False):
-            # Fetch current users to show in a selection list
             users_db = requests.get(USERS_URL).json() or {}
             all_users = sorted([u for u in users_db.keys() if u != "ADMIN"])
-            
             st.markdown("### Manage Existing")
             target_user = st.selectbox("Select User to Remove", ["---"] + all_users, key="admin_user_sel")
             if target_user != "---":
                 if st.button(f"🗑️ Delete {target_user}", use_container_width=True):
                     requests.delete(f"{DB_BASE_URL}/users/{target_user}.json")
-                    st.toast(f"User {target_user} Removed")
                     st.rerun()
-            
             st.divider()
             st.markdown("### Add New User")
             nu = st.text_input("New Staff Name").upper().strip()
             if st.button("✅ Authorize New Name", use_container_width=True):
                 if nu:
                     requests.patch(f"{DB_BASE_URL}/users/{nu}.json", json={"role":"STAFF"})
-                    st.toast(f"Slot Created for {nu}")
                     st.rerun()
 
-        # --- FEATURE 2: FINANCE CATEGORY MASTER (RENAME + DEEP WIPE) ---
-        with st.expander("🛠️ Finance Category Master", expanded=False):
-            st.markdown("### Existing Categories")
-            # Select from the global 'all_fins' list
-            target_f = st.selectbox("Select Category to Edit", ["---"] + all_fins, key="admin_fin_sel")
-            
+        # --- FEATURE 2: FINANCE MASTER LIST (Dropdown Control) ---
+        with st.expander("🛠️ Finance Master List", expanded=False):
+            st.markdown("### Add to Dropdown")
+            new_f_name = st.text_input("Add New Category").upper().strip()
+            if st.button("➕ Add to Master", use_container_width=True):
+                if new_f_name:
+                    requests.patch(FINANCE_MASTER_URL, json={new_f_name: True})
+                    st.rerun()
+
+            st.divider()
+            st.markdown("### Edit/Delete Existing")
+            target_f = st.selectbox("Select Category", ["---"] + all_fins, key="admin_fin_sel")
             if target_f != "---":
-                # Rename Section
-                st.markdown(f"**Action: Rename '{target_f}'**")
-                rename_f = st.text_input(f"New Name for {target_f}").upper()
-                if st.button(f"Update Name to {rename_f}", use_container_width=True):
+                rename_f = st.text_input(f"Rename '{target_f}' to:").upper().strip()
+                if st.button(f"Update Globally", use_container_width=True):
+                    # Update Master List
+                    requests.patch(FINANCE_MASTER_URL, json={rename_f: True})
+                    requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
+                    # Update all tasks in DB
                     for tid, d in tasks_dict.items():
-                        if d.get('finance') == target_f: 
+                        if d.get('finance') == target_f:
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": rename_f})
-                    st.toast(f"Global Update: {target_f} -> {rename_f}")
                     st.rerun()
 
-                st.divider()
-                # Deep Wipe Section
-                st.markdown(f"**Action: Wipe '{target_f}'**")
-                st.warning(f"This will delete ALL tasks under {target_f}")
-                if st.checkbox(f"Confirm Wipe of {target_f}?", key=f"wipe_chk_{target_f}"):
-                    if st.button(f"🔥 DELETE ALL {target_f} RECORDS", use_container_width=True):
-                        # Find all IDs first
-                        to_delete = [tid for tid, d in tasks_dict.items() if d.get('finance') == target_f]
-                        # Execute Deletions
-                        for tid in to_delete:
-                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                        
-                        st.toast(f"Category {target_f} Wiped Successfully!")
-                        import time
-                        time.sleep(1) # Sync buffer
+                if st.checkbox(f"Remove '{target_f}' from List?"):
+                    if st.button(f"🗑️ DELETE FROM DROPDOWN", use_container_width=True):
+                        requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
                         st.rerun()
 
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
@@ -154,11 +143,16 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
+    # Inside the "PUSH TO LEDGER" button code:
     if st.button("🚀 PUSH TO LEDGER", use_container_width=True):
         if fin_active != "--- SELECT ---" and dtl_main:
+            # 1. Save the Task record
             requests.post(TASKS_URL, json={"finance": fin_active, "task": f"[{cat}] {dtl_main}", "priority": prio, "assigner": user['name'], "status": "Pending", "assigned_at": get_now_ist()})
+            # 2. Add to Master Finance List so it appears in the dropdown
+            requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+            
             st.session_state.edit_dtl_top = ""
-            st.toast("Task Pushed to Database!")
+            st.toast("Pushed and Master List Updated!")
             st.rerun()
 
 # --- 7. SEARCH & EXCEL EXPORT ---
