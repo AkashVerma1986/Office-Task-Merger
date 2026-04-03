@@ -289,15 +289,14 @@ for tid in keys[:150]:
     ''', unsafe_allow_html=True)
 
     with st.container():
+       with st.container():
         # --- INLINE EDIT SUITE ---
         if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
-                
-                # Adjusted columns to 3 to accommodate LAN No.
+                # Adjusted to 3 columns to fit LAN No.
                 ec1, ec_l, ec2 = st.columns([1, 1, 1])
                 
-                # Logic to find current finance index
                 current_val = task.get('finance', "")
                 try:
                     f_idx = all_fins.index(current_val)
@@ -305,24 +304,51 @@ for tid in keys[:150]:
                     f_idx = 0
 
                 e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_{tid}")
-                
                 # NEW: LAN No. Edit Field
                 e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_{tid}")
-                
                 e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
-                
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
                 
                 if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
-                    # Added 'lan' to the patch request to ensure it updates in DB
                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                        "finance": e_fin, 
-                        "lan": e_lan, 
-                        "task": e_dtl, 
-                        "priority": e_prio
+                        "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
                     })
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
+
+        # --- COMPLETION & ACTION CONTROLS ---
+        if t_status == "Completed":
+            st.markdown(f'''
+                <div class="completion-box">
+                    👤 <b>{task.get("completed_by")}</b> closed this <b>{task.get("work_type")}</b> task at {task.get("finished_at")}<br>
+                    📝 <i>Note: {task.get("comment", "N/A")}</i>
+                </div>
+            ''', unsafe_allow_html=True)
+        else:
+            # Re-inserting the missing action row
+            c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
+            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
+            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+            
+            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
+                new_s = "Hold" if t_status != "Hold" else "Pending"
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
+                st.rerun()
+                
+            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                    "status": "Completed", "completed_by": user['name'], 
+                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                })
+                st.rerun()
+                
+            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                if st.checkbox("🗑️", key=f"del_chk_{tid}"):
+                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                        st.rerun()
+
+        st.markdown('</div></div></div>', unsafe_allow_html=True)
         else:
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
