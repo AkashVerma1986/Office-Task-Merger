@@ -75,28 +75,50 @@ user = st.session_state.user_data
 tasks_dict = requests.get(TASKS_URL).json() or {}
 all_fins = sorted(list(set(t.get('finance', '').upper() for t in tasks_dict.values() if t.get('finance'))))
 
-# --- 5. ADMIN SIDEBAR (Slots & Finance Master) ---
+# --- 5. ADMIN SIDEBAR (Master Control: Users & Finance) ---
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
-        with st.expander("🛠️ Finance Category Master"):
-            target_f = st.selectbox("Global Finance", ["---"] + all_fins)
+        
+        # --- Section A: User Slot Management (Add & Delete) ---
+        with st.expander("👤 User Slot Management", expanded=False):
+            nu = st.text_input("Staff Name").upper().strip()
+            uc1, uc2 = st.columns(2)
+            
+            if nu:
+                if uc1.button("✅ Authorize", use_container_width=True):
+                    requests.patch(f"{DB_BASE_URL}/users/{nu}.json", json={"role":"STAFF"})
+                    st.toast(f"Slot Created for {nu}")
+                    st.rerun()
+                
+                if uc2.button("🗑️ Remove", use_container_width=True):
+                    requests.delete(f"{DB_BASE_URL}/users/{nu}.json")
+                    st.toast(f"Slot Deleted for {nu}")
+                    st.rerun()
+            else:
+                st.caption("Enter a name to manage slots")
+
+        # --- Section B: Finance Category Master (Rename & Wipe) ---
+        with st.expander("🛠️ Finance Category Master", expanded=False):
+            target_f = st.selectbox("Select Category", ["---"] + all_fins)
+            
             if target_f != "---":
                 rename_f = st.text_input(f"Rename '{target_f}' To").upper()
-                if st.button(f"Apply Rename to {target_f}"):
+                if st.button(f"Apply Rename to {target_f}", use_container_width=True):
                     for tid, d in tasks_dict.items():
                         if d.get('finance') == target_f: 
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": rename_f})
-                    st.toast(f"Renamed {target_f} to {rename_f}")
+                    st.toast(f"Updated {target_f} -> {rename_f}")
                     st.rerun()
 
                 st.markdown("---")
+                # Safety Check for Deletion
                 if st.checkbox(f"Confirm Wipe of {target_f}?"):
-                    if st.button(f"🗑️ DELETE ALL {target_f} RECORDS", use_container_width=True):
+                    if st.button(f"🔥 DELETE ALL {target_f} RECORDS", use_container_width=True):
                         to_delete = [tid for tid, d in tasks_dict.items() if d.get('finance') == target_f]
                         for tid in to_delete:
                             requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                        st.toast(f"Category {target_f} Deleted!")
+                        st.toast(f"Category {target_f} Wiped!")
                         st.rerun()
 
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
