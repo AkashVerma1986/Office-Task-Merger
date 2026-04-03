@@ -267,36 +267,48 @@ with s3:
 keys = list(filtered_df.index)
 keys.reverse()
 
+# --- 8. THE UNIFIED TASK CARDS ---
+keys = list(filtered_df.index)
+keys.reverse()
+
+# --- 8. THE UNIFIED TASK CARDS ---
+keys = list(filtered_df.index)
+keys.reverse()
+
 for tid in keys[:150]:
     task = tasks_dict[tid]
-    if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): continue
+    # Search logic
+    if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): 
+        continue
 
-    # 1. COLOR LOGIC (Dark Pink for Hold)
+    # 1. COLOR LOGIC
     t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
     if t_status == "Completed": s_color = "status-completed"
-    elif t_status == "Hold": s_color = "status-hold" # This turns the bar Dark Pink
+    elif t_status == "Hold": s_color = "status-hold"
     elif t_prio == "High" and t_status == "Pending": s_color = "status-high"
 
+    # 2. CARD HEADER (Displays Finance & LAN)
     st.markdown(f'''
         <div class="sleek-card">
             <div class="galloping-bar {s_color}"></div>
             <div class="card-body">
                 <div class="card-text">
-                    <strong style="font-size:28px;">{task.get('finance')}</strong> | <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | <small>{task.get('assigned_at')}</small><br>
+                    <strong style="font-size:28px;">{task.get('finance')}</strong> | 
+                    <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | 
+                    <small>{task.get('assigned_at')}</small><br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
     ''', unsafe_allow_html=True)
 
     with st.container():
-       with st.container():
         # --- INLINE EDIT SUITE ---
         if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
-                # Adjusted to 3 columns to fit LAN No.
                 ec1, ec_l, ec2 = st.columns([1, 1, 1])
                 
+                # Fetch current finance index
                 current_val = task.get('finance', "")
                 try:
                     f_idx = all_fins.index(current_val)
@@ -304,7 +316,6 @@ for tid in keys[:150]:
                     f_idx = 0
 
                 e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_{tid}")
-                # NEW: LAN No. Edit Field
                 e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_{tid}")
                 e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
@@ -325,16 +336,17 @@ for tid in keys[:150]:
                 </div>
             ''', unsafe_allow_html=True)
         else:
-            # Re-inserting the missing action row
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
+            # Hold Toggle
             if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
                 new_s = "Hold" if t_status != "Hold" else "Pending"
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
                 st.rerun()
                 
+            # Complete Action
             if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                     "status": "Completed", "completed_by": user['name'], 
@@ -342,33 +354,14 @@ for tid in keys[:150]:
                 })
                 st.rerun()
                 
+            # Admin Delete Option
             if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
                 if st.checkbox("🗑️", key=f"del_chk_{tid}"):
                     if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                         st.rerun()
 
-        st.markdown('</div></div></div>', unsafe_allow_html=True)
-        else:
-            c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
-            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
-            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-            
-            # THE CORRECTED HOLD BUTTON (Changes status to "Hold", Bar to Dark Pink)
-            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
-                new_s = "Hold" if t_status != "Hold" else "Pending"
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
-                st.rerun()
-                
-            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()})
-                st.rerun()
-                
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                if st.checkbox("🗑️", key=f"del_chk_{tid}"):
-                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json"); st.rerun()
-
+        # Close the card-body and sleek-card divs
         st.markdown('</div></div></div>', unsafe_allow_html=True)
     st.divider()
 
