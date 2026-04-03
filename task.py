@@ -72,11 +72,15 @@ if not st.session_state.authenticated:
 
 # --- 4. DATA FETCH ---
 user = st.session_state.user_data
-# This pulls the entire database into the app
+# Pull fresh from Firebase
 tasks_dict = requests.get(TASKS_URL).json() or {}
 
-# GLOBAL LIST GENERATOR: This scans every task and creates the unique list of Finance names
-all_fins = sorted(list(set(str(t.get('finance', '')).upper() for t in tasks_dict.values() if t.get('finance'))))
+# This rebuilt logic ensures NO empty or 'None' categories stay in your list
+all_fins = sorted(list(set(
+    str(t.get('finance', '')).upper().strip() 
+    for t in tasks_dict.values() 
+    if t.get('finance') and str(t.get('finance')).strip() != ""
+)))
 
 # --- 5. ADMIN SIDEBAR (Master Control: All Features) ---
 if user['role'] == "ADMIN":
@@ -144,7 +148,7 @@ if user['role'] == "ADMIN":
 st.subheader("📝 Report Correction Ledger")
 with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c3 = st.columns([1.5, 1, 1])
-    f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins)
+    f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins, key="main_finance_picker")
     fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
     cat = c2.selectbox("Category", ["---", "Rate Correction", "Spelling", "Digital Sign", "Upload", "Drafting"])
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
