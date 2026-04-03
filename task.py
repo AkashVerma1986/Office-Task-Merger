@@ -236,18 +236,22 @@ for tid in keys[:150]:
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
                 ec1, ec2 = st.columns(2)
-                f_idx = all_fins.index(task.get('finance'))
-            except (ValueError, IndexError):
-                f_idx = 0
-                e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f_idx_tid if 'f_idx_tid' in locals() else f"ef_{tid}")
+                
+                # Logic to find current finance index
+                current_val = task.get('finance', "")
+                try:
+                    f_idx = all_fins.index(current_val)
+                except (ValueError, IndexError):
+                    f_idx = 0
+
+                e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_{tid}")
                 e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
+                
                 if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": e_fin, "task": e_dtl, "priority": e_prio})
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="card-footer">', unsafe_allow_html=True)
         if t_status == "Completed":
             st.markdown(f'''
                 <div class="completion-box">
