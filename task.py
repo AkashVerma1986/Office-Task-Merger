@@ -213,6 +213,8 @@ with st.expander("Ledger Entry Form", expanded=True):
             requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
             
             st.session_state.edit_dtl_top = ""
+            if "main_finance_picker" in st.session_state: st.session_state.main_finance_picker = "--- SELECT ---"
+            if "main_cat_picker" in st.session_state: st.session_state.main_cat_picker = "---"
             st.toast(f"Pushed Task for LAN: {lan_no}!")
             st.rerun()
         elif not lan_no:
