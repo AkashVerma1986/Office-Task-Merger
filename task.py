@@ -309,7 +309,7 @@ for tid in keys[:150]:
                 <div class="card-text">
                     <strong style="font-size:28px;">{task.get('finance')}</strong> | 
                     <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | 
-                    <small>{task.get('assigned_at')}</small><br>
+                    <span style="color:#AAAAAA; font-size:18px;">By: {task.get('assigner', 'Unknown')} @ {task.get('assigned_at')}</span><br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
     ''', unsafe_allow_html=True)
