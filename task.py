@@ -293,7 +293,9 @@ for tid in keys[:150]:
         if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
-                ec1, ec2 = st.columns(2)
+                
+                # Adjusted columns to 3 to accommodate LAN No.
+                ec1, ec_l, ec2 = st.columns([1, 1, 1])
                 
                 # Logic to find current finance index
                 current_val = task.get('finance', "")
@@ -303,20 +305,24 @@ for tid in keys[:150]:
                     f_idx = 0
 
                 e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_{tid}")
+                
+                # NEW: LAN No. Edit Field
+                e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_{tid}")
+                
                 e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
+                
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
                 
                 if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": e_fin, "task": e_dtl, "priority": e_prio})
+                    # Added 'lan' to the patch request to ensure it updates in DB
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                        "finance": e_fin, 
+                        "lan": e_lan, 
+                        "task": e_dtl, 
+                        "priority": e_prio
+                    })
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-        if t_status == "Completed":
-            st.markdown(f'''
-                <div class="completion-box">
-                    👤 <b>{task.get("completed_by")}</b> closed this <b>{task.get("work_type")}</b> task at {task.get("finished_at")}<br>
-                    📝 <i>Note: {task.get("comment", "N/A")}</i>
-                </div>
-            ''', unsafe_allow_html=True)
         else:
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
