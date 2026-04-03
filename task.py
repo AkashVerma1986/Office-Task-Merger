@@ -173,24 +173,45 @@ if user['role'] == "ADMIN":
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
 st.subheader("📝 Report Correction Ledger")
 with st.expander("Ledger Entry Form", expanded=True):
-    c1, c2, c3 = st.columns([1.5, 1, 1])
+    # Added a 4th column for LAN No.
+    c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
+    
     f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins, key="main_finance_picker")
     fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
+    
     cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+    
+    # NEW: LAN No. Input (Mandatory)
+    lan_no = c_lan.text_input("LAN No.", placeholder="Required").strip()
+    
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    # Inside the "PUSH TO LEDGER" button code:
     if st.button("🚀 PUSH TO LEDGER", use_container_width=True):
-        if fin_active != "--- SELECT ---" and dtl_main:
-            # 1. Save the Task record
-            requests.post(TASKS_URL, json={"finance": fin_active, "task": f"[{cat}] {dtl_main}", "priority": prio, "assigner": user['name'], "status": "Pending", "assigned_at": get_now_ist()})
-            # 2. Add to Master Finance List so it appears in the dropdown
+        # Logic Check: Ensure Finance, LAN No, and Details are present
+        if fin_active != "--- SELECT ---" and lan_no and dtl_main:
+            # Save the record including the new 'lan' field
+            payload = {
+                "finance": fin_active, 
+                "lan": lan_no,
+                "task": f"[{cat}] {dtl_main}", 
+                "priority": prio, 
+                "assigner": user['name'], 
+                "status": "Pending", 
+                "assigned_at": get_now_ist()
+            }
+            requests.post(TASKS_URL, json=payload)
+            
+            # Update Master Finance List
             requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
             
             st.session_state.edit_dtl_top = ""
-            st.toast("Pushed and Master List Updated!")
+            st.toast(f"Pushed Task for LAN: {lan_no}!")
             st.rerun()
+        elif not lan_no:
+            st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
+        else:
+            st.warning("⚠️ Please fill in Finance and Task Details.")
 
 # --- 7. SEARCH, DATE FILTER & EXCEL EXPORT ---
 st.divider()
@@ -262,7 +283,7 @@ for tid in keys[:150]:
             <div class="galloping-bar {s_color}"></div>
             <div class="card-body">
                 <div class="card-text">
-                    <strong style="font-size:28px;">{task.get('finance')}</strong> | <small>{task.get('assigned_at')}</small><br>
+                    <strong style="font-size:28px;">{task.get('finance')}</strong> | <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | <small>{task.get('assigned_at')}</small><br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
     ''', unsafe_allow_html=True)
@@ -307,7 +328,7 @@ for tid in keys[:150]:
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
                 st.rerun()
                 
-            if c_done.button("✅ Mark Done", key=f"d_{tid}", use_container_width=True):
+            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()})
                 st.rerun()
                 
