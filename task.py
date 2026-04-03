@@ -155,19 +155,60 @@ with st.expander("Ledger Entry Form", expanded=True):
             st.toast("Pushed and Master List Updated!")
             st.rerun()
 
-# --- 7. SEARCH & EXCEL EXPORT ---
+# --- 7. SEARCH, DATE FILTER & EXCEL EXPORT ---
 st.divider()
-s1, s2, s3 = st.columns([2, 1, 1])
-search = s1.text_input("🔍 Search (Finance, Task, or Staff)").lower()
-if s2.button("🔄 Refresh Data"): st.rerun()
-if s3.button("📥 Export to Excel", use_container_width=True):
-    df = pd.DataFrame.from_dict(tasks_dict, orient='index')
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine='openpyxl') as wr: df.to_excel(wr)
-    st.download_button("Download RAAS_Report.xlsx", buf.getvalue(), "RAAS_Report.xlsx")
+c_date, c_search = st.columns([1, 1])
+with c_date:
+    date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-# --- 8. THE UNIFIED TASK CARDS (150-Item Buffer) ---
-keys = list(tasks_dict.keys()); keys.reverse()
+# Convert dictionary to DataFrame for filtering
+df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
+
+if not df_all.empty:
+    # Convert 'assigned_at' strings to actual datetime objects for filtering
+    df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
+    
+    # Apply Date Filter if two dates are selected
+    if len(date_range) == 2:
+        start_date, end_date = date_range
+        df_all = df_all[(df_all['date_dt'].dt.date >= start_date) & (df_all['date_dt'].dt.date <= end_date)]
+
+s1, s2, s3 = st.columns([2, 1, 1])
+search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar").lower()
+
+# Apply Search Filter
+filtered_df = df_all.copy()
+if search:
+    filtered_df = filtered_df[
+        filtered_df['finance'].str.contains(search, case=False, na=False) | 
+        filtered_df['task'].str.contains(search, case=False, na=False)
+    ]
+
+if s2.button("🔄 Refresh Data"): 
+    st.rerun()
+
+# Fixed Export Logic using Download Button
+with s3:
+    if not filtered_df.empty:
+        buf = io.BytesIO()
+        export_output = filtered_df.drop(columns=['date_dt'], errors='ignore')
+        with pd.ExcelWriter(buf, engine='openpyxl') as wr:
+            export_output.to_excel(wr, index=True)
+        
+        st.download_button(
+            label="📥 Download Excel",
+            data=buf.getvalue(),
+            file_name=f"RAAS_Export_{datetime.now().strftime('%d_%b')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    else:
+        st.button("📥 No Data", disabled=True, use_container_width=True)
+
+# --- 8. THE UNIFIED TASK CARDS ---
+# Use the filtered index so the cards match your search/date filters
+keys = list(filtered_df.index)
+keys.reverse()
 
 for tid in keys[:150]:
     task = tasks_dict[tid]
