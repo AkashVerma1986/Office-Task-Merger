@@ -206,7 +206,6 @@ with s3:
         st.button("📥 No Data", disabled=True, use_container_width=True)
 
 # --- 8. THE UNIFIED TASK CARDS ---
-# Use the filtered index so the cards match your search/date filters
 keys = list(filtered_df.index)
 keys.reverse()
 
@@ -214,10 +213,11 @@ for tid in keys[:150]:
     task = tasks_dict[tid]
     if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): continue
 
+    # 1. COLOR LOGIC (Dark Pink for Hold)
     t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
     if t_status == "Completed": s_color = "status-completed"
-    elif t_status == "Hold": s_color = "status-hold"
+    elif t_status == "Hold": s_color = "status-hold" # This turns the bar Dark Pink
     elif t_prio == "High" and t_status == "Pending": s_color = "status-high"
 
     st.markdown(f'''
@@ -231,7 +231,7 @@ for tid in keys[:150]:
     ''', unsafe_allow_html=True)
 
     with st.container():
-        # --- INLINE EDIT SUITE (The Integrated Feature) ---
+        # --- INLINE EDIT SUITE ---
         if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
                 st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
@@ -241,11 +241,6 @@ for tid in keys[:150]:
                 e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
                 if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": e_fin, "task": e_dtl, "priority": e_prio})
-                    st.toast("Changes Saved Successfully!")
-                    st.rerun()
-                if st.button("⬆️ SEND TO TOP FORM", key=f"top_{tid}", use_container_width=True):
-                    st.session_state.edit_dtl_top = task.get('task')
-                    components.html("<script>window.parent.document.querySelector('section.main').scrollTo(0, 0);</script>", height=0)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -257,23 +252,19 @@ for tid in keys[:150]:
                     📝 <i>Note: {task.get("comment", "N/A")}</i>
                 </div>
             ''', unsafe_allow_html=True)
-            if user['role'] == "ADMIN":
-                if st.button("🗑️ Admin Delete Record", key=f"adm_del_{tid}"):
-                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json"); st.rerun()
         else:
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
+            # THE CORRECTED HOLD BUTTON (Changes status to "Hold", Bar to Dark Pink)
             if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
                 new_s = "Hold" if t_status != "Hold" else "Pending"
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
-                st.toast(f"Status changed to {new_s}")
                 st.rerun()
                 
             if c_done.button("✅ Mark Done", key=f"d_{tid}", use_container_width=True):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()})
-                st.toast("Task Completed!")
                 st.rerun()
                 
             if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
