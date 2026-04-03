@@ -78,18 +78,19 @@ tasks_dict = requests.get(TASKS_URL).json() or {}
 # GLOBAL LIST GENERATOR: This scans every task and creates the unique list of Finance names
 all_fins = sorted(list(set(str(t.get('finance', '')).upper() for t in tasks_dict.values() if t.get('finance'))))
 
-# --- 5. ADMIN SIDEBAR (Master Control: User & Finance Lists) ---
+# --- 5. ADMIN SIDEBAR (Master Control: All Features) ---
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
         
-        # --- 1. USER MANAGEMENT ---
+        # --- FEATURE 1: USER SLOT MANAGEMENT (LIST + ADD/DELETE) ---
         with st.expander("👤 User Slot Management", expanded=False):
+            # Fetch current users to show in a selection list
             users_db = requests.get(USERS_URL).json() or {}
             all_users = sorted([u for u in users_db.keys() if u != "ADMIN"])
             
-            st.subheader("Manage Existing Users")
-            target_user = st.selectbox("Select User to Remove", ["---"] + all_users)
+            st.markdown("### Manage Existing")
+            target_user = st.selectbox("Select User to Remove", ["---"] + all_users, key="admin_user_sel")
             if target_user != "---":
                 if st.button(f"🗑️ Delete {target_user}", use_container_width=True):
                     requests.delete(f"{DB_BASE_URL}/users/{target_user}.json")
@@ -97,7 +98,7 @@ if user['role'] == "ADMIN":
                     st.rerun()
             
             st.divider()
-            st.subheader("Add New User")
+            st.markdown("### Add New User")
             nu = st.text_input("New Staff Name").upper().strip()
             if st.button("✅ Authorize New Name", use_container_width=True):
                 if nu:
@@ -105,31 +106,38 @@ if user['role'] == "ADMIN":
                     st.toast(f"Slot Created for {nu}")
                     st.rerun()
 
-        # --- 2. FINANCE CATEGORY MASTER (Global Updates) ---
+        # --- FEATURE 2: FINANCE CATEGORY MASTER (RENAME + DEEP WIPE) ---
         with st.expander("🛠️ Finance Category Master", expanded=False):
-            st.subheader("Existing Categories")
-            target_f = st.selectbox("Select Category to Edit", ["---"] + all_fins)
+            st.markdown("### Existing Categories")
+            # Select from the global 'all_fins' list
+            target_f = st.selectbox("Select Category to Edit", ["---"] + all_fins, key="admin_fin_sel")
             
             if target_f != "---":
-                # Rename Section: This updates the name in every task in the DB
-                st.markdown(f"**Action: Rename {target_f}**")
+                # Rename Section
+                st.markdown(f"**Action: Rename '{target_f}'**")
                 rename_f = st.text_input(f"New Name for {target_f}").upper()
                 if st.button(f"Update Name to {rename_f}", use_container_width=True):
                     for tid, d in tasks_dict.items():
                         if d.get('finance') == target_f: 
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"finance": rename_f})
-                    st.toast("✅ Global Rename Complete!")
-                    st.rerun() # Forces the app to rebuild 'all_fins'
+                    st.toast(f"Global Update: {target_f} -> {rename_f}")
+                    st.rerun()
 
                 st.divider()
-                # Delete Section: This wipes the category from the DB
-                st.markdown(f"**Action: Wipe {target_f}**")
-                if st.checkbox(f"Confirm Delete all {target_f}?"):
-                    if st.button(f"🔥 WIPE ALL {target_f} RECORDS", use_container_width=True):
+                # Deep Wipe Section
+                st.markdown(f"**Action: Wipe '{target_f}'**")
+                st.warning(f"This will delete ALL tasks under {target_f}")
+                if st.checkbox(f"Confirm Wipe of {target_f}?", key=f"wipe_chk_{target_f}"):
+                    if st.button(f"🔥 DELETE ALL {target_f} RECORDS", use_container_width=True):
+                        # Find all IDs first
                         to_delete = [tid for tid, d in tasks_dict.items() if d.get('finance') == target_f]
+                        # Execute Deletions
                         for tid in to_delete:
                             requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                        st.toast(f"Category {target_f} Deleted!")
+                        
+                        st.toast(f"Category {target_f} Wiped Successfully!")
+                        import time
+                        time.sleep(1) # Sync buffer
                         st.rerun()
 
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
