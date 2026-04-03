@@ -89,6 +89,27 @@ master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
 CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
 master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
+@st.dialog("Edit Task Details")
+def edit_task_dialog(tid, task):
+    ec1, ec_l, ec2 = st.columns([1, 1, 1])
+    
+    current_val = task.get('finance', "")
+    try:
+        f_idx = all_fins.index(current_val)
+    except (ValueError, IndexError):
+        f_idx = 0
+
+    e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_dlg_{tid}")
+    e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_dlg_{tid}")
+    e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], 
+                          index=["Normal", "Medium", "High"].index(task.get('priority', 'Normal')), key=f"ep_dlg_{tid}")
+    e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_dlg_{tid}", height=250)
+    
+    if st.button("💾 SAVE CHANGES", key=f"sv_dlg_{tid}", use_container_width=True):
+        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+            "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
+        })
+        st.rerun()
 # Convert the dictionary keys into a sorted list
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 # --- 4. DATA FETCH (INSERT HERE) ---
@@ -317,33 +338,8 @@ for tid in keys[:150]:
     with st.container():
         # --- INLINE EDIT SUITE ---
         if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
-            if st.checkbox(f"✏️ Modify Task", key=f"mod_{tid}"):
-                st.markdown('<div class="edit-zone">', unsafe_allow_html=True)
-                ec1, ec_l, ec2 = st.columns([1, 1, 1])
-                
-                # Fetch current finance index
-                current_val = task.get('finance', "")
-                try:
-                    f_idx = all_fins.index(current_val)
-                except (ValueError, IndexError):
-                    f_idx = 0
-
-                e_fin = ec1.selectbox("Update Finance", all_fins, index=f_idx, key=f"ef_{tid}")
-                e_lan = ec_l.text_input("Update LAN No.", value=task.get('lan', ""), key=f"elan_{tid}")
-                e_prio = ec2.selectbox("Update Priority", ["Normal", "Medium", "High"], index=["Normal", "Medium", "High"].index(t_prio), key=f"ep_{tid}")
-                e_dtl = st.text_area("Update Details", value=task.get('task'), key=f"ed_{tid}")
-                
-                if st.button("💾 SAVE CHANGES", key=f"sv_{tid}", use_container_width=True):
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                        "finance": e_fin, "lan": e_lan, "task": e_dtl, "priority": e_prio
-                    })
-                    # Clear top form state
-                    st.session_state.edit_dtl_top = ""
-                    for key in ["main_finance_picker", "main_cat_picker"]:
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+            if st.button(f"✏️ Modify Task", key=f"mod_btn_{tid}"):
+                edit_task_dialog(tid, task)
 
         # --- COMPLETION & ACTION CONTROLS ---
         if t_status == "Completed":
