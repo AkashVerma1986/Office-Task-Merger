@@ -241,7 +241,7 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    if st.button("🚀    SUBMIT", use_container_width=True):
+    if st.button("    SUBMIT", use_container_width=True):
         if fin_active != "--- SELECT ---" and lan_no and dtl_main:
             payload = {
                 "finance": fin_active, 
@@ -272,68 +272,74 @@ with st.expander("Ledger Entry Form", expanded=True):
         else:
             st.warning("⚠️ Please fill in Finance and Task Details.")
 
-# --- 7. SEARCH, DATE FILTER & EXCEL EXPORT ---
+# --- 7. SEARCH, DATE FILTER, SORTING & EXCEL EXPORT ---
 st.divider()
+
+# New Filter Dropdown
+view_filter = st.selectbox(
+    "📂 View Filter", 
+    ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
+    key="view_filter_main"
+)
+
 c_date, c_search = st.columns([1, 1])
 with c_date:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-# Convert dictionary to DataFrame for filtering
+# Convert dictionary to DataFrame
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 
 if not df_all.empty:
-    # Convert 'assigned_at' strings to actual datetime objects for filtering
+    # Convert 'assigned_at' strings to actual datetime objects
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
-    
-    # Apply Date Filter if two dates are selected
+    filtered_df = df_all.copy()
+
+    # 1. Apply View Filter Logic
+    today_dt = datetime.now(IST).date()
+    if view_filter == "Pending":
+        filtered_df = filtered_df[filtered_df['status'] == "Pending"]
+    elif view_filter == "Hold":
+        filtered_df = filtered_df[filtered_df['status'] == "Hold"]
+    elif view_filter == "Completed":
+        filtered_df = filtered_df[filtered_df['status'] == "Completed"]
+    elif view_filter == "Today's":
+        filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
+    elif view_filter == "Yesterday":
+        yesterday = today_dt - pd.Timedelta(days=1)
+        filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
+
+    # 2. Search Filter Logic
+    s1, s2, s3 = st.columns([2, 1, 1])
+    search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar").lower()
+    if search:
+        filtered_df = filtered_df[
+            (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
+            (filtered_df['task'].str.contains(search, case=False, na=False)) |
+            (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
+        ]
+
+    # 3. Apply Priority Sorting (High -> Medium -> Normal)
+    prio_map = {"High": 0, "Medium": 1, "Normal": 2}
+    filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
+    # Sort by Priority first, then by Date (Newest first)
+    filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
+
+    # 4. Apply Date Range Filter
     if len(date_range) == 2:
         start_date, end_date = date_range
-        df_all = df_all[(df_all['date_dt'].dt.date >= start_date) & (df_all['date_dt'].dt.date <= end_date)]
+        filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
-s1, s2, s3 = st.columns([2, 1, 1])
-search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar").lower()
-
-# Apply Search Filter
-filtered_df = df_all.copy()
-if search:
-    filtered_df = filtered_df[
-        (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
-        (filtered_df['task'].str.contains(search, case=False, na=False)) |
-	(filtered_df['lan'].astype(str).str.contains(search, case=False, na=False)) # Added LAN search
-    ]
-
-if s2.button("🔄 Refresh Data"): 
-    st.rerun()
-
-# Fixed Export Logic using Download Button
-with s3:
-    if not filtered_df.empty:
+    # 5. Refresh & Export Buttons
+    if s2.button("🔄 Refresh Data"): st.rerun()
+    with s3:
         buf = io.BytesIO()
-        export_output = filtered_df.drop(columns=['date_dt'], errors='ignore')
         with pd.ExcelWriter(buf, engine='openpyxl') as wr:
-            export_output.to_excel(wr, index=True)
-        
-        st.download_button(
-            label="📥 Download Excel",
-            data=buf.getvalue(),
-            file_name=f"RAAS_Export_{datetime.now().strftime('%d_%b')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-    else:
-        st.button("📥 No Data", disabled=True, use_container_width=True)
+            filtered_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
+        st.download_button(label="📥 Excel", data=buf.getvalue(), file_name="Export.xlsx", use_container_width=True)
 
 # --- 8. THE UNIFIED TASK CARDS ---
-keys = list(filtered_df.index)
-keys.reverse()
-
-# --- 8. THE UNIFIED TASK CARDS ---
-keys = list(filtered_df.index)
-keys.reverse()
-
-# --- 8. THE UNIFIED TASK CARDS ---
-keys = list(filtered_df.index)
-keys.reverse()
+keys = list(filtered_df.index) if not filtered_df.empty else []
+# Note: Do NOT use keys.reverse() here, as the sorting is already handled above.
 
 for tid in keys[:150]:
     task = tasks_dict[tid]
