@@ -25,24 +25,24 @@ st.markdown("""
     .main { background-color: #000000; }
     .stApp { background-color: #000000; color: #E0E0E0; }
     
-    /* ENHANCED BUTTON VISIBILITY */
+    /* MATTE LIGHT-ON-DARK COMBINATION */
     .stButton > button {
-        background-color: #1E1E1E !important;
-        color: #FFFFFF !important;
-        border: 2px solid #444444 !important;
-        border-radius: 10px !important;
+        background-color: #E0E0E0 !important; /* Matte Light Grey */
+        color: #1A1A1A !important;            /* Dark Charcoal Text */
+        border: 1px solid #CCCCCC !important;
+        border-radius: 4px !important;
         padding: 10px 20px !important;
-        transition: all 0.3s ease !important;
-        font-weight: bold !important;
+        font-weight: 700 !important;
         width: 100%;
+        transition: none !important;          /* Keeps it Matte */
+        text-transform: uppercase;
     }
 
-    /* Hover effect: Glow and Border Change */
     .stButton > button:hover {
-        border-color: #00FFCC !important; 
-        background-color: #2D2D2D !important;
-        box-shadow: 0px 0px 12px rgba(0, 255, 204, 0.3);
-        color: #00FFCC !important;
+        background-color: #FFFFFF !important; /* Pure White on hover */
+        color: #000000 !important;            /* Pure Black Text */
+        border-color: #FFFFFF !important;
+        box-shadow: none !important;
     }
 
     /* Cards and Status Colors */
