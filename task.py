@@ -20,10 +20,32 @@ st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 # --- 2. THE ULTIMATE CSS (Galloping Bar + 22px Font) ---
 st.markdown("""
     <style>
+    /* Global Font and Background */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { font-size: 24px !important; } 
     .main { background-color: #000000; }
     .stApp { background-color: #000000; color: #E0E0E0; }
     
+    /* ENHANCED BUTTON VISIBILITY */
+    .stButton > button {
+        background-color: #1E1E1E !important;
+        color: #FFFFFF !important;
+        border: 2px solid #444444 !important;
+        border-radius: 10px !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease !important;
+        font-weight: bold !important;
+        width: 100%;
+    }
+
+    /* Hover effect: Glow and Border Change */
+    .stButton > button:hover {
+        border-color: #00FFCC !important; 
+        background-color: #2D2D2D !important;
+        box-shadow: 0px 0px 12px rgba(0, 255, 204, 0.3);
+        color: #00FFCC !important;
+    }
+
+    /* Cards and Status Colors */
     .sleek-card {
         display: flex;
         background-color: #0A0A0A;
@@ -32,23 +54,21 @@ st.markdown("""
         margin-bottom: 12px;
         overflow: hidden;
     }
-    .galloping-bar { width: 7px; flex-shrink: 5; }
+    .gallocation-bar { width: 7px; flex-shrink: 5; }
     .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
     .card-text { padding: 12px; border-bottom: 1px solid #222222; }
     .card-footer { background-color: #111111; padding: 7px; border-top: 1px solid #222222; }
-    
-    .edit-zone { background-color: #161616; padding: 7px; border-top: 1px dashed #444; border-bottom: 1px dashed #444; }
     
     .status-pending { background-color: #C29100 !important; }
     .status-completed { background-color: #1B5E20 !important; }
     .status-hold { background-color: #C71585 !important; }
     .status-high { background-color: #B71C1C !important; }
+
     /* Fix for dropdown visibility */
-    div[data-baseweb="select"] > div, 
-    div[aria-selected="true"], 
-    li[role="option"] { 
-        color: #FFFFFF !important; 
-        background-color: #1A1A1A !important; 
+    div[data-baseweb="select"] > div {
+        background-color: #1A1A1A !important;
+        color: white !important;
+        border: 1px solid #444 !important;
     }
 
     .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 10px; border-radius: 5px; color: #81C784; }
