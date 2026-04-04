@@ -372,7 +372,8 @@ for tid in keys[:150]:
 
     with st.container():
         # --- INLINE EDIT SUITE ---
-        if t_status != "Completed" and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
+        # Show Modify button if status is Pending OR Hold
+        if t_status in ["Pending", "Hold"] and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.button(f"✏️ Modify Task", key=f"mod_btn_{tid}"):
                 edit_task_dialog(tid, task)
 
@@ -385,6 +386,7 @@ for tid in keys[:150]:
                 </div>
             ''', unsafe_allow_html=True)
         else:
+            # Shows for BOTH "Pending" and "Hold" statuses
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
@@ -393,23 +395,18 @@ for tid in keys[:150]:
             h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
-                    # Action: Putting on Hold
-                    h_payload = {
-                        "status": "Hold", 
-                        "comment": note, 
-                        "hold_by": user['name'], 
-                        "hold_at": get_now_ist()
-                    }
+                    h_payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                 else:
-                    # Action: Resuming to Pending
-                    h_payload = {
-                        "status": "Pending", 
-                        "comment": note, 
-                        "hold_by": None, 
-                        "hold_at": None
-                    }
-                
+                    h_payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
+                st.rerun()
+                
+            # Complete Action (Now visible even if status is Hold)
+            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                    "status": "Completed", "completed_by": user['name'], 
+                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                })
                 st.rerun()
                 
             # Admin Delete Option
