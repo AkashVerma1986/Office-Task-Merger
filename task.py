@@ -354,7 +354,9 @@ for tid in keys[:150]:
     elif t_status == "Hold": s_color = "status-hold"
     elif t_prio == "High" and t_status == "Pending": s_color = "status-high"
 
-    # 2. CARD HEADER (Displays Finance & LAN)
+    # 2. CARD HEADER (With Hold Tracking)
+    hold_info = f' | <span style="color:#FF69B4;">⏸️ Hold by: {task.get("hold_by", "N/A")} @ {task.get("hold_at", "N/A")}</span>' if t_status == "Hold" else ""
+
     st.markdown(f'''
         <div class="sleek-card">
             <div class="galloping-bar {s_color}"></div>
@@ -362,7 +364,8 @@ for tid in keys[:150]:
                 <div class="card-text">
                     <strong style="font-size:28px;">{task.get('finance')}</strong> | 
                     <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | 
-                    <span style="color:#AAAAAA; font-size:18px;">By: {task.get('assigner', 'Unknown')} @ {task.get('assigned_at')}</span><br>
+                    <span style="color:#AAAAAA; font-size:18px;">By: {task.get('assigner', 'Unknown')} @ {task.get('assigned_at')}</span>
+                    {hold_info}<br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
     ''', unsafe_allow_html=True)
@@ -386,18 +389,27 @@ for tid in keys[:150]:
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            # Hold Toggle
-            if c_hold.button("⏸️ Hold" if t_status != "Hold" else "▶️ Unhold", key=f"h_{tid}", use_container_width=True):
-                new_s = "Hold" if t_status != "Hold" else "Pending"
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={"status": new_s, "comment": note})
-                st.rerun()
+            # Hold Toggle Logic
+            h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
+            if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                if t_status != "Hold":
+                    # Action: Putting on Hold
+                    h_payload = {
+                        "status": "Hold", 
+                        "comment": note, 
+                        "hold_by": user['name'], 
+                        "hold_at": get_now_ist()
+                    }
+                else:
+                    # Action: Resuming to Pending
+                    h_payload = {
+                        "status": "Pending", 
+                        "comment": note, 
+                        "hold_by": None, 
+                        "hold_at": None
+                    }
                 
-            # Complete Action
-            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                    "status": "Completed", "completed_by": user['name'], 
-                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                })
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
                 st.rerun()
                 
             # Admin Delete Option
