@@ -87,28 +87,45 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. AUTH & HARDWARE LOCK ---
+# --- 3. AUTH & DEVICE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
-if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
-if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 
-def get_now_ist(): return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
+def get_device_id():
+    # Fingerprint: Browser Agent + IP Info (if available)
+    return f"{st.context.headers.get('User-Agent', 'unknown')}"
 
 if not st.session_state.authenticated:
     st.title("🔐 RAAS SECURE ACCESS")
     name_in = st.text_input("Name").upper().strip()
     pwd_in = st.text_input("Password", type="password")
+    
     if st.button("LOGIN"):
         users_db = requests.get(USERS_URL).json() or {}
         is_admin = (pwd_in == "1586")
+        dev_id = get_device_id()
+
         if name_in and (is_admin or pwd_in == "1234"):
-            if name_in not in users_db and not is_admin:
-                st.error("🚫 Access Denied. No Slot.")
-            else:
-                st.session_state.user_data = {"name": name_in, "role": "ADMIN" if is_admin else "STAFF"}
+            user_entry = users_db.get(name_in, {})
+            # Ensure these are lists even if they don't exist yet
+            approved_devices = user_entry.get("approved_devices", []) if isinstance(user_entry.get("approved_devices"), list) else []
+            pending_devices = user_entry.get("pending_devices", []) if isinstance(user_entry.get("pending_devices"), list) else []
+
+            if is_admin:
+                st.session_state.user_data = {"name": name_in, "role": "ADMIN"}
                 st.session_state.authenticated = True
-                st.toast(f"Welcome, {name_in}!")
                 st.rerun()
+            elif name_in in users_db:
+                if dev_id in approved_devices:
+                    st.session_state.user_data = {"name": name_in, "role": "STAFF"}
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    if dev_id not in pending_devices:
+                        pending_devices.append(dev_id)
+                        requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending_devices})
+                    st.error("🚫 Device not approved. Contact Admin to authorize this device.")
+            else:
+                st.error("🚫 Access Denied. No Slot.")
     st.stop()
 
 # --- 4. DATA FETCH ---
@@ -179,6 +196,32 @@ all_cats = sorted([c for c in master_cat_data.keys()]) # Removed .upper() to sav
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
+        
+        # --- FEATURE: DEVICE APPROVALS ---
+        with st.expander("📱 Device Approval Requests", expanded=False):
+            users_db = requests.get(USERS_URL).json() or {}
+            found_request = False
+            for u_name, u_data in users_db.items():
+                pending = u_data.get("pending_devices", [])
+                approved = u_data.get("approved_devices", [])
+                
+                if pending and isinstance(pending, list):
+                    found_request = True
+                    st.write(f"**User:** {u_name}")
+                    st.caption(f"Approved: {len(approved)}/2")
+                    for d_id in pending:
+                        if st.button(f"✅ Approve Device for {u_name}", key=f"app_{u_name}_{d_id}"):
+                            if len(approved) < 2:
+                                approved.append(d_id)
+                                pending.remove(d_id)
+                                requests.patch(f"{DB_BASE_URL}/users/{u_name}.json", 
+                                               json={"approved_devices": approved, "pending_devices": pending})
+                                st.success(f"Device Linked to {u_name}!")
+                                st.rerun()
+                            else:
+                                st.error("User already has 2 devices!")
+            if not found_request:
+                st.info("No pending device requests.")
         
         # --- FEATURE 1: USER SLOT MANAGEMENT ---
         with st.expander("👤 User Slot Management", expanded=False):
