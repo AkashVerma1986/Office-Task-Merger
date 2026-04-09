@@ -443,11 +443,13 @@ for tid in keys[:150]:
                 </div>
             ''', unsafe_allow_html=True)
         else:
-            # Action Controls (Buttons/Inputs)
+            # Action Controls (Inside the boundary)
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
+            # --- 1. DYNAMIC HOLD BUTTON ---
+            # Changes label and uses a standard button
             h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
@@ -457,7 +459,9 @@ for tid in keys[:150]:
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
                 st.rerun()
                 
-            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
+            # --- 2. DYNAMIC COMPLETE BUTTON ---
+            # type="primary" usually highlights the button in your theme's accent color
+            if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True, type="primary"):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                     "status": "Completed", "completed_by": user['name'], 
                     "work_type": w_type, "comment": note, "finished_at": get_now_ist()
