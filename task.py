@@ -439,12 +439,38 @@ if not df_all.empty:
         filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
 
     # 6. REFRESH & EXPORT
+    # 6. REFRESH & EXPORT
     if s2.button("🔄 Refresh Data"): st.rerun()
     with s3:
+        # Create a copy for export to avoid messing up the UI display
+        export_df = filtered_df.copy()
+        
+        # LOGIC TO EXTRACT CATEGORY FROM THE [TEXT]
+        def extract_cat(text):
+            if isinstance(text, str) and text.startswith("[") and "]" in text:
+                return text.split("]")[0].replace("[", "").strip()
+            return "None"
+
+        def clean_task(text):
+            if isinstance(text, str) and text.startswith("[") and "]" in text:
+                return text.split("]", 1)[1].strip()
+            return text
+
+        # Add specific Category column and clean the Task column for Excel
+        export_df['Category'] = export_df['task'].apply(extract_cat)
+        export_df['task'] = export_df['task'].apply(clean_task)
+
+        # Drop internal columns and export
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine='openpyxl') as wr:
-            filtered_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
-        st.download_button(label="📥 Excel", data=buf.getvalue(), file_name=f"Export_{view_filter}.xlsx", use_container_width=True)
+            export_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
+        
+        st.download_button(
+            label="📥 Excel", 
+            data=buf.getvalue(), 
+            file_name=f"Export_{view_filter}.xlsx", 
+            use_container_width=True
+        )
 
 # --- 8. THE UNIFIED TASK CARDS ---
 keys = list(filtered_df.index) if not filtered_df.empty else []
