@@ -396,18 +396,14 @@ if not df_all.empty:
 
 # --- 8. THE UNIFIED TASK CARDS ---
 keys = list(filtered_df.index) if not filtered_df.empty else []
-# Note: Do NOT use keys.reverse() here, as the sorting is already handled above.
 
 for tid in keys[:150]:
     task = tasks_dict[tid]
-    # Search logic
-    if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): 
-        continue
-
-    # 1. COLOR LOGIC (Updated for Boundary)
+    
+    # 1. COLOR LOGIC (Boundary + Bar)
     t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
-    b_color = "border-pending" # New boundary class
+    b_color = "border-pending"
     
     if t_status == "Completed": 
         s_color = "status-completed"
@@ -419,7 +415,7 @@ for tid in keys[:150]:
         s_color = "status-high"
         b_color = "border-high"
 
-    # 2. CARD HEADER (Added b_color class to the sleek-card div)
+    # 2. CARD HEADER (Starts the boundary)
     hold_info = f' | <span style="color:#FF69B4;">⏸️ Hold by: {task.get("hold_by", "N/A")} @ {task.get("hold_at", "N/A")}</span>' if t_status == "Hold" else ""
 
     st.markdown(f'''
@@ -435,28 +431,27 @@ for tid in keys[:150]:
                 </div>
     ''', unsafe_allow_html=True)
 
+    # --- 3. INLINE CONTENT (Inside Boundary) ---
     with st.container():
-        # --- INLINE EDIT SUITE ---
-        # Show Modify button if status is Pending OR Hold
+        # Modify Button
         if t_status in ["Pending", "Hold"] and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.button(f"✏️ Modify Task", key=f"mod_btn_{tid}"):
                 edit_task_dialog(tid, task)
 
-        # --- COMPLETION & ACTION CONTROLS ---
+        # Completion Info
         if t_status == "Completed":
             st.markdown(f'''
-                <div class="completion-box">
+                <div class="completion-box" style="border-top: 1px solid #eee; margin: 0px; border-radius: 0px; background-color: #E9F7EF; padding: 15px;">
                     👤 <b>{task.get("completed_by")}</b> closed this <b>{task.get("work_type")}</b> task at {task.get("finished_at")}<br>
                     📝 <i>Note: {task.get("comment", "N/A")}</i>
                 </div>
             ''', unsafe_allow_html=True)
         else:
-            # Shows for BOTH "Pending" and "Hold" statuses
+            # Action Controls (Buttons/Inputs)
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            # Hold Toggle Logic
             h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
@@ -466,7 +461,6 @@ for tid in keys[:150]:
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
                 st.rerun()
                 
-            # Complete Action (Now visible even if status is Hold)
             if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                     "status": "Completed", "completed_by": user['name'], 
@@ -474,15 +468,14 @@ for tid in keys[:150]:
                 })
                 st.rerun()
                 
-            # Admin Delete Option
             if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
                 if st.checkbox("🗑️", key=f"del_chk_{tid}"):
                     if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                         st.rerun()
 
-        # Close the card-body and sleek-card divs
-        st.markdown('</div></div></div>', unsafe_allow_html=True)
+    # --- 4. THE CLOSING TAGS (Must be after the container) ---
+    st.markdown('</div></div>', unsafe_allow_html=True)
     st.divider()
 
 if st.sidebar.button("🚪 LOGOUT"):
