@@ -307,7 +307,6 @@ with st.expander("Ledger Entry Form", expanded=True):
 # --- 7. SEARCH, DATE FILTER, SORTING & EXCEL EXPORT ---
 st.divider()
 
-# New Filter Dropdown
 view_filter = st.selectbox(
     "📂 View Filter", 
     ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
@@ -318,35 +317,13 @@ c_date, c_search = st.columns([1, 1])
 with c_date:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-# Convert dictionary to DataFrame
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 
 if not df_all.empty:
-    # Convert 'assigned_at' strings to actual datetime objects
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
     filtered_df = df_all.copy()
     
-    # --- DASHBOARD SUMMARY ---
-    st.markdown("### 📊 Live Status Overview")
-    db_c1, db_c2, db_c3, db_c4, db_c5 = st.columns(5)
-    
-    with db_c1:
-        st.metric("Total", len(filtered_df))
-    with db_c2:
-        p_count = len(filtered_df[filtered_df['status'] == "Pending"])
-        st.metric("⏳ Pending", p_count)
-    with db_c3:
-        h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
-        st.metric("🔥 High Prio", h_prio)
-    with db_c4:
-        h_count = len(filtered_df[filtered_df['status'] == "Hold"])
-        st.metric("⏸️ Hold", h_count)
-    with db_c5:
-        c_count = len(filtered_df[filtered_df['status'] == "Completed"])
-        st.metric("✅ Done", c_count)
-    st.divider()
-
-    # 1. Apply View Filter Logic
+    # 1. APPLY VIEW FILTER LOGIC FIRST
     today_dt = datetime.now(IST).date()
     if view_filter == "Pending":
         filtered_df = filtered_df[filtered_df['status'] == "Pending"]
@@ -360,7 +337,33 @@ if not df_all.empty:
         yesterday = today_dt - pd.Timedelta(days=1)
         filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
 
-    # 2. Search Filter Logic
+    # 2. APPLY DATE RANGE FILTER
+    if len(date_range) == 2:
+        start_date, end_date = date_range
+        filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
+
+    # 3. DASHBOARD SUMMARY (Now calculating from the already filtered_df)
+    st.markdown(f"### 📊 Live Status Overview ({view_filter})")
+    db_c1, db_c2, db_c3, db_c4, db_c5 = st.columns(5)
+    
+    with db_c1:
+        st.metric("Total", len(filtered_df))
+    with db_c2:
+        p_count = len(filtered_df[filtered_df['status'] == "Pending"])
+        st.metric("⏳ Pending", p_count)
+    with db_c3:
+        # High priority items within the current filtered view
+        h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
+        st.metric("🔥 High Prio", h_prio)
+    with db_c4:
+        h_count = len(filtered_df[filtered_df['status'] == "Hold"])
+        st.metric("⏸️ Hold", h_count)
+    with db_c5:
+        c_count = len(filtered_df[filtered_df['status'] == "Completed"])
+        st.metric("✅ Done", c_count)
+    st.divider()
+
+    # 4. SEARCH FILTER LOGIC
     s1, s2, s3 = st.columns([2, 1, 1])
     search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar").lower()
     if search:
@@ -370,29 +373,22 @@ if not df_all.empty:
             (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
         ]
 
-    # 3. Apply Priority and Date Sorting
+    # 5. PRIORITY AND DATE SORTING
     prio_map = {"High": 0, "Medium": 1, "Normal": 2}
     filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
 
     if view_filter == "All Tasks":
-        # Sort ONLY by Date (Newest first) for All Tasks
         filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
     else:
-        # Sort by Priority first, then by Date for filtered views
         filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
 
-    # 4. Apply Date Range Filter
-    if len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
-
-    # 5. Refresh & Export Buttons
+    # 6. REFRESH & EXPORT
     if s2.button("🔄 Refresh Data"): st.rerun()
     with s3:
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine='openpyxl') as wr:
             filtered_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
-        st.download_button(label="📥 Excel", data=buf.getvalue(), file_name="Export.xlsx", use_container_width=True)
+        st.download_button(label="📥 Excel", data=buf.getvalue(), file_name=f"Export_{view_filter}.xlsx", use_container_width=True)
 
 # --- 8. THE UNIFIED TASK CARDS ---
 keys = list(filtered_df.index) if not filtered_df.empty else []
