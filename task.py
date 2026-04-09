@@ -18,60 +18,66 @@ IST = pytz.timezone('Asia/Kolkata')
 st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 
 # --- 2. THE ULTIMATE CSS (Galloping Bar + 22px Font) ---
+# --- 2. THE ULTIMATE CSS (White Theme) ---
 st.markdown("""
     <style>
-    /* Global Font and Background */
-    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { font-size: 24px !important; } 
-    .main { background-color: #000000; }
-    .stApp { background-color: #000000; color: #E0E0E0; }
+    /* Global Font and Clean Background */
+    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { 
+        font-size: 22px !important; 
+    } 
     
-    /* MATTE LIGHT-ON-DARK COMBINATION */
+    /* Let Streamlit handle the background, but we force cards to be white */
+    .stApp { color: #1A1A1A; }
+    
+    /* PROFESSIONAL LIGHT BUTTONS */
     .stButton > button {
-        background-color: #E0E0E0 !important; /* Matte Light Grey */
-        color: #1A1A1A !important;            /* Dark Charcoal Text */
-        border: 1px solid #CCCCCC !important;
-        border-radius: 4px !important;
+        background-color: #F0F2F6 !important; /* Light Greyish Blue */
+        color: #1A1A1A !important;
+        border: 1px solid #DDE1E7 !important;
+        border-radius: 8px !important;
         padding: 10px 20px !important;
-        font-weight: 700 !important;
+        font-weight: 600 !important;
         width: 100%;
-        transition: none !important;          /* Keeps it Matte */
         text-transform: uppercase;
     }
 
     .stButton > button:hover {
-        background-color: #FFFFFF !important; /* Pure White on hover */
-        color: #000000 !important;            /* Pure Black Text */
-        border-color: #FFFFFF !important;
-        box-shadow: none !important;
+        background-color: #E0E4EB !important;
+        border-color: #B0B7C3 !important;
+        color: #000000 !important;
     }
 
-    /* Cards and Status Colors */
+    /* Cards for White Theme */
     .sleek-card {
         display: flex;
-        background-color: #0A0A0A;
-        border: 1px solid #333333;
-        border-radius: 15px;
+        background-color: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 12px;
         margin-bottom: 12px;
         overflow: hidden;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
-    .gallocation-bar { width: 7px; flex-shrink: 5; }
-    .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-    .card-text { padding: 12px; border-bottom: 1px solid #222222; }
-    .card-footer { background-color: #111111; padding: 7px; border-top: 1px solid #222222; }
     
-    .status-pending { background-color: #C29100 !important; }
-    .status-completed { background-color: #1B5E20 !important; }
-    .status-hold { background-color: #C71585 !important; }
-    .status-high { background-color: #B71C1C !important; }
+    .gallocation-bar { width: 8px; flex-shrink: 0; }
+    .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+    .card-text { padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }
+    .card-footer { background-color: #F8F9FA; padding: 7px; border-top: 1px solid #F0F0F0; }
+    
+    /* Status Colors (Slightly brighter for White BG) */
+    .status-pending { background-color: #FFC107 !important; }
+    .status-completed { background-color: #28A745 !important; }
+    .status-hold { background-color: #E83E8C !important; }
+    .status-high { background-color: #DC3545 !important; }
 
-    /* Fix for dropdown visibility */
-    div[data-baseweb="select"] > div {
-        background-color: #1A1A1A !important;
-        color: white !important;
-        border: 1px solid #444 !important;
+    /* Completion Box */
+    .completion-box { 
+        background-color: #E9F7EF; 
+        border: 1px solid #28A745; 
+        padding: 10px; 
+        border-radius: 5px; 
+        color: #155724; 
+        margin: 10px;
     }
-
-    .completion-box { background-color: #0D1B0D; border: 1px solid #1B5E20; padding: 10px; border-radius: 5px; color: #81C784; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -388,8 +394,8 @@ for tid in keys[:150]:
             <div class="card-body">
                 <div class="card-text">
                     <strong style="font-size:28px;">{task.get('finance')}</strong> | 
-                    <span style="color:#FFD700;">LAN: {task.get('lan', 'N/A')}</span> | 
-                    <span style="color:#AAAAAA; font-size:18px;">By: {task.get('assigner', 'Unknown')} @ {task.get('assigned_at')}</span>
+                    <span style="color:#B8860B;">LAN: {task.get('lan', 'N/A')}</span> | 
+                    <span style="color:#666666; font-size:18px;">By: {task.get('assigner', 'Unknown')} @ {task.get('assigned_at')}</span>
                     {hold_info}<br>
                     <div style="margin-top:10px;">{task.get('task')}</div>
                 </div>
