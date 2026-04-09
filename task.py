@@ -319,6 +319,26 @@ if not df_all.empty:
     # Convert 'assigned_at' strings to actual datetime objects
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
     filtered_df = df_all.copy()
+    
+    # --- DASHBOARD SUMMARY ---
+    st.markdown("### 📊 Live Status Overview")
+    db_c1, db_c2, db_c3, db_c4, db_c5 = st.columns(5)
+    
+    with db_c1:
+        st.metric("Total", len(filtered_df))
+    with db_c2:
+        p_count = len(filtered_df[filtered_df['status'] == "Pending"])
+        st.metric("⏳ Pending", p_count)
+    with db_c3:
+        h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
+        st.metric("🔥 High Prio", h_prio)
+    with db_c4:
+        h_count = len(filtered_df[filtered_df['status'] == "Hold"])
+        st.metric("⏸️ Hold", h_count)
+    with db_c5:
+        c_count = len(filtered_df[filtered_df['status'] == "Completed"])
+        st.metric("✅ Done", c_count)
+    st.divider()
 
     # 1. Apply View Filter Logic
     today_dt = datetime.now(IST).date()
