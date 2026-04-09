@@ -47,17 +47,23 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* Cards for White Theme */
+    /* Cards for White Theme with Dynamic Border */
     .sleek-card {
         display: flex;
         background-color: #FFFFFF;
-        border: 1px solid #E0E0E0;
         border-radius: 12px;
         margin-bottom: 12px;
         overflow: hidden;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
+        border: 2px solid #E0E0E0; /* Default border */
     }
     
+    /* Boundary Logic Colors */
+    .border-pending { border: 2px solid #FFC107 !important; }
+    .border-completed { border: 2px solid #28A745 !important; }
+    .border-hold { border: 2px solid #E83E8C !important; }
+    .border-high { border: 2px solid #DC3545 !important; }
+
     .gallocation-bar { width: 8px; flex-shrink: 0; }
     .card-body { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
     .card-text { padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }
@@ -398,19 +404,27 @@ for tid in keys[:150]:
     if search and (search not in str(task.get('finance','')).lower() and search not in str(task.get('task','')).lower()): 
         continue
 
-    # 1. COLOR LOGIC
+    # 1. COLOR LOGIC (Updated for Boundary)
     t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
-    if t_status == "Completed": s_color = "status-completed"
-    elif t_status == "Hold": s_color = "status-hold"
-    elif t_prio == "High" and t_status == "Pending": s_color = "status-high"
+    b_color = "border-pending" # New boundary class
+    
+    if t_status == "Completed": 
+        s_color = "status-completed"
+        b_color = "border-completed"
+    elif t_status == "Hold": 
+        s_color = "status-hold"
+        b_color = "border-hold"
+    elif t_prio == "High" and t_status == "Pending": 
+        s_color = "status-high"
+        b_color = "border-high"
 
-    # 2. CARD HEADER (With Hold Tracking)
+    # 2. CARD HEADER (Added b_color class to the sleek-card div)
     hold_info = f' | <span style="color:#FF69B4;">⏸️ Hold by: {task.get("hold_by", "N/A")} @ {task.get("hold_at", "N/A")}</span>' if t_status == "Hold" else ""
 
     st.markdown(f'''
-        <div class="sleek-card">
-            <div class="galloping-bar {s_color}"></div>
+        <div class="sleek-card {b_color}">
+            <div class="gallocation-bar {s_color}"></div>
             <div class="card-body">
                 <div class="card-text">
                     <strong style="font-size:28px;">{task.get('finance')}</strong> | 
