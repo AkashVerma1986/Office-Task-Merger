@@ -60,11 +60,11 @@ st.markdown("""
         padding-bottom: 15px; /* Added internal space for buttons */
     }
     
-    /* Boundary Logic Colors */
-    .border-pending { border: 2px solid #FFC107 !important; }
-    .border-completed { border: 2px solid #28A745 !important; }
-    .border-hold { border: 2px solid #E83E8C !important; }
-    .border-high { border: 2px solid #DC3545 !important; }
+    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER */
+    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { border: 2px solid #FFC107 !important; border-left: 10px solid #FFC107 !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { border: 2px solid #28A745 !important; border-left: 10px solid #28A745 !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { border: 2px solid #E83E8C !important; border-left: 10px solid #E83E8C !important; }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-high { border: 2px solid #DC3545 !important; border-left: 10px solid #DC3545 !important; }
 
     .gallocation-bar { width: 8px; flex-shrink: 0; }
     .card-body { 
@@ -494,62 +494,69 @@ keys = list(filtered_df.index) if not filtered_df.empty else []
 for tid in keys[:150]:
     task = tasks_dict[tid]
     
+    # 1. LOGIC TO CHOOSE THE CLASS
     t_status = task.get('status', 'Pending')
     t_prio = task.get('priority', 'Normal')
+    
+    # Default color
+    b_class = "border-pending"
+    
+    if t_status == "Completed": 
+        b_class = "border-completed"
+    elif t_status == "Hold": 
+        b_class = "border-hold"
+    elif t_prio == "High" and t_status == "Pending": 
+        b_class = "border-high"
 
-    # This creates the surrounding border for EVERYTHING inside the loop
+    # 2. THE BORDERED CONTAINER
     with st.container(border=True):
-        
-        # 1. HEADER ROW: Finance Name, LAN, and Status
-        col_header, col_status = st.columns([2, 1])
-        
-        with col_header:
-            st.markdown(f"### {task.get('finance')}")
-            st.markdown(f"**LAN No:** `{task.get('lan', 'N/A')}`")
-        
-        with col_status:
-            # Simple Status Indicator
-            if t_status == "Completed":
-                st.success(f"✅ {t_status}")
-            elif t_status == "Hold":
-                st.warning(f"⏸️ {t_status}")
-            else:
-                st.info(f"⏳ {t_status}")
-            
-            st.caption(f"By: {task.get('assigner')} \n @ {task.get('assigned_at')}")
+        # THIS SCRIPT INJECTS THE COLOR CLASS INTO THE CONTAINER
+        components.html(f"""
+            <script>
+                var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
+                var lastElement = elements[elements.length - 1];
+                lastElement.classList.add('{b_class}');
+            </script>
+        """, height=0)
 
-        # 2. TASK DETAILS
-        st.markdown(f"**Task Details:**")
-        st.write(task.get('task'))
+        # 3. HEADER CONTENT
+        h_col1, h_col2 = st.columns([2, 1])
+        with h_col1:
+            st.markdown(f"## {task.get('finance')}")
+            st.markdown(f"**LAN:** `{task.get('lan', 'N/A')}`")
+        with h_col2:
+            st.write(f"**Status:** {t_status}")
+            st.caption(f"Created: {task.get('assigned_at')}")
+            st.caption(f"By: {task.get('assigner')}")
+
+        st.markdown(f"**Task:** {task.get('task')}")
         
-        # Show Hold Information if applicable
         if t_status == "Hold":
-            st.error(f"Reason: {task.get('comment', 'N/A')} (by {task.get('hold_by')})")
+            st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
 
         st.divider()
 
-        # 3. INTERACTIVE AREA (Buttons & Inputs)
+        # 4. BUTTONS & INPUTS (Guaranteed to be inside the border)
         if t_status == "Completed":
-            st.success(f"Finished by {task.get('completed_by')} at {task.get('finished_at')}")
-            st.info(f"Note: {task.get('comment', 'N/A')}")
+            st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+            st.info(f"Final Note: {task.get('comment', 'N/A')}")
         else:
-            # Action layout: Comment field and Buttons
+            # Action Row
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
-            
-            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Add note...")
+            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            # Hold/Unhold Logic
-            h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
+            # Hold Button
+            h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Res"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
-                    h_payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                 else:
-                    h_payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
+                    payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                 st.rerun()
                 
-            # Complete Logic
+            # Done Button
             if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                     "status": "Completed", "completed_by": user['name'], 
@@ -557,16 +564,16 @@ for tid in keys[:150]:
                 })
                 st.rerun()
 
-        # 4. MODIFY & DELETE (Admin/Assigner only)
+        # 5. ADMIN / ASSIGNER ACTIONS
         if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-            m_col, d_col = st.columns([1, 1])
-            if m_col.button(f"✏️ Modify Task", key=f"mod_btn_{tid}", use_container_width=True):
+            st.write("") # Tiny spacer
+            adm1, adm2 = st.columns([1, 1])
+            if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                 edit_task_dialog(tid, task)
             
-            if d_col.checkbox("🗑️ Confirm Delete", key=f"del_chk_{tid}"):
-                if st.button("DELETE NOW", key=f"del_btn_{tid}", use_container_width=True):
+            if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                     st.rerun()
 
-    # Small space between cards
-    st.write("")
+    st.write("") # Margin between cards
