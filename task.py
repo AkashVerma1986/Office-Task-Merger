@@ -494,67 +494,79 @@ keys = list(filtered_df.index) if not filtered_df.empty else []
 for tid in keys[:150]:
     task = tasks_dict[tid]
     
-    # --- 1. Color Logic ---
-    t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
-    s_color = "status-pending"
-    b_color = "border-pending"
-    if t_status == "Completed": 
-        s_color = "status-completed"; b_color = "border-completed"
-    elif t_status == "Hold": 
-        s_color = "status-hold"; b_color = "border-hold"
-    elif t_prio == "High" and t_status == "Pending": 
-        s_color = "status-high"; b_color = "border-high"
+    t_status = task.get('status', 'Pending')
+    t_prio = task.get('priority', 'Normal')
 
-    # --- 2. OPEN THE BORDER (Start) ---
-    # We open the main 'sleek-card' div and the 'card-body' div
-    st.markdown(f'<div class="sleek-card {b_color}"><div class="gallocation-bar {s_color}"></div><div class="card-body">', unsafe_allow_html=True)
+    # This creates the surrounding border for EVERYTHING inside the loop
+    with st.container(border=True):
+        
+        # 1. HEADER ROW: Finance Name, LAN, and Status
+        col_header, col_status = st.columns([2, 1])
+        
+        with col_header:
+            st.markdown(f"### {task.get('finance')}")
+            st.markdown(f"**LAN No:** `{task.get('lan', 'N/A')}`")
+        
+        with col_status:
+            # Simple Status Indicator
+            if t_status == "Completed":
+                st.success(f"✅ {t_status}")
+            elif t_status == "Hold":
+                st.warning(f"⏸️ {t_status}")
+            else:
+                st.info(f"⏳ {t_status}")
+            
+            st.caption(f"By: {task.get('assigner')} \n @ {task.get('assigned_at')}")
 
-    # --- 3. HEADER TEXT ---
-    hold_info = f' | <span style="color:#FF69B4;">⏸️ Hold: {task.get("hold_by", "N/A")}</span>' if t_status == "Hold" else ""
-    st.markdown(f'''
-        <div class="card-text">
-            <strong style="font-size:28px;">{task.get('finance')}</strong> | 
-            <span style="color:#B8860B;">LAN: {task.get('lan', 'N/A')}</span><br>
-            <span style="color:#666666; font-size:18px;">By: {task.get('assigner')} @ {task.get('assigned_at')}</span> {hold_info}<br>
-            <div style="margin-top:10px; font-size:22px;">{task.get('task')}</div>
-        </div>
-    ''', unsafe_allow_html=True)
+        # 2. TASK DETAILS
+        st.markdown(f"**Task Details:**")
+        st.write(task.get('task'))
+        
+        # Show Hold Information if applicable
+        if t_status == "Hold":
+            st.error(f"Reason: {task.get('comment', 'N/A')} (by {task.get('hold_by')})")
 
-    # --- 4. BUTTONS AREA (Inside the border) ---
-    # We use a container to keep everything together
-    with st.container():
-        # Modify Button
-        if t_status in ["Pending", "Hold"] and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
-            if st.button(f"✏️ Modify Task", key=f"mod_btn_{tid}", use_container_width=True):
-                edit_task_dialog(tid, task)
+        st.divider()
 
+        # 3. INTERACTIVE AREA (Buttons & Inputs)
         if t_status == "Completed":
-            st.markdown(f'''<div class="completion-box">👤 {task.get("completed_by")} | {task.get("work_type")} | {task.get("finished_at")}<br>Note: {task.get("comment")}</div>''', unsafe_allow_html=True)
+            st.success(f"Finished by {task.get('completed_by')} at {task.get('finished_at')}")
+            st.info(f"Note: {task.get('comment', 'N/A')}")
         else:
-            # Note & Complete Layout
+            # Action layout: Comment field and Buttons
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
-            note = c_note.text_input("Note", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+            
+            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Add note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            if c_hold.button("⏸️" if t_status != "Hold" else "▶️", key=f"h_{tid}", use_container_width=True):
-                # ... (Apply Hold Logic)
+            # Hold/Unhold Logic
+            h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
+            if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                if t_status != "Hold":
+                    h_payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                else:
+                    h_payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
                 st.rerun()
                 
+            # Complete Logic
             if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                # ... (Apply Completion Logic)
+                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                    "status": "Completed", "completed_by": user['name'], 
+                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                })
                 st.rerun()
 
-            # Admin Delete Checkbox
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                        st.rerun()
+        # 4. MODIFY & DELETE (Admin/Assigner only)
+        if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+            m_col, d_col = st.columns([1, 1])
+            if m_col.button(f"✏️ Modify Task", key=f"mod_btn_{tid}", use_container_width=True):
+                edit_task_dialog(tid, task)
+            
+            if d_col.checkbox("🗑️ Confirm Delete", key=f"del_chk_{tid}"):
+                if st.button("DELETE NOW", key=f"del_btn_{tid}", use_container_width=True):
+                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                    st.rerun()
 
-    # --- 5. CLOSE THE BORDER (End) ---
-    # This closes the 'card-body' and 'sleek-card' divs we opened in step 2
-    st.markdown('</div></div>', unsafe_allow_html=True)
-    st.divider()
-
-if st.sidebar.button("🚪 LOGOUT"):
-    st.session_state.authenticated = False; st.rerun()
+    # Small space between cards
+    st.write("")
