@@ -48,15 +48,16 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* Cards for White Theme with Dynamic Border */
+    /* Updated Card CSS */
     .sleek-card {
         display: flex;
         background-color: #FFFFFF;
         border-radius: 12px;
-        margin-bottom: 12px;
+        margin-bottom: 25px; 
         overflow: hidden;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
-        border: 2px solid #E0E0E0; /* Default border */
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.05);
+        border: 2px solid #E0E0E0;
+        padding-bottom: 15px; /* Added internal space for buttons */
     }
     
     /* Boundary Logic Colors */
@@ -488,7 +489,7 @@ keys = list(filtered_df.index) if not filtered_df.empty else []
 for tid in keys[:150]:
     task = tasks_dict[tid]
     
-    # 1. COLOR LOGIC (Boundary + Bar)
+    # 1. COLOR LOGIC
     t_status, t_prio = task.get('status', 'Pending'), task.get('priority', 'Normal')
     s_color = "status-pending"
     b_color = "border-pending"
@@ -503,7 +504,7 @@ for tid in keys[:150]:
         s_color = "status-high"
         b_color = "border-high"
 
-    # 2. CARD HEADER (Starts the boundary)
+    # 2. CARD HEADER (Opens the border)
     hold_info = f' | <span style="color:#FF69B4;">⏸️ Hold by: {task.get("hold_by", "N/A")} @ {task.get("hold_at", "N/A")}</span>' if t_status == "Hold" else ""
 
     st.markdown(f'''
@@ -519,29 +520,24 @@ for tid in keys[:150]:
                 </div>
     ''', unsafe_allow_html=True)
 
-    # --- 3. INLINE CONTENT (Inside Boundary) ---
+    # 3. INTERACTIVE CONTENT (Surrounded by the border)
     with st.container():
-        # Modify Button
+        # This padding ensures Streamlit buttons don't touch the border lines
+        st.markdown('<div style="padding: 0px 15px;">', unsafe_allow_html=True)
+        
         if t_status in ["Pending", "Hold"] and (user['role'] == "ADMIN" or task.get('assigner') == user['name']):
             if st.button(f"✏️ Modify Task", key=f"mod_btn_{tid}"):
                 edit_task_dialog(tid, task)
 
-        # Completion Info
         if t_status == "Completed":
-            st.markdown(f'''
-                <div class="completion-box" style="border-top: 1px solid #eee; margin: 0px; border-radius: 0px; background-color: #E9F7EF; padding: 15px;">
-                    👤 <b>{task.get("completed_by")}</b> closed this <b>{task.get("work_type")}</b> task at {task.get("finished_at")}<br>
-                    📝 <i>Note: {task.get("comment", "N/A")}</i>
-                </div>
-            ''', unsafe_allow_html=True)
+            st.success(f"👤 {task.get('completed_by')} closed this {task.get('work_type')} task at {task.get('finished_at')}")
+            st.info(f"📝 Note: {task.get('comment', 'N/A')}")
         else:
-            # Action Controls (Inside the boundary)
             c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Closing note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            # --- 1. DYNAMIC HOLD BUTTON ---
-            # Changes label and uses a standard button
+            # --- HOLD BUTTON ---
             h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Unhold"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
@@ -551,22 +547,23 @@ for tid in keys[:150]:
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=h_payload)
                 st.rerun()
                 
-            # --- 2. DYNAMIC COMPLETE BUTTON ---
-            # type="primary" usually highlights the button in your theme's accent color
+            # --- COMPLETE BUTTON ---
             if c_done.button("✅ Complete", key=f"d_{tid}", use_container_width=True, type="primary"):
                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                     "status": "Completed", "completed_by": user['name'], 
                     "work_type": w_type, "comment": note, "finished_at": get_now_ist()
                 })
                 st.rerun()
-                
+
             if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                if st.checkbox("🗑️", key=f"del_chk_{tid}"):
+                if st.checkbox("🗑️ Delete?", key=f"del_chk_{tid}"):
                     if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                         st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True) # Close internal padding div
 
-    # --- 4. THE CLOSING TAGS (Must be after the container) ---
+    # 4. THE CLOSING TAGS (This closes the surrounding border)
     st.markdown('</div></div>', unsafe_allow_html=True)
     st.divider()
 
