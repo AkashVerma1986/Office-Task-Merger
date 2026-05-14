@@ -5,6 +5,7 @@ from datetime import datetime
 import pytz 
 import io
 import os
+import time
 import streamlit.components.v1 as components
 
 # --- 1. CONFIGURATION ---
@@ -190,12 +191,21 @@ def edit_task_dialog(tid, task):
         # Re-wrap the category into the task string before saving
         final_task_string = f"[{e_cat}] {e_dtl}" if e_cat != "---" else e_dtl
         
+        # 1. Update the Database
         requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
             "finance": e_fin, 
             "lan": e_lan, 
             "task": final_task_string, 
             "priority": e_prio
         })
+        
+        # 2. Show the disappearing pop-up
+        msg_placeholder = st.empty()
+        msg_placeholder.success("✅ Modification Done!")
+        time.sleep(3)  # Wait for 3 seconds
+        msg_placeholder.empty()
+        
+        # 3. Refresh
         st.rerun()
 # Convert the dictionary keys into a sorted list
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
