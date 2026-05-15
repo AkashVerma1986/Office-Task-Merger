@@ -359,7 +359,8 @@ with st.expander("Ledger Entry Form", expanded=True):
     prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
     dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
     
-    if st.button("      SUBMIT", use_container_width=True):
+    # Ensure there are no leading code-block spaces in the label string
+    if st.button("SUBMIT", use_container_width=True, type="primary"):
         if fin_active != "--- SELECT ---" and lan_no and dtl_main:
             payload = {
                 "finance": fin_active, 
@@ -400,7 +401,7 @@ view_filter = st.selectbox(
 ) 
 
 # Dynamic Toggle Button for My Tasks Filter Rule
-btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else " My Tasks"
+btn_label = "Show All Tasks" if st.session_state.my_tasks_only else " My Tasks"
 if st.button(btn_label, key="my_tasks_toggle"):
     st.session_state.my_tasks_only = not st.session_state.my_tasks_only
     st.rerun()
