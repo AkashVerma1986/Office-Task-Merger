@@ -395,12 +395,6 @@ with left_pane:
         # Fallback tracking if the file name is misspelled or missing from the folder
         st.caption("⚠️ Logo file not found in directory. Please verify filename match.")
 
-    st.subheader("📝 Create New Correction")
-    with st.expander("Ledger Entry Form", expanded=True):
-        c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
-        
-        f_sel = c1.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
-        # ... Rest of your form components remain exactly the same ...
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
     st.subheader("📝 Create New Correction")
