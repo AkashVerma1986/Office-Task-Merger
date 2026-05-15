@@ -385,7 +385,7 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 with left_pane:
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
-    st.subheader("📝 Report Correction Ledger")
+    st.subheader("📝 Create New Correction")
     with st.expander("Ledger Entry Form", expanded=True):
         c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
         
@@ -479,23 +479,31 @@ with left_pane:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
-        # --- Live Metric Box Overview Framework ---
+        # --- Live Metric Box Overview Framework (Aligned in 1 row) ---
         st.markdown(f"**Live Status Overview ({view_filter})**")
-        m_row1_1, m_row1_2, m_row1_3 = st.columns(3)
-        m_row2_1, m_row2_2 = st.columns(2)
         
-        with m_row1_1:
+        # Injecting tight styling specifically for the metric cards to ensure single-line fitness
+        st.markdown("""
+            <style>
+            div[data-testid="stMetricSimpleValue"] { font-size: 20px !important; }
+            div[data-testid="stMetricLabel"] { font-size: 14px !important; }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+        
+        with m_col1:
             st.metric("Total", len(filtered_df))
-        with m_row1_2:
+        with m_col2:
             p_count = len(filtered_df[filtered_df['status'] == "Pending"])
-            st.metric("⏳ Pending", p_count)
-        with m_row1_3:
+            st.metric("⏳ Pend", p_count)
+        with m_col3:
             h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
             st.metric("🔥 High", h_prio)
-        with m_row2_1:
+        with m_col4:
             h_count = len(filtered_df[filtered_df['status'] == "Hold"])
             st.metric("⏸️ Hold", h_count)
-        with m_row2_2:
+        with m_col5:
             c_count = len(filtered_df[filtered_df['status'] == "Completed"])
             st.metric("✅ Done", c_count)
         
@@ -553,7 +561,7 @@ with left_pane:
 
 
 # ==========================================
-# RIGHT PANE: SECTION 3 (TASK CARDS)
+# RIGHT PANE: SECTION 3 (COMPACT TASK CARDS WITH DROPDOWN)
 # ==========================================
 with right_pane:
     st.subheader("📋 Active Ledger Tasks")
@@ -591,6 +599,7 @@ with right_pane:
                 </script>
             """, height=0)
 
+            # Surface Row: Finance, LAN, Status, and Meta details
             c_main, c_side = st.columns([2.0, 1.4])
             
             with c_main:
@@ -616,46 +625,57 @@ with right_pane:
                     unsafe_allow_html=True
                 )
 
-            st.markdown(f"**Task:** {task.get('task')}")
+            # Surface Description: Extract and display ONLY the first line/sentence
+            raw_task_text = str(task.get('task', ''))
+            first_line = raw_task_text.split('\n')[0]  # Gets first line if there are line breaks
+            if len(first_line) > 90:                  # Truncate if single line is too wide
+                first_line = first_line[:87] + "..."
+                
+            st.markdown(f"**Task Preview:** {first_line}")
             
-            if t_status == "Hold":
-                st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
-
-            st.divider()
-
-            if t_status == "Completed":
-                st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                st.info(f"Final Note: {task.get('comment', 'N/A')}")
-            else:
-                c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+            # --- THE DROPDOWN LIST (EXPANDER) FOR REST OF THE DATA ---
+            with st.expander("📄 View Full Details & Actions", expanded=False):
+                st.markdown(f"**Full Task Description:**\n{raw_task_text}")
                 
-                h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                    if t_status != "Hold":
-                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                    else:
-                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                    st.rerun()
+                if t_status == "Hold":
+                    st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
+
+                st.divider()
+
+                if t_status == "Completed":
+                    st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                    st.info(f"Final Note: {task.get('comment', 'N/A')}")
+                else:
+                    c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                    note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                    w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                     
-                if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                        "status": "Completed", "completed_by": user['name'], 
-                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                    })
-                    st.rerun()
-
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                st.write("") 
-                adm1, adm2 = st.columns([1, 1])
-                if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                    edit_task_dialog(tid, task)
-                
-                if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                    h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                    if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                        if t_status != "Hold":
+                            payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                        else:
+                            payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                         st.rerun()
+                        
+                    if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                            "status": "Completed", "completed_by": user['name'], 
+                            "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                        })
+                        st.rerun()
+
+                # Admin Controls inside dropdown
+                if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                    st.write("") 
+                    adm1, adm2 = st.columns([1, 1])
+                    if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                        edit_task_dialog(tid, task)
+                    
+                    if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                        if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                            st.rerun()
 
         st.write("")
