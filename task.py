@@ -98,6 +98,8 @@ st.markdown("""
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
+if "my_tasks_only" not in st.session_state: 
+    st.session_state.my_tasks_only = False
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -380,6 +382,14 @@ with st.expander("Ledger Entry Form", expanded=True):
 st.divider()
 
 view_filter = st.selectbox(
+    # My Tasks Toggle Button
+btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else "👤 My Tasks"
+if st.button(btn_label, key="my_tasks_toggle"):
+    st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+    st.rerun()
+
+if st.session_state.my_tasks_only:
+    st.info(f"Filtering by: {user['name']}")
     "📂 View Filter", 
     ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
     key="view_filter_main"
@@ -394,6 +404,9 @@ df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 if not df_all.empty:
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
     filtered_df = df_all.copy()
+    # Apply 'My Tasks' logic
+    if st.session_state.my_tasks_only:
+        filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
     
     # 1. APPLY VIEW FILTER LOGIC FIRST
     today_dt = datetime.now(IST).date()
