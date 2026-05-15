@@ -236,6 +236,44 @@ all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 if user['role'] == "ADMIN":
     with st.sidebar:
         st.header("⚙️ MASTER CONTROL")
+
+        if user['role'] == "ADMIN":
+    with st.sidebar:
+        st.header("⚙️ MASTER CONTROL")
+        
+        # --- NEW CODE: HIGH-VISIBILITY TASK STATUS COLOR PANEL ---
+        st.markdown("### 📊 Task Ledger Summary")
+        
+        # Calculate task counts from live data safely
+        if not df_all.empty:
+            tot_p = len(df_all[df_all['status'] == "Pending"])
+            tot_h = len(df_all[df_all['status'] == "Hold"])
+            tot_c = len(df_all[df_all['status'] == "Completed"])
+        else:
+            tot_p, tot_h, tot_c = 0, 0, 0
+
+        # Injecting custom color bars matching your theme
+        st.markdown(f"""
+            <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; border: 1px solid #E0E4EB; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #FFC107; padding-left: 10px; height: 35px;">
+                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏳ PENDING TASKS</span>
+                    <span style="background-color: #FFC107; color: #000000; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_p}</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #E83E8C; padding-left: 10px; height: 35px;">
+                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏸️ ON HOLD</span>
+                    <span style="background-color: #E83E8C; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_h}</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #28A745; padding-left: 10px; height: 35px;">
+                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">✅ COMPLETED</span>
+                    <span style="background-color: #28A745; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_c}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        # --- END OF NEW STATUS COLOR PANEL ---
+
+        # (The rest of your expanders like Device Approval Requests, etc., continue below here...)
         
         with st.expander("📱 Device Approval Requests", expanded=False):
             current_db = requests.get(USERS_URL).json() or {}
@@ -513,15 +551,22 @@ for tid in keys[:150]:
     t_status = task.get('status', 'Pending')
     t_prio = task.get('priority', 'Normal')
     
+    # Define exact theme colors for the left strip indicator
     b_class = "border-pending"
+    indicator_color = "#FFC107"  # Yellow for Pending
+    
     if t_status == "Completed": 
         b_class = "border-completed"
+        indicator_color = "#28A745"  # Green for Completed
     elif t_status == "Hold": 
         b_class = "border-hold"
+        indicator_color = "#E83E8C"  # Magenta Pink for Hold
     elif t_prio == "High" and t_status == "Pending": 
         b_class = "border-high"
+        indicator_color = "#DC3545"  # High Priority Red
 
     with st.container(border=True):
+        # Keeps your original CSS class injection layout script active
         components.html(f"""
             <script>
                 var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
@@ -530,10 +575,22 @@ for tid in keys[:150]:
             </script>
         """, height=0)
 
+        # --- NEW: Solid Internal Left Accent Bar Header ---
+        # This acts as a bulletproof visual strip on the left inside the card block
+        st.markdown(
+            f"""
+            <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 10px;">
+                <h2 style="margin: 0; padding: 0;">{task.get('finance')}</h2>
+                <span style="font-size: 16px; color: #555;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
         h_col1, h_col2 = st.columns([2, 1])
         with h_col1:
-            st.markdown(f"## {task.get('finance')}")
-            st.markdown(f"**LAN:** `{task.get('lan', 'N/A')}`")
+            # Shifted original titles into the HTML container above for seamless alignment
+            pass
         with h_col2:
             st.write(f"**Status:** {t_status}")
             st.caption(f"Created: {task.get('assigned_at')}")
