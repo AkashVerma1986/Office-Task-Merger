@@ -381,23 +381,24 @@ with st.expander("Ledger Entry Form", expanded=True):
 # --- 7. SEARCH, DATE FILTER, SORTING & EXCEL EXPORT ---
 st.divider()
 
+# 1. The Selectbox (Make sure it closes correctly here)
 view_filter = st.selectbox(
     "📂 View Filter", 
     ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
     key="view_filter_main"
-)
+) 
 
-if st.button("👤 Show All Tasks" if st.session_state.my_tasks_only else "👤 My Tasks", key="mt_btn"):
+# 2. The My Tasks Button (Completely separate from the selectbox above)
+btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else "👤 My Tasks"
+if st.button(btn_label, key="my_tasks_toggle"):
     st.session_state.my_tasks_only = not st.session_state.my_tasks_only
     st.rerun()
 
+# 3. Inform the user (Optional UI hint)
 if st.session_state.my_tasks_only:
-    st.info(f"Filtering by: {user['name']}")
-    "📂 View Filter", 
-    ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
-    key="view_filter_main"
-)
+    st.info(f"Viewing tasks by: {user['name']}")
 
+# 4. Date Filter Columns
 c_date, c_search = st.columns([1, 1])
 with c_date:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
@@ -407,7 +408,8 @@ df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 if not df_all.empty:
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
     filtered_df = df_all.copy()
-    # Apply 'My Tasks' logic
+    
+    # ADD THIS LINE:
     if st.session_state.my_tasks_only:
         filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
     
