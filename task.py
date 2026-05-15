@@ -237,11 +237,10 @@ all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 # --- 5. ADMIN SIDEBAR ---
 if user['role'] == "ADMIN":
     with st.sidebar:
-        st.header("⚙️ MASTER CONTROL")
+        st.header("⚙️ Control Panel")
 
         if user['role'] == "ADMIN":
             with st.sidebar:
-                st.header("⚙️ MASTER CONTROL")
         
                 # --- NEW CODE: HIGH-VISIBILITY TASK STATUS COLOR PANEL ---
                 st.markdown("### 📊 Task Ledger Summary")
