@@ -16,7 +16,7 @@ CATEGORIES_URL = f"{DB_BASE_URL}/categories.json"
 FINANCE_MASTER_URL = f"{DB_BASE_URL}/finance_list.json"
 IST = pytz.timezone('Asia/Kolkata') 
 
-st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
+st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="centered")
 
 # --- 2. THE ULTIMATE CSS (White Theme & Tight Spacing Layout) ---
 st.markdown("""
@@ -30,9 +30,10 @@ st.markdown("""
 
     /* Force Streamlit to drop general empty vertical whitespace */
     .stAppViewMain .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 1.5rem !important;
-        gap: 0.5rem !important; 
+        max-width: 1100px !important; /* Prevents stretching on ultra-wide screens */
+        padding-top: 1.0rem !important;
+        padding-bottom: 1.0rem !important;
+        gap: 0.4rem !important; 
     }
     
     /* PROFESSIONAL LIGHT BUTTONS */
@@ -386,7 +387,7 @@ if user['role'] == "ADMIN":
                         st.rerun()
 
 # --- 6. TOP FORM (Add New / Jump-to-Edit) ---
-st.subheader("📝 Report Correction Ledger")
+st.subheader("📝 Create New Correction")
 with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
     
@@ -574,7 +575,7 @@ for tid in keys[:150]:
             </script>
         """, height=0)
 
-        # --- COMPACT LAYOUT: Combined title, info, and status row to eliminate spacing gaps ---
+        # --- MAIN VISIBLE ROW (Always Seen) ---
         c_main, c_side = st.columns([2.2, 1.2])
         
         with c_main:
@@ -589,7 +590,6 @@ for tid in keys[:150]:
             )
             
         with c_side:
-            # Inline HTML styling removes native block spacing stack limits entirely
             st.markdown(
                 f"""
                 <div style="text-align: right; font-size: 15px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
@@ -601,47 +601,48 @@ for tid in keys[:150]:
                 unsafe_allow_html=True
             )
 
-        # Content Details Block
-        st.markdown(f"**Task:** {task.get('task')}")
-        
-        if t_status == "Hold":
-            st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
-
-        st.divider()
-
-        if t_status == "Completed":
-            st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-            st.info(f"Final Note: {task.get('comment', 'N/A')}")
-        else:
-            c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
-            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+        # --- DROPDOWN EXPANDER (Hidden until clicked) ---
+        with st.expander("🔍 View Task Details & Actions", expanded=False):
+            st.markdown(f"**Task Description:** {task.get('task')}")
             
-            h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-            if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                if t_status != "Hold":
-                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                else:
-                    payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                st.rerun()
+            if t_status == "Hold":
+                st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
+
+            st.divider()
+
+            if t_status == "Completed":
+                st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                st.info(f"Final Note: {task.get('comment', 'N/A')}")
+            else:
+                c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
+                note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                 
-            if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                    "status": "Completed", "completed_by": user['name'], 
-                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                })
-                st.rerun()
-
-        if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-            st.write("") 
-            adm1, adm2 = st.columns([1, 1])
-            if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                edit_task_dialog(tid, task)
-            
-            if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                    if t_status != "Hold":
+                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                    else:
+                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                     st.rerun()
+                    
+                if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                        "status": "Completed", "completed_by": user['name'], 
+                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                    })
+                    st.rerun()
+
+            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                st.write("") 
+                adm1, adm2 = st.columns([1, 1])
+                if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                    edit_task_dialog(tid, task)
+                
+                if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                        st.rerun()
 
     st.write("")
