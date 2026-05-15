@@ -398,7 +398,7 @@ with left_pane:
 
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
-    st.subheader("📝 Create New Correction")
+    st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
         
@@ -516,7 +516,7 @@ with left_pane:
         with m_col1:
             st.metric("Total", m_total)
         with m_col2:
-            st.metric("⏳ Pend", m_pending)
+            st.metric("⏳ Pending", m_pending)
         with m_col3:
             st.metric("🔥 High", m_high)
         with m_col4:
