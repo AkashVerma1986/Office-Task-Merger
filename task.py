@@ -386,263 +386,278 @@ if user['role'] == "ADMIN":
                         requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
                         st.rerun()
 
-# --- 6. TOP FORM (Add New / Jump-to-Edit) ---
-st.subheader("📝 Create New Correction")
-with st.expander("Ledger Entry Form", expanded=True):
-    c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
-    
-    f_sel = c1.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
-    fin_active = f_sel
-    
-    cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
-    lan_no = c_lan.text_input("LAN No.", placeholder="Required").strip()
-    prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
-    dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
-    
-    # Ensure there are no leading code-block spaces in the label string
-    if st.button("SUBMIT", use_container_width=True, type="primary"):
-        if fin_active != "--- SELECT ---" and lan_no and dtl_main:
-            payload = {
-                "finance": fin_active, 
-                "lan": lan_no,
-                "task": f"[{cat}] {dtl_main}", 
-                "priority": prio, 
-                "assigner": user['name'], 
-                "status": "Pending", 
-                "assigned_at": get_now_ist()
-            }
-            requests.post(TASKS_URL, json=payload)
-            requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
-            
-            st.session_state.edit_dtl_top = ""
-            
-            for key in ["main_finance_picker", "main_cat_picker"]:
-                if key in st.session_state:
-                    del st.session_state[key]
-            
-            # --- NOTIFICATION ON SUBMIT ---
-            st.success(f"🎉 Success! Task for LAN {lan_no} has been added to the ledger.")
-            st.toast(f"📢 New Task Added by {user['name']}!", icon="✅")
-            
-            time.sleep(1.5) 
-            st.rerun()
-        elif not lan_no:
-            st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
-        else:
-            st.warning("⚠️ Please fill in Finance and Task Details.")
-
-# --- 7. SEARCH, DATE FILTER, SORTING & EXCEL EXPORT ---
+# --- 6 & 7. RESTRUCTURED THREE-SECTION GRID LAYOUT ---
 st.divider()
 
-view_filter = st.selectbox(
-    "📂 View Filter", 
-    ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
-    key="view_filter_main"
-) 
+# Create a main layout split: Left Panel (Form & Filters) vs Right Panel (Task Feed)
+left_panel, right_panel = st.columns([1.6, 2.4], gap="medium")
 
-# Dynamic Toggle Button for My Tasks Filter Rule
-btn_label = "Show All Tasks" if st.session_state.my_tasks_only else " My Tasks"
-if st.button(btn_label, key="my_tasks_toggle"):
-    st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-    st.rerun()
-
-if st.session_state.my_tasks_only:
-    st.info(f"Viewing tasks by: {user['name']}")
-
-c_date, c_search = st.columns([1, 1])
-with c_date:
-    date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
-
-
-if not df_all.empty:
-    df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
-    filtered_df = df_all.copy()
+# =========================================================================
+# LEFT PANEL: SECTION 1 (TOP) & SECTION 2 (BOTTOM)
+# =========================================================================
+with left_panel:
     
-    # Active Filtering Rule for Creator
-    if st.session_state.my_tasks_only:
-        filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
-    
-    today_dt = datetime.now(IST).date()
-    if view_filter == "Pending":
-        filtered_df = filtered_df[filtered_df['status'] == "Pending"]
-    elif view_filter == "Hold":
-        filtered_df = filtered_df[filtered_df['status'] == "Hold"]
-    elif view_filter == "Completed":
-        filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-    elif view_filter == "Today's":
-        filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
-    elif view_filter == "Yesterday":
-        yesterday = today_dt - pd.Timedelta(days=1)
-        filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
-
-    if len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
-
-    st.markdown(f"### 📊 Live Status Overview ({view_filter})")
-    db_c1, db_c2, db_c3, db_c4, db_c5 = st.columns(5)
-    
-    with db_c1:
-        st.metric("Total", len(filtered_df))
-    with db_c2:
-        p_count = len(filtered_df[filtered_df['status'] == "Pending"])
-        st.metric("⏳ Pending", p_count)
-    with db_c3:
-        h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
-        st.metric("🔥 High Priority", h_prio)
-    with db_c4:
-        h_count = len(filtered_df[filtered_df['status'] == "Hold"])
-        st.metric("⏸️ Hold", h_count)
-    with db_c5:
-        c_count = len(filtered_df[filtered_df['status'] == "Completed"])
-        st.metric("✅ Done", c_count)
-    st.divider()
-
-    s1, s2, s3 = st.columns([2, 1, 1])
-    search = s1.text_input("🔍 Search (Finance, Task, or Staff)", key="search_bar").lower()
-    if search:
-        filtered_df = filtered_df[
-            (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
-            (filtered_df['task'].str.contains(search, case=False, na=False)) |
-            (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
-        ]
-
-    prio_map = {"High": 0, "Medium": 1, "Normal": 2}
-    filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
-
-    if view_filter == "All Tasks":
-        filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
-    else:
-        filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
-
-    if s2.button("🔄 Refresh Data"): st.rerun()
-    with s3:
-        export_df = filtered_df.copy()
-        
-        def extract_cat(text):
-            if isinstance(text, str) and text.startswith("[") and "]" in text:
-                return text.split("]")[0].replace("[", "").strip()
-            return "None"
-
-        def clean_task(text):
-            if isinstance(text, str) and text.startswith("[") and "]" in text:
-                return text.split("]", 1)[1].strip()
-            return text
-
-        export_df['Category'] = export_df['task'].apply(extract_cat)
-        export_df['task'] = export_df['task'].apply(clean_task)
-
-        buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine='openpyxl') as wr:
-            export_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
-        
-        st.download_button(
-            label="📥 Excel", 
-            data=buf.getvalue(), 
-            file_name=f"Export_{view_filter}.xlsx", 
-            use_container_width=True
-        )
-
-# --- 8. THE UNIFIED TASK CARDS ---
-keys = list(filtered_df.index) if not filtered_df.empty else []
-
-for tid in keys[:150]:
-    task = tasks_dict[tid]
-    
-    t_status = task.get('status', 'Pending')
-    t_prio = task.get('priority', 'Normal')
-    
-    # Define exact theme colors for the left strip indicator
-    b_class = "border-pending"
-    indicator_color = "#FFC107"  # Yellow for Pending
-    
-    if t_status == "Completed": 
-        b_class = "border-completed"
-        indicator_color = "#28A745"  # Green for Completed
-    elif t_status == "Hold": 
-        b_class = "border-hold"
-        indicator_color = "#E83E8C"  # Magenta Pink for Hold
-    elif t_prio == "High" and t_status == "Pending": 
-        b_class = "border-high"
-        indicator_color = "#DC3545"  # High Priority Red
-
+    # -----------------------------------------------------------------
+    # FIRST SECTION (Left Top): Create New Correction & Ledger Entry Form
+    # -----------------------------------------------------------------
+    st.subheader("📝 Report Correction Ledger")
     with st.container(border=True):
-        components.html(f"""
-            <script>
-                var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
-                var lastElement = elements[elements.length - 1];
-                lastElement.classList.add('{b_class}');
-            </script>
-        """, height=0)
-
-        # --- MAIN VISIBLE ROW (Always Seen) ---
-        c_main, c_side = st.columns([2.2, 1.2])
+        st.markdown("#### Ledger Entry Form")
         
-        with c_main:
-            st.markdown(
-                f"""
-                <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                    <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1;">{task.get('finance')}</h2>
-                    <span style="font-size: 16px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            
-        with c_side:
-            st.markdown(
-                f"""
-                <div style="text-align: right; font-size: 15px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
-                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                    <span style="color: #666; font-size: 13px;">Created: {task.get('assigned_at')}</span><br>
-                    <span style="color: #666; font-size: 13px;">By: {task.get('assigner')}</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # --- DROPDOWN EXPANDER (Hidden until clicked) ---
-        with st.expander("🔍 View Task Details & Actions", expanded=False):
-            st.markdown(f"**Task Description:** {task.get('task')}")
-            
-            if t_status == "Hold":
-                st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
-
-            st.divider()
-
-            if t_status == "Completed":
-                st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                st.info(f"Final Note: {task.get('comment', 'N/A')}")
+        f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
+        fin_active = f_sel
+        
+        cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+        lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+        prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+        dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""), key="main_dtl_input", height=100)
+        
+        if st.button("SUBMIT", use_container_width=True, type="primary", key="main_submit_btn"):
+            if fin_active != "--- SELECT ---" and lan_no and dtl_main:
+                payload = {
+                    "finance": fin_active, 
+                    "lan": lan_no,
+                    "task": f"[{cat}] {dtl_main}", 
+                    "priority": prio, 
+                    "assigner": user['name'], 
+                    "status": "Pending", 
+                    "assigned_at": get_now_ist()
+                }
+                requests.post(TASKS_URL, json=payload)
+                requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+                
+                st.session_state.edit_dtl_top = ""
+                for key in ["main_finance_picker", "main_cat_picker"]:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                
+                st.success(f"🎉 Success! Added to ledger.")
+                st.toast(f"📢 New Task Added!", icon="✅")
+                time.sleep(1.5) 
+                st.rerun()
+            elif not lan_no:
+                st.error("🛑 LAN No. is mandatory!")
             else:
-                c_note, c_type, c_hold, c_done = st.columns([1.5, 0.8, 0.7, 1])
-                note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                
-                h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                    if t_status != "Hold":
-                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                    else:
-                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                    st.rerun()
-                    
-                if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                        "status": "Completed", "completed_by": user['name'], 
-                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                    })
-                    st.rerun()
+                st.warning("⚠️ Please fill in Finance and Details.")
 
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                st.write("") 
-                adm1, adm2 = st.columns([1, 1])
-                if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                    edit_task_dialog(tid, task)
+    st.write("") # Structural spacing element
+
+    # -----------------------------------------------------------------
+    # SECOND SECTION (Left Bottom): Filters, Overview, & Utilities
+    # -----------------------------------------------------------------
+    st.subheader("⚙️ Control Dashboard")
+    with st.container(border=True):
+        
+        # View Filter Selectbox
+        view_filter = st.selectbox(
+            "📂 View Filter", 
+            ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
+            key="view_filter_main"
+        ) 
+
+        # My Tasks Toggle Rule Button
+        btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else " My Tasks"
+        if st.button(btn_label, key="my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun()
+
+        if st.session_state.my_tasks_only:
+            st.info(f"Viewing tasks by: {user['name']}")
+
+        # Date Range Filter Input
+        date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
+
+        # Live Overview Metrics Block Stacked
+        st.markdown("#### 📊 Live Status Overview")
+        
+        # Parse filter dataframe updates locally
+        if not df_all.empty:
+            filtered_df = df_all.copy()
+            if st.session_state.my_tasks_only:
+                filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
+            
+            today_dt = datetime.now(IST).date()
+            if view_filter == "Pending":
+                filtered_df = filtered_df[filtered_df['status'] == "Pending"]
+            elif view_filter == "Hold":
+                filtered_df = filtered_df[filtered_df['status'] == "Hold"]
+            elif view_filter == "Completed":
+                filtered_df = filtered_df[filtered_df['status'] == "Completed"]
+            elif view_filter == "Today's":
+                filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
+            elif view_filter == "Yesterday":
+                yesterday = today_dt - pd.Timedelta(days=1)
+                filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
+
+            if len(date_range) == 2:
+                start_date, end_date = date_range
+                filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
+        else:
+            filtered_df = pd.DataFrame()
+
+        # Render Mini Grid Metrics
+        m_c1, m_c2, m_c3 = st.columns(3)
+        with m_c1:
+            st.metric("Total", len(filtered_df))
+        with m_c2:
+            st.metric("⏳ Pend", len(filtered_df[filtered_df['status'] == "Pending"]) if not filtered_df.empty else 0)
+        with m_c3:
+            st.metric("✅ Done", len(filtered_df[filtered_df['status'] == "Completed"]) if not filtered_df.empty else 0)
+
+        st.divider()
+
+        # Excel Export Setup Configuration Processing
+        if not filtered_df.empty:
+            export_df = filtered_df.copy()
+            def extract_cat(text):
+                if isinstance(text, str) and text.startswith("[") and "]" in text:
+                    return text.split("]")[0].replace("[", "").strip()
+                return "None"
+            def clean_task(text):
+                if isinstance(text, str) and text.startswith("[") and "]" in text:
+                    return text.split("]", 1)[1].strip()
+                return text
+
+            export_df['Category'] = export_df['task'].apply(extract_cat)
+            export_df['task'] = export_df['task'].apply(clean_task)
+
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine='openpyxl') as wr:
+                export_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
+            
+            # Download Button Layout Action Row
+            st.download_button(
+                label="📥 Download Excel Report", 
+                data=buf.getvalue(), 
+                file_name=f"Export_{view_filter}.xlsx", 
+                use_container_width=True
+            )
+
+        # Search box panel layout configuration
+        search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar").lower()
+        if search and not filtered_df.empty:
+            filtered_df = filtered_df[
+                (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
+                (filtered_df['task'].str.contains(search, case=False, na=False)) |
+                (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
+            ]
+
+        # Sorting Order Mapping Calculations
+        if not filtered_df.empty:
+            prio_map = {"High": 0, "Medium": 1, "Normal": 2}
+            filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
+            if view_filter == "All Tasks":
+                filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
+            else:
+                filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
+
+        if st.button("🔄 Refresh Data Feed", use_container_width=True): 
+            st.rerun()
+
+# =========================================================================
+# RIGHT PANEL: THIRD SECTION (All Task Cards Feed Stream)
+# =========================================================================
+with right_panel:
+    st.subheader(f"📋 Live Ledger Records ({view_filter})")
+    
+    keys = list(filtered_df.index) if (not filtered_df.empty) else []
+    
+    if not keys:
+        st.info("No records matching current criteria found.")
+        
+    for tid in keys[:150]:
+        task = tasks_dict[tid]
+        
+        t_status = task.get('status', 'Pending')
+        t_prio = task.get('priority', 'Normal')
+        
+        b_class = "border-pending"
+        indicator_color = "#FFC107"
+        
+        if t_status == "Completed": 
+            b_class = "border-completed"
+            indicator_color = "#28A745"
+        elif t_status == "Hold": 
+            b_class = "border-hold"
+            indicator_color = "#E83E8C"
+        elif t_prio == "High" and t_status == "Pending": 
+            b_class = "border-high"
+            indicator_color = "#DC3545"
+
+        with st.container(border=True):
+            components.html(f"""
+                <script>
+                    var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
+                    var lastElement = elements[elements.length - 1];
+                    lastElement.classList.add('{b_class}');
+                </script>
+            """, height=0)
+
+            # High-Level Summary Header Block Layout
+            c_main, c_side = st.columns([2.0, 1.4])
+            with c_main:
+                st.markdown(
+                    f"""
+                    <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
+                        <h3 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size: 20px;">{task.get('finance')}</h3>
+                        <span style="font-size: 14px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+            with c_side:
+                st.markdown(
+                    f"""
+                    <div style="text-align: right; font-size: 13px; line-height: 1.2; color: #1A1A1A;">
+                        <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
+                        <span style="color: #666;">📅 {task.get('assigned_at')}</span><br>
+                        <span style="color: #666;">👤 By: {task.get('assigner')}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            # Dropdown Container Component for Hidden Values
+            with st.expander("🔍 View Details & Actions", expanded=False):
+                st.markdown(f"**Task Description:** {task.get('task')}")
                 
-                if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                if t_status == "Hold":
+                    st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
+
+                st.divider()
+
+                if t_status == "Completed":
+                    st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                    st.info(f"Final Note: {task.get('comment', 'N/A')}")
+                else:
+                    c_note, c_type, c_hold, c_done = st.columns([1.4, 0.8, 0.7, 0.9])
+                    note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                    w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                    
+                    h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                    if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                        if t_status != "Hold":
+                            payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                        else:
+                            payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                        st.rerun()
+                        
+                    if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                            "status": "Completed", "completed_by": user['name'], 
+                            "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                        })
                         st.rerun()
 
-    st.write("")
+                if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                    st.write("") 
+                    adm1, adm2 = st.columns([1, 1])
+                    if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                        edit_task_dialog(tid, task)
+                    
+                    if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                        if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                            st.rerun()
+        st.write("")
