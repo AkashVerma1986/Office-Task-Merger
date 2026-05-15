@@ -238,36 +238,36 @@ if user['role'] == "ADMIN":
         st.header("⚙️ MASTER CONTROL")
 
         if user['role'] == "ADMIN":
-    with st.sidebar:
-        st.header("⚙️ MASTER CONTROL")
+            with st.sidebar:
+                st.header("⚙️ MASTER CONTROL")
         
-        # --- NEW CODE: HIGH-VISIBILITY TASK STATUS COLOR PANEL ---
-        st.markdown("### 📊 Task Ledger Summary")
+                # --- NEW CODE: HIGH-VISIBILITY TASK STATUS COLOR PANEL ---
+                st.markdown("### 📊 Task Ledger Summary")
         
-        # Calculate task counts from live data safely
-        if not df_all.empty:
-            tot_p = len(df_all[df_all['status'] == "Pending"])
-            tot_h = len(df_all[df_all['status'] == "Hold"])
-            tot_c = len(df_all[df_all['status'] == "Completed"])
-        else:
-            tot_p, tot_h, tot_c = 0, 0, 0
+                # Calculate task counts from live data safely
+                if not df_all.empty:
+                    tot_p = len(df_all[df_all['status'] == "Pending"])
+                    tot_h = len(df_all[df_all['status'] == "Hold"])
+                    tot_c = len(df_all[df_all['status'] == "Completed"])
+                else:
+                    tot_p, tot_h, tot_c = 0, 0, 0
 
-        # Injecting custom color bars matching your theme
-        st.markdown(f"""
-            <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; border: 1px solid #E0E4EB; display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #FFC107; padding-left: 10px; height: 35px;">
-                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏳ PENDING TASKS</span>
-                    <span style="background-color: #FFC107; color: #000000; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_p}</span>
+                # Injecting custom color bars matching your theme
+                st.markdown(f"""
+                    <div style="background-color: #FFFFFF; padding: 12px; border-radius: 8px; border: 1px solid #E0E4EB; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #FFC107; padding-left: 10px; height: 35px;">
+                        <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏳ PENDING TASKS</span>
+                        <span style="background-color: #FFC107; color: #000000; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_p}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #E83E8C; padding-left: 10px; height: 35px;">
+                        <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏸️ ON HOLD</span>
+                        <span style="background-color: #E83E8C; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_h}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #28A745; padding-left: 10px; height: 35px;">
+                        <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">✅ COMPLETED</span>
+                        <span style="background-color: #28A745; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_c}</span>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #E83E8C; padding-left: 10px; height: 35px;">
-                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">⏸️ ON HOLD</span>
-                    <span style="background-color: #E83E8C; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_h}</span>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: space-between; border-left: 6px solid #28A745; padding-left: 10px; height: 35px;">
-                    <span style="font-weight: 600; font-size: 16px; color: #1A1A1A;">✅ COMPLETED</span>
-                    <span style="background-color: #28A745; color: #FFFFFF; font-weight: bold; padding: 2px 10px; border-radius: 20px; font-size: 16px;">{tot_c}</span>
-                </div>
-            </div>
         """, unsafe_allow_html=True)
         
         st.divider()
