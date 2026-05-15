@@ -438,7 +438,7 @@ with left_pane:
     with vf_col:
         view_filter = st.selectbox(
             "📂 View Filter", 
-            ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
+            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"],  # "Today's" is now at index 0 (Default)
             key="view_filter_main",
             label_visibility="collapsed"
         ) 
