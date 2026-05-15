@@ -60,11 +60,32 @@ st.markdown("""
         padding-bottom: 15px; /* Added internal space for buttons */
     }
     
-    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER */
-    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { border: 2px solid #FFC107 !important; border-left: 10px solid #FFC107 !important; }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { border: 2px solid #28A745 !important; border-left: 10px solid #28A745 !important; }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { border: 2px solid #E83E8C !important; border-left: 10px solid #E83E8C !important; }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-high { border: 2px solid #DC3545 !important; border-left: 10px solid #DC3545 !important; }
+    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY */
+    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { 
+        border: 2px solid #FFC107 !important; 
+        border-left: 10px solid #FFC107 !important; 
+        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #FFC107 !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { 
+        border: 2px solid #28A745 !important; 
+        border-left: 10px solid #28A745 !important; 
+        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #28A745 !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { 
+        border: 2px solid #E83E8C !important; 
+        border-left: 10px solid #E83E8C !important; 
+        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #E83E8C !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-high { 
+        border: 2px solid #DC3545 !important; 
+        border-left: 10px solid #DC3545 !important; 
+        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #DC3545 !important;
+    }
+
+    /* Adds breathing room between the text and the new inner boundary */
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+        padding: 12px !important;
+    }
 
     .gallocation-bar { width: 8px; flex-shrink: 0; }
     .card-body { 
@@ -371,7 +392,12 @@ with st.expander("Ledger Entry Form", expanded=True):
                 if key in st.session_state:
                     del st.session_state[key]
             
-            st.toast(f"Pushed Task for LAN: {lan_no}!")
+            # --- NEW NOTIFICATION LOGIC ---
+            st.success(f"🎉 Success! Task for LAN {lan_no} has been added to the ledger.")
+            st.toast(f"📢 New Task Added by {user['name']}!", icon="✅")
+            
+            # This pause lets the user actually see the notification before the page refreshes
+            time.sleep(1.5) 
             st.rerun()
         elif not lan_no:
             st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
