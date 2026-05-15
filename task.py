@@ -566,7 +566,6 @@ for tid in keys[:150]:
         indicator_color = "#DC3545"  # High Priority Red
 
     with st.container(border=True):
-        # Keeps your original CSS class injection layout script active
         components.html(f"""
             <script>
                 var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
@@ -575,27 +574,34 @@ for tid in keys[:150]:
             </script>
         """, height=0)
 
-        # --- NEW: Solid Internal Left Accent Bar Header ---
-        # This acts as a bulletproof visual strip on the left inside the card block
-        st.markdown(
-            f"""
-            <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 10px;">
-                <h2 style="margin: 0; padding: 0;">{task.get('finance')}</h2>
-                <span style="font-size: 16px; color: #555;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        # --- COMPACT LAYOUT: Combined title, info, and status row to eliminate spacing gaps ---
+        c_main, c_side = st.columns([2.2, 1.2])
+        
+        with c_main:
+            st.markdown(
+                f"""
+                <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
+                    <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1;">{task.get('finance')}</h2>
+                    <span style="font-size: 16px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+        with c_side:
+            # Inline HTML styling removes native block spacing stack limits entirely
+            st.markdown(
+                f"""
+                <div style="text-align: right; font-size: 15px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
+                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
+                    <span style="color: #666; font-size: 13px;">Created: {task.get('assigned_at')}</span><br>
+                    <span style="color: #666; font-size: 13px;">By: {task.get('assigner')}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        h_col1, h_col2 = st.columns([2, 1])
-        with h_col1:
-            # Shifted original titles into the HTML container above for seamless alignment
-            pass
-        with h_col2:
-            st.write(f"**Status:** {t_status}")
-            st.caption(f"Created: {task.get('assigned_at')}")
-            st.caption(f"By: {task.get('assigner')}")
-
+        # Content Details Block
         st.markdown(f"**Task:** {task.get('task')}")
         
         if t_status == "Hold":
