@@ -382,7 +382,12 @@ with st.expander("Ledger Entry Form", expanded=True):
 st.divider()
 
 view_filter = st.selectbox(
-    # My Tasks Toggle Button
+    "📂 View Filter", 
+    ["All Tasks", "Pending", "Hold", "Completed", "Today's", "Yesterday"], 
+    key="view_filter_main"
+) # <--- MAKE SURE THIS PARENTHESIS IS HERE
+
+# My Tasks Toggle Button
 btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else "👤 My Tasks"
 if st.button(btn_label, key="my_tasks_toggle"):
     st.session_state.my_tasks_only = not st.session_state.my_tasks_only
