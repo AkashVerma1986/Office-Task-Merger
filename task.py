@@ -248,17 +248,31 @@ if user['role'] == "ADMIN":
                     request_found = True
                     st.write(f"**User:** {u_name}")
                     st.caption(f"Approved: {len(a_list)}/2")
+                    
                     for d_id in p_list:
-                        if st.button(f"✅ Approve Device for {u_name}", key=f"app_{u_name}_{d_id}"):
-                            if len(a_list) < 2:
-                                a_list.append(d_id)
+                        # Created a 2-column layout for Approve and Reject actions
+                        btn_col1, btn_col2 = st.columns(2)
+                        
+                        with btn_col1:
+                            if st.button(f"✅ Approve", key=f"app_{u_name}_{d_id}", use_container_width=True):
+                                if len(a_list) < 2:
+                                    a_list.append(d_id)
+                                    p_list.remove(d_id)
+                                    requests.patch(f"{DB_BASE_URL}/users/{u_name}.json", 
+                                                   json={"approved_devices": a_list, "pending_devices": p_list})
+                                    st.success(f"Device Linked!")
+                                    st.rerun()
+                                else:
+                                    st.error("User already has 2 devices!")
+                                    
+                        with btn_col2:
+                            if st.button(f"❌ Reject", key=f"rej_{u_name}_{d_id}", use_container_width=True):
                                 p_list.remove(d_id)
                                 requests.patch(f"{DB_BASE_URL}/users/{u_name}.json", 
-                                               json={"approved_devices": a_list, "pending_devices": p_list})
-                                st.success(f"Device Linked!")
+                                               json={"pending_devices": p_list})
+                                st.warning(f"Request Rejected!")
+                                time.sleep(1)
                                 st.rerun()
-                            else:
-                                st.error("User already has 2 devices!")
             if not request_found:
                 st.info("No pending requests.")
         
@@ -386,7 +400,7 @@ view_filter = st.selectbox(
 ) 
 
 # Dynamic Toggle Button for My Tasks Filter Rule
-btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else "👤 My Tasks"
+btn_label = "👤 Show All Tasks" if st.session_state.my_tasks_only else " My Tasks"
 if st.button(btn_label, key="my_tasks_toggle"):
     st.session_state.my_tasks_only = not st.session_state.my_tasks_only
     st.rerun()
@@ -435,7 +449,7 @@ if not df_all.empty:
         st.metric("⏳ Pending", p_count)
     with db_c3:
         h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
-        st.metric("🔥 High Prio", h_prio)
+        st.metric("🔥 High Priority", h_prio)
     with db_c4:
         h_count = len(filtered_df[filtered_df['status'] == "Hold"])
         st.metric("⏸️ Hold", h_count)
@@ -539,7 +553,7 @@ for tid in keys[:150]:
             note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
             w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
             
-            h_label = "⏸️ Hold" if t_status != "Hold" else "▶️ Res"
+            h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
             if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                 if t_status != "Hold":
                     payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
