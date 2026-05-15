@@ -386,14 +386,15 @@ with left_pane:
     
     # --- SECTION 1: LOGO, CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
     
-    # Place the logo here, centered and scaled beautifully
-    logo_path = "your_logo_filename.jpg"  # <-- CHANGE THIS to your actual filename
+    # This automatically finds the exact folder where your python script lives
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
     
     if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=False, width=180) # Adjust the width as needed
+        st.image(logo_path, use_container_width=False, width=180)
     else:
-        # Fallback tracking if the file name is misspelled or missing from the folder
-        st.caption("⚠️ Logo file not found in directory. Please verify filename match.")
+        # If it STILL fails, we can print the path it's trying to look into for debugging
+        st.caption(f"⚠️ Looking in: {logo_path}")
 
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
