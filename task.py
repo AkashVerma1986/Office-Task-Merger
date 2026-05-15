@@ -479,7 +479,7 @@ with left_pane:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
-        # --- Live Metric Box Overview Framework (Aligned in 1 row) ---
+        # --- Live Metric Box Overview Framework (Dynamically Linked to User) ---
         st.markdown(f"**Live Status Overview ({view_filter})**")
         
         # Injecting tight styling specifically for the metric cards to ensure single-line fitness
@@ -490,22 +490,26 @@ with left_pane:
             </style>
         """, unsafe_allow_html=True)
         
+        # ALL metrics are now computed directly from the already-filtered filtered_df 
+        # This ensures that if "My Tasks" is active, these reflect ONLY that user's tasks.
+        m_total = len(filtered_df)
+        m_pending = len(filtered_df[filtered_df['status'] == "Pending"])
+        m_high = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
+        m_hold = len(filtered_df[filtered_df['status'] == "Hold"])
+        m_done = len(filtered_df[filtered_df['status'] == "Completed"])
+
         m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
         
         with m_col1:
-            st.metric("Total", len(filtered_df))
+            st.metric("Total", m_total)
         with m_col2:
-            p_count = len(filtered_df[filtered_df['status'] == "Pending"])
-            st.metric("⏳ Pend", p_count)
+            st.metric("⏳ Pend", m_pending)
         with m_col3:
-            h_prio = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
-            st.metric("🔥 High", h_prio)
+            st.metric("🔥 High", m_high)
         with m_col4:
-            h_count = len(filtered_df[filtered_df['status'] == "Hold"])
-            st.metric("⏸️ Hold", h_count)
+            st.metric("⏸️ Hold", m_hold)
         with m_col5:
-            c_count = len(filtered_df[filtered_df['status'] == "Completed"])
-            st.metric("✅ Done", c_count)
+            st.metric("✅ Done", m_done)
         
         st.divider()
 
@@ -564,7 +568,7 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (COMPACT TASK CARDS WITH DROPDOWN)
 # ==========================================
 with right_pane:
-    st.subheader("📋 Active Ledger Tasks")
+    st.subheader("📋 All Tasks")
     
     keys = list(filtered_df.index) if not filtered_df.empty else []
 
