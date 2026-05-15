@@ -185,6 +185,8 @@ master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
 master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
 
+df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
+
 @st.dialog("Edit Task Details", width="large")
 def edit_task_dialog(tid, task):
     ec1, ec_cat, ec_l, ec2 = st.columns([2, 2, 2, 2])
@@ -451,7 +453,6 @@ c_date, c_search = st.columns([1, 1])
 with c_date:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 
 if not df_all.empty:
     df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
