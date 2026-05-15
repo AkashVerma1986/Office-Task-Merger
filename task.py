@@ -351,8 +351,8 @@ st.subheader("📝 Report Correction Ledger")
 with st.expander("Ledger Entry Form", expanded=True):
     c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
     
-    f_sel = c1.selectbox("Finance", ["--- SELECT ---", "ADD NEW+"] + all_fins, key="main_finance_picker")
-    fin_active = st.text_input("New Finance Name").upper() if f_sel == "ADD NEW+" else f_sel
+    f_sel = c1.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
+    fin_active = f_sel
     
     cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
     lan_no = c_lan.text_input("LAN No.", placeholder="Required").strip()
