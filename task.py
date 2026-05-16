@@ -19,12 +19,12 @@ IST = pytz.timezone('Asia/Kolkata')
 st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 
 # --- 2. THE ULTIMATE CSS (White Theme & Tight Spacing Layout) ---
-st.markdown("""
+st.markdown(f"""
     <style>
     /* Global Font, Clean Background, and Tight Layout */
-    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div { 
+    html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
         font-size: 22px !important; 
-    } 
+    }} 
     
     .stApp { color: #1A1A1A; }
 
@@ -130,6 +130,8 @@ if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: 
     st.session_state.my_tasks_only = False
+# Add this line right here to track the scale choice
+if "ui_scale" not in st.session_state: st.session_state.ui_scale = 100
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -383,6 +385,12 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # LEFT PANE: SECTION 1 & SECTION 2
 # ==========================================
 with left_pane:
+    # Global UI Zoom Control accessible to everyone
+    ui_scale = st.slider("🔍 UI Zoom Scale (%)", 100, 150, value=st.session_state.ui_scale, step=5)
+    st.session_state.ui_scale = ui_scale
+    scale_mod = ui_scale / 100.0  # Turns 125 into 1.25 multiplier
+    
+    
     
     # --- SECTION 1: LOGO, CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
     
