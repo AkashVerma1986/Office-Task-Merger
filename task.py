@@ -395,7 +395,7 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 with left_pane:
     
     # Global Layout Scale Adjuster - Instantly accessible to every user row
-    new_scale = st.slider(" ", 100, 150, value=st.session_state.ui_scale, step=5)
+    new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
     if new_scale != st.session_state.ui_scale:
         st.session_state.ui_scale = new_scale
         st.rerun()
@@ -632,10 +632,10 @@ with right_pane:
             with c_side:
                 st.markdown(
                     f"""
-                    <div style="text-align: right; font-size: {int(14 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
+                    <div style="text-align: right; font-size: {int(18 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
                         <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                        <span style="color: #666; font-size: {int(12 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                        <span style="color: #666; font-size: {int(12 * scale_mod)}px;">By: {task.get('assigner')}</span>
+                        <span style="color: #666; font-size: {int(16 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                        <span style="color: #666; font-size: {int(16 * scale_mod)}px;">By: {task.get('assigner')}</span>
                     </div>
                     """,
                     unsafe_allow_html=True
