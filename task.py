@@ -395,7 +395,7 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 with left_pane:
     
     # Global Layout Scale Adjuster - Instantly accessible to every user row
-    new_scale = st.slider("🔍 Zoom Layout Scale (%)", 100, 150, value=st.session_state.ui_scale, step=5)
+    new_scale = st.slider(" ", 100, 150, value=st.session_state.ui_scale, step=5)
     if new_scale != st.session_state.ui_scale:
         st.session_state.ui_scale = new_scale
         st.rerun()
