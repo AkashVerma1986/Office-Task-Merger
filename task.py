@@ -18,109 +18,121 @@ IST = pytz.timezone('Asia/Kolkata')
 
 st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 
-# --- 2. THE ULTIMATE CSS (White Theme & Tight Spacing Layout) ---
+# Initialize global UI zoom tracking safely at the top
+if "ui_scale" not in st.session_state: 
+    st.session_state.ui_scale = 100
+
+# Compute scale multiplier safely before CSS blocks evaluate
+scale_mod = st.session_state.ui_scale / 100.0
+
+# --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
 st.markdown(f"""
     <style>
     /* Global Font, Clean Background, and Tight Layout */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
-        font-size: 22px !important; 
+        font-size: {int(22 * scale_mod)}px !important; 
     }} 
     
-    .stApp { color: #1A1A1A; }
+    .stApp {{ color: #1A1A1A; }}
 
     /* Force Streamlit to drop general empty vertical whitespace */
-    .stAppViewMain .block-container {
+    .stAppViewMain .block-container {{
         padding-top: 1.5rem !important;
         padding-bottom: 1.5rem !important;
         gap: 0.5rem !important; 
-    }
+    }}
     
     /* PROFESSIONAL LIGHT BUTTONS */
-    .stButton > button {
+    .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
         border-radius: 8px !important;
-        padding: 10px 20px !important;
+        padding: {int(10 * scale_mod)}px {int(20 * scale_mod)}px !important;
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-    }
+        font-size: {int(18 * scale_mod)}px !important;
+    }}
 
-    .stButton > button:hover {
+    .stButton > button:hover {{
         background-color: #E0E4EB !important;
         border-color: #B0B7C3 !important;
         color: #000000 !important;
-    }
+    }}
 
     /* Updated Card CSS Layout Gaps */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stVerticalBlockBorderWrapper"] {{
         margin-bottom: 8px !important; 
-    }
+    }}
     
     /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY */
-    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { 
+    div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
         border: 2px solid #FFC107 !important; 
         border-left: 10px solid #FFC107 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #FFC107 !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
         border: 2px solid #28A745 !important; 
         border-left: 10px solid #28A745 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #28A745 !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
         border: 2px solid #E83E8C !important; 
         border-left: 10px solid #E83E8C !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #E83E8C !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-high { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
         border: 2px solid #DC3545 !important; 
         border-left: 10px solid #DC3545 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #DC3545 !important;
-    }
+    }}
 
     /* Tightens padding inside the cards and squishes row gaps */
-    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {{
         padding: 4px 12px !important;   
         gap: 0.3rem !important;          
-    }
+    }}
     
     /* Strip layout margins on element containers to stop the expanded look */
-    div[data-testid="element-container"] {
+    div[data-testid="element-container"] {{
         margin-bottom: 0px !important;
-    }
+    }}
     
     /* Makes dividers thinner with less whitespace */
-    hr {
+    hr {{
         margin: 0.4rem 0 !important;
-    }
+    }}
 
-    .gallocation-bar { width: 8px; flex-shrink: 0; }
-    .card-body { 
+    .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
+    .card-body {{ 
         flex-grow: 1; 
         display: block; 
         width: 100%; 
         padding-bottom: 10px;
-    }
-    .card-text { padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }
-    .card-footer { background-color: #F8F9FA; padding: 7px; border-top: 1px solid #F0F0F0; }
+    }}
+    .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
+    .card-footer {{ background-color: #F8F9FA; padding: 7px; border-top: 1px solid #F0F0F0; }}
     
     /* Status Colors */
-    .status-pending { background-color: #FFC107 !important; }
-    .status-completed { background-color: #28A745 !important; }
-    .status-hold { background-color: #E83E8C !important; }
-    .status-high { background-color: #DC3545 !important; }
+    .status-pending {{ background-color: #FFC107 !important; }}
+    .status-completed {{ background-color: #28A745 !important; }}
+    .status-hold {{ background-color: #E83E8C !important; }}
+    .status-high {{ background-color: #DC3545 !important; }}
 
     /* Completion Box */
-    .completion-box { 
+    .completion-box {{ 
         background-color: #E9F7EF; 
         border: 1px solid #28A745; 
         padding: 10px; 
         border-radius: 5px; 
         color: #155724; 
         margin: 10px;
-    }
+    }}
+
+    /* Metric internal overrides scaled up dynamically */
+    div[data-testid="stMetricSimpleValue"] {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] {{ font-size: {int(14 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -130,8 +142,6 @@ if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: 
     st.session_state.my_tasks_only = False
-# Add this line right here to track the scale choice
-if "ui_scale" not in st.session_state: st.session_state.ui_scale = 100
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -360,7 +370,7 @@ if user['role'] == "ADMIN":
             target_c = st.selectbox("Select Category", ["---"] + all_cats, key="admin_cat_sel")
             if target_c != "---":
                 rename_c = st.text_input(f"Rename '{target_c}' to:", key="ren_cat_input").strip()
-                if st.button(f"Update Category Globally", key="btn_upd_cat", use_container_width=True):
+                if st.button("Update Category Globally", key="btn_upd_cat", use_container_width=True):
                     requests.patch(CATEGORIES_URL, json={rename_c: True})
                     requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
                     for tid, d in tasks_dict.items():
@@ -370,14 +380,12 @@ if user['role'] == "ADMIN":
                     st.rerun()
 
                 if st.checkbox(f"Remove '{target_c}' from List?", key="del_cat_chk"):
-                    if st.button(f"🗑️ DELETE CATEGORY", key="btn_final_del_cat", use_container_width=True):
+                    if st.button("🗑️ DELETE CATEGORY", key="btn_final_del_cat", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
                         st.rerun()
 
 
 # --- 6. SPLIT SCREEN THREE-SECTION LAYOUT ---
-# Left Pane holds Section 1 (Top Form) and Section 2 (Filters/Metrics)
-# Right Pane holds Section 3 (All Task Cards)
 left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 
 
@@ -385,14 +393,14 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # LEFT PANE: SECTION 1 & SECTION 2
 # ==========================================
 with left_pane:
-    # Global UI Zoom Control accessible to everyone
-    ui_scale = st.slider("🔍 UI Zoom Scale (%)", 100, 150, value=st.session_state.ui_scale, step=5)
-    st.session_state.ui_scale = ui_scale
-    scale_mod = ui_scale / 100.0  # Turns 125 into 1.25 multiplier
     
-    
-    
-    # --- SECTION 1: LOGO, CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
+    # Global Layout Scale Adjuster - Instantly accessible to every user row
+    new_scale = st.slider("🔍 Zoom Layout Scale (%)", 100, 150, value=st.session_state.ui_scale, step=5)
+    if new_scale != st.session_state.ui_scale:
+        st.session_state.ui_scale = new_scale
+        st.rerun()
+        
+    st.divider()
     
     # This automatically finds the exact folder where your python script lives
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -401,7 +409,6 @@ with left_pane:
     if os.path.exists(logo_path):
         st.image(logo_path, use_container_width=False, width=180)
     else:
-        # If it STILL fails, we can print the path it's trying to look into for debugging
         st.caption(f"⚠️ Looking in: {logo_path}")
 
     
@@ -454,12 +461,11 @@ with left_pane:
     # --- SECTION 2: VIEW FILTERS, METRICS, SEARCH & EXCEL EXPORT ---
     st.subheader("🔍 Operations Control Panel")
     
-    # View Filters and My Task Action Elements
     vf_col, toggle_col = st.columns([2, 1])
     with vf_col:
         view_filter = st.selectbox(
             "📂 View Filter", 
-            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"],  # "Today's" is now at index 0 (Default)
+            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
             key="view_filter_main",
             label_visibility="collapsed"
         ) 
@@ -472,10 +478,8 @@ with left_pane:
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
 
-    # Date Filter Window Component
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-    # Data Processing Logic execution engine
     if not df_all.empty:
         df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
         filtered_df = df_all.copy()
@@ -500,19 +504,8 @@ with left_pane:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
-        # --- Live Metric Box Overview Framework (Dynamically Linked to User) ---
         st.markdown(f"**Live Status Overview ({view_filter})**")
         
-        # Injecting tight styling specifically for the metric cards to ensure single-line fitness
-        st.markdown("""
-            <style>
-            div[data-testid="stMetricSimpleValue"] { font-size: 20px !important; }
-            div[data-testid="stMetricLabel"] { font-size: 14px !important; }
-            </style>
-        """, unsafe_allow_html=True)
-        
-        # ALL metrics are now computed directly from the already-filtered filtered_df 
-        # This ensures that if "My Tasks" is active, these reflect ONLY that user's tasks.
         m_total = len(filtered_df)
         m_pending = len(filtered_df[filtered_df['status'] == "Pending"])
         m_high = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
@@ -534,7 +527,6 @@ with left_pane:
         
         st.divider()
 
-        # Search bar, Refresh & Excel actions engine blocks
         search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
         if search:
             filtered_df = filtered_df[
@@ -586,7 +578,7 @@ with left_pane:
 
 
 # ==========================================
-# RIGHT PANE: SECTION 3 (COMPACT TASK CARDS WITH DROPDOWN)
+# RIGHT PANE: SECTION 3 (COMPACT TASK CARDS)
 # ==========================================
 with right_pane:
     st.subheader("📋 All Tasks")
@@ -603,17 +595,17 @@ with right_pane:
         t_prio = task.get('priority', 'Normal')
         
         b_class = "border-pending"
-        indicator_color = "#FFC107"  # Yellow for Pending
+        indicator_color = "#FFC107"
         
         if t_status == "Completed": 
             b_class = "border-completed"
-            indicator_color = "#28A745"  # Green for Completed
+            indicator_color = "#28A745"
         elif t_status == "Hold": 
             b_class = "border-hold"
-            indicator_color = "#E83E8C"  # Magenta Pink for Hold
+            indicator_color = "#E83E8C"
         elif t_prio == "High" and t_status == "Pending": 
             b_class = "border-high"
-            indicator_color = "#DC3545"  # High Priority Red
+            indicator_color = "#DC3545"
 
         with st.container(border=True):
             components.html(f"""
@@ -624,15 +616,14 @@ with right_pane:
                 </script>
             """, height=0)
 
-            # Surface Row: Finance, LAN, Status, and Meta details
             c_main, c_side = st.columns([2.0, 1.4])
             
             with c_main:
                 st.markdown(
                     f"""
                     <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:24px;">{task.get('finance')}</h2>
-                        <span style="font-size: 16px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
+                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(24 * scale_mod)}px;">{task.get('finance')}</h2>
+                        <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
                     </div>
                     """, 
                     unsafe_allow_html=True
@@ -641,24 +632,22 @@ with right_pane:
             with c_side:
                 st.markdown(
                     f"""
-                    <div style="text-align: right; font-size: 14px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
+                    <div style="text-align: right; font-size: {int(14 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
                         <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                        <span style="color: #666; font-size: 12px;">Created: {task.get('assigned_at')}</span><br>
-                        <span style="color: #666; font-size: 12px;">By: {task.get('assigner')}</span>
+                        <span style="color: #666; font-size: {int(12 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                        <span style="color: #666; font-size: {int(12 * scale_mod)}px;">By: {task.get('assigner')}</span>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-            # Surface Description: Extract and display ONLY the first line/sentence
             raw_task_text = str(task.get('task', ''))
-            first_line = raw_task_text.split('\n')[0]  # Gets first line if there are line breaks
-            if len(first_line) > 90:                  # Truncate if single line is too wide
+            first_line = raw_task_text.split('\n')[0]
+            if len(first_line) > 90:
                 first_line = first_line[:87] + "..."
                 
             st.markdown(f"**Task Preview:** {first_line}")
             
-            # --- THE DROPDOWN LIST (EXPANDER) FOR REST OF THE DATA ---
             with st.expander("📄 View Full Details & Actions", expanded=False):
                 st.markdown(f"**Full Task Description:**\n{raw_task_text}")
                 
@@ -691,7 +680,6 @@ with right_pane:
                         })
                         st.rerun()
 
-                # Admin Controls inside dropdown
                 if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
                     st.write("") 
                     adm1, adm2 = st.columns([1, 1])
