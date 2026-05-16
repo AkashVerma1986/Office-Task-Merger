@@ -33,7 +33,11 @@ st.markdown(f"""
         font-size: {int(22 * scale_mod)}px !important; 
     }} 
     
-    .stApp {{ color: #1A1A1A; }}
+    /* STOPS MOBILE PULL-TO-REFRESH AND FIXES LOGOUTS */
+    .stApp {{ 
+        color: #1A1A1A; 
+        overscroll-behavior-y: contain !important; 
+    }}
 
     /* Force Streamlit to drop general empty vertical whitespace */
     .stAppViewMain .block-container {{
@@ -394,10 +398,14 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # ==========================================
 with left_pane:
     
-    # Global Layout Scale Adjuster - Instantly accessible to every user row
+    # Global Layout Scale Adjuster
     new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
     if new_scale != st.session_state.ui_scale:
         st.session_state.ui_scale = new_scale
+        st.rerun()
+        
+    # Quick Mobile Refresh Tap right under the slider
+    if st.button("REFRESH DATA", key="mobile_quick_ref", use_container_width=True):
         st.rerun()
         
     st.divider()
