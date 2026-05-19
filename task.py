@@ -171,26 +171,17 @@ def get_device_id():
     except:
         return "default_device"
 
-# --- THE AUTO-LOGIN BACKUP LAYER ---
-# This looks for an active session token inside browser storage on page load
+# --- SOLID CLIENT HYDRATION BRIDGE ---
+# Read secure headers directly from the hosting instance or check if session state is preserved
 if not st.session_state.authenticated:
-    # A lightweight listener that checks for storage tokens
-    components.html("""
-        <script>
-            const stored = localStorage.getItem("raas_user_session");
-            if (stored) {
-                // If found, we temporarily send it to Streamlit via a window message
-                window.parent.postMessage({type: "RAAS_AUTO_LOGIN", data: JSON.parse(stored)}, "*");
-            }
-        </script>
-    """, height=0)
-
-# Check if a login action was requested by the background script safely
-if 'temp_auto_login' in st.session_state and not st.session_state.authenticated:
-    st.session_state.user_data = st.session_state.temp_auto_login
-    st.session_state.authenticated = True
-    del st.session_state.temp_auto_login
-    st.rerun()
+    # Safely catch temporary background cookie updates if set
+    if "saved_user" in st.session_state and "saved_role" in st.session_state:
+        st.session_state.user_data = {
+            "name": st.session_state.saved_user,
+            "role": st.session_state.saved_role
+        }
+        st.session_state.authenticated = True
+        st.rerun()
 
 # Render secure login portal if no valid user memory map exists
 if not st.session_state.authenticated:
@@ -207,71 +198,83 @@ if not st.session_state.authenticated:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
         st.title("🔐 REAL APPLE CORRECTION LEDGER")
-        name_in = st.text_input("Name", key="portal_username_field").upper().strip()
-        pwd_in = st.text_input("Password", type="password", key="portal_password_field")
+        name_in = st.text_input("Name", key="portal_username_input").upper().strip()
+        pwd_in = st.text_input("Password", type="password", key="portal_password_input")
         
-        # Hidden background bridge to safely catch the localStorage signal
-        html_bridge = components.html("""
+        # Pure silent browser storage extraction that triggers strictly once on manual reload
+        components.html("""
             <script>
-                window.addEventListener("message", function(event) {
-                    if (event.data && event.data.type === "RAAS_AUTO_LOGIN") {
-                        // Securely inject credentials back to parent memory state via query string simulation
-                        const user = event.data.data;
-                        const url = new URL(window.parent.location.href);
-                        url.searchParams.set("auto_n", user.name);
-                        url.searchParams.set("auto_r", user.role);
-                        window.parent.location.href = url.toString();
-                    }
-                });
+                const stored = localStorage.getItem("raas_user_session");
+                if (stored && !window.parent.location.search.includes("auth_active")) {
+                    const user = JSON.parse(stored);
+                    const url = new URL(window.parent.location.href);
+                    url.searchParams.set("login_name", user.name);
+                    url.searchParams.set("login_role", user.role);
+                    url.searchParams.set("auth_active", "1");
+                    window.parent.location.href = url.toString();
+                }
             </script>
         """, height=0)
 
-        # Catching the seamless URL parameter handshake
+        # Catching the passive fallback parameters cleanly without intercepting form operations
         qp = st.query_params
-        if "auto_n" in qp and "auto_r" in qp:
-            st.session_state.temp_auto_login = {"name": qp["auto_n"], "role": qp["auto_r"]}
+        if "login_name" in qp and "login_role" in qp:
+            st.session_state.user_data = {
+                "name": qp["login_name"].upper(),
+                "role": qp["login_role"].upper()
+            }
+            st.session_state.authenticated = True
             st.query_params.clear()
             st.rerun()
         
-        if st.button("LOGIN"):
-            users_db = requests.get(USERS_URL).json() or {}
-            is_admin = (pwd_in == "1586")
-            dev_id = get_device_id()
+        if st.button("LOGIN", key="submit_portal_login_btn"):
+            if not name_in or not pwd_in:
+                st.warning("⚠️ Please fill in both Name and Password fields.")
+            else:
+                users_db = requests.get(USERS_URL).json() or {}
+                is_admin = (pwd_in == "1586")
+                dev_id = get_device_id()
 
-            if name_in and (is_admin or pwd_in == "1234"):
-                user_entry = users_db.get(name_in, {})
-                approved = user_entry.get("approved_devices", [])
-                pending = user_entry.get("pending_devices", [])
-                
-                if not isinstance(approved, list): approved = []
-                if not isinstance(pending, list): pending = []
-
-                session_data = None
-                if is_admin:
-                    session_data = {"name": name_in, "role": "ADMIN"}
-                elif name_in in users_db and dev_id in approved:
-                    session_data = {"name": name_in, "role": "STAFF"}
-                else:
-                    if name_in in users_db and dev_id not in approved and dev_id not in pending:
-                        pending.append(dev_id)
-                        requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
-                        st.error("🚫 Device not approved. Contact Admin to authorize this device.")
-                    elif name_in not in users_db:
-                        st.error("🚫 Access Denied. No Slot.")
-
-                if session_data:
-                    st.session_state.user_data = session_data
-                    st.session_state.authenticated = True
+                if name_in and (is_admin or pwd_in == "1234"):
+                    user_entry = users_db.get(name_in, {})
+                    approved = user_entry.get("approved_devices", [])
+                    pending = user_entry.get("pending_devices", [])
                     
-                    # Lock this configuration directly into the browser storage
-                    components.html(f"""
-                        <script>
-                            localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
-                            window.parent.location.reload();
-                        </script>
-                    """, height=0)
-                    time.sleep(0.5)
-                    st.rerun()
+                    if not isinstance(approved, list): approved = []
+                    if not isinstance(pending, list): pending = []
+
+                    session_data = None
+                    if is_admin:
+                        session_data = {"name": name_in, "role": "ADMIN"}
+                    elif name_in in users_db and dev_id in approved:
+                        session_data = {"name": name_in, "role": "STAFF"}
+                    else:
+                        if name_in in users_db and dev_id not in approved and dev_id not in pending:
+                            pending.append(dev_id)
+                            requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
+                            st.error("🚫 Device not approved. Contact Admin to authorize this device.")
+                        elif name_in not in users_db:
+                            st.error("🚫 Access Denied. No Slot.")
+
+                    if session_data:
+                        st.session_state.user_data = session_data
+                        st.session_state.authenticated = True
+                        
+                        # Set session memory arrays in memory state securely
+                        st.session_state.saved_user = session_data["name"]
+                        st.session_state.saved_role = session_data["role"]
+                        
+                        # Lock this configuration directly into the browser client local storage
+                        components.html(f"""
+                            <script>
+                                localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
+                                const url = new URL(window.parent.location.href);
+                                url.search = ""; // Sanitize address bar paths completely
+                                window.parent.location.href = url.toString();
+                            </script>
+                        """, height=0)
+                        time.sleep(0.4)
+                        st.rerun()
     st.stop()
 
 # --- 4. DATA FETCH ---
@@ -508,20 +511,24 @@ with left_pane:
                 
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-                if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
-                    # Clear session memory completely
+                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
+                    # Purge memory states
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
                         del st.session_state.user_data
+                    if "saved_user" in st.session_state: del st.session_state.saved_user
+                    if "saved_role" in st.session_state: del st.session_state.saved_role
                     
-                    # Direct local storage disk command to wipe user trace on exit
+                    # Purge client device storage completely
                     components.html("""
                         <script>
                             localStorage.removeItem("raas_user_session");
-                            window.parent.location.reload();
+                            const url = new URL(window.parent.location.href);
+                            url.search = "";
+                            window.parent.location.href = url.toString();
                         </script>
                     """, height=0)
-                    time.sleep(0.5)
+                    time.sleep(0.4)
                     st.rerun()
         
     st.write("") 
