@@ -411,20 +411,35 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 
 
 # ==========================================
+# ==========================================
 # LEFT PANE: SECTION 1 & SECTION 2
 # ==========================================
 with left_pane:
     
+    # Create 2 columns to put the logo and user name side-by-side
+    logo_col, name_col = st.columns([1.5, 1.2])
     
-    # This automatically finds the exact folder where your python script lives
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
-    
-    if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=False, width=260)
-    else:
-        st.caption(f"⚠️ Looking in: {logo_path}")
-
+    with logo_col:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
+        
+        if os.path.exists(logo_path):
+            # Maintains your increased brand footprint
+            st.image(logo_path, use_container_width=False, width=260)
+        else:
+            st.caption(f"⚠️ Looking in: {logo_path}")
+            
+    with name_col:
+        # Pushes the text down slightly so it sits centered with the logo height
+        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style="background-color: #F8F9FA; padding: 12px 18px; border-radius: 8px; border: 1px solid #DDE1E7; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+                <span style="font-size: {int(14 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Active Operator</span>
+                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;">👤 {user['name']}</h3>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    st.write("") # Clean separation spacer
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
         
     st.divider()
