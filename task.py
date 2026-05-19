@@ -159,7 +159,6 @@ if 'authenticated' not in st.session_state: st.session_state.authenticated = Fal
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 
-# CHANGED: Default this to True so users only see their own tasks immediately after login
 if "my_tasks_only" not in st.session_state: 
     st.session_state.my_tasks_only = True
 
@@ -172,41 +171,69 @@ def get_device_id():
     except:
         return "default_device"
 
-# Catch direct URL-based session injection from the browser storage layer
-query_params = st.query_params
-if "login_name" in query_params and "login_role" in query_params and not st.session_state.authenticated:
-    st.session_state.user_data = {
-        "name": query_params["login_name"].upper(),
-        "role": query_params["login_role"].upper()
-    }
-    st.session_state.authenticated = True
-    st.query_params.clear()
-    st.rerun()
-
-# This script pulls session data instantly from the browser local storage to maintain session lock on reload
-if not st.session_state.authenticated:
+# --- THE HARDENED LOCAL STORAGE SYNC HUB ---
+# 1. Create a hidden container to pass credentials from Browser Storage to Streamlit instantly
+with st.container():
+    # JavaScript that reads browser storage and forces values into Streamlit elements
     components.html("""
         <script>
-            const stored = localStorage.getItem("raas_user_session");
-            if (stored) {
-                const user = JSON.parse(stored);
-                const url = new URL(window.location.href);
-                if (!url.searchParams.has("login_name")) {
-                    url.searchParams.set("login_name", user.name);
-                    url.searchParams.set("login_role", user.role);
-                    window.parent.location.href = url.toString();
+            function syncSession() {
+                const stored = localStorage.getItem("raas_user_session");
+                if (stored) {
+                    const user = JSON.parse(stored);
+                    
+                    // Find the hidden inputs inside the Streamlit parent document
+                    const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+                    let syncName = null, syncRole = null;
+                    
+                    for (let i of inputs) {
+                        if (i.ariaLabel === "HIDDEN_SYNC_NAME") syncName = i;
+                        if (i.ariaLabel === "HIDDEN_SYNC_ROLE") syncRole = i;
+                    }
+                    
+                    // Inject values and trigger input events so Streamlit registers them instantly
+                    if (syncName && syncRole && (!syncName.value || syncName.value === "NONE")) {
+                        syncName.value = user.name;
+                        syncName.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        syncRole.value = user.role;
+                        syncRole.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
                 }
             }
+            // Run immediately and micro-delay to ensure DOM is fully painted
+            syncSession();
+            setTimeout(syncSession, 300);
         </script>
     """, height=0)
 
-# Render standard login portal if no browser session is active
+    # These inputs receive the browser storage tokens silently in the background
+    sync_name = st.text_input("SYNC_NAME", value="NONE", label_visibility="collapsed", key="hid_name_sync").upper().strip()
+    sync_role = st.text_input("SYNC_ROLE", value="NONE", label_visibility="collapsed", key="hid_role_sync").upper().strip()
+    
+    # Force accessibility tags so our JavaScript hook can find them instantly
+    st.markdown(f"""
+        <script>
+            var inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            for(let i of inputs) {{
+                if(i.value === "{sync_name}") i.setAttribute("aria-label", "HIDDEN_SYNC_NAME");
+                if(i.value === "{sync_role}") i.setAttribute("aria-label", "HIDDEN_SYNC_ROLE");
+            }}
+        </script>
+    """, unsafe_allow_html=True)
+
+# 2. Evaluate backgrounds tokens to bypass the form instantly on page refresh
+if not st.session_state.authenticated and sync_name != "NONE" and sync_role != "NONE":
+    st.session_state.user_data = {"name": sync_name, "role": sync_role}
+    st.session_state.authenticated = True
+    st.rerun()
+
+# 3. Standard Login Portal fallback layout if no token exists in browser cache
 if not st.session_state.authenticated:
     pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
     with center_col:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
         
@@ -216,7 +243,6 @@ if not st.session_state.authenticated:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
         st.title("🔐 REAL APPLE CORRECTION LEDGER")
-        
         name_in = st.text_input("Name").upper().strip()
         pwd_in = st.text_input("Password", type="password")
         
@@ -250,13 +276,11 @@ if not st.session_state.authenticated:
                     st.session_state.user_data = session_data
                     st.session_state.authenticated = True
                     
+                    # Hard-write session parameters into browser local storage immediately
                     components.html(f"""
                         <script>
                             localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
-                            const url = new URL(window.parent.location.href);
-                            url.searchParams.set("login_name", "{session_data['name']}");
-                            url.searchParams.set("login_role", "{session_data['role']}");
-                            window.parent.location.href = url.toString();
+                            window.parent.location.reload();
                         </script>
                     """, height=0)
                     time.sleep(0.5)
@@ -497,17 +521,19 @@ with left_pane:
                 
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-                if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
+                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
+                    # 1. Wipe local memory arrays
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
                         del st.session_state.user_data
+                    st.session_state["hid_name_sync"] = "NONE"
+                    st.session_state["hid_role_sync"] = "NONE"
                     
+                    # 2. Purge browser storage disk cache completely
                     components.html("""
                         <script>
                             localStorage.removeItem("raas_user_session");
-                            const url = new URL(window.parent.location.href);
-                            url.search = "";
-                            window.parent.location.href = url.toString();
+                            window.parent.location.reload();
                         </script>
                     """, height=0)
                     time.sleep(0.5)
@@ -674,7 +700,7 @@ with left_pane:
         else:
             filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
 
-        # Render action execution utility rows cleanly below analytics metrics
+        # Render action execution utility row split 50/50
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
@@ -706,11 +732,12 @@ with left_pane:
                 use_container_width=True
             )
 
-            st.write("") 
-            new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
-            if new_scale != st.session_state.ui_scale:
-                st.session_state.ui_scale = new_scale
-                st.rerun()
+        # --- MOVED & UPDATED: Zoom Layout Slider now occupies its own clean full row ---
+        st.write("") 
+        new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5, key="global_zoom_slider")
+        if new_scale != st.session_state.ui_scale:
+            st.session_state.ui_scale = new_scale
+            st.rerun()
     else:
         filtered_df = pd.DataFrame()
 
