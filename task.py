@@ -488,14 +488,14 @@ with left_pane:
             with card_left:
                 st.markdown(f"""
                     <div style="margin: -6px 0 0 0; padding: 0;">
-                        <span style="font-size: {int(12 * scale_mod)}px; color: #666666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0px;">Operator</span>
-                        <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 {user['name']}</h3>
+                        <span style="font-size: {int(12 * scale_mod)}px; color: #666666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0px;">Real Apple</span>
+                        <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {user['name']}</h3>
                     </div>
                 """, unsafe_allow_html=True)
                 
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
+                if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
                         del st.session_state.user_data
@@ -770,7 +770,7 @@ with right_pane:
                 st.markdown(
                     f"""
                     <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(32 * scale_mod)}px; font-weight: bold; color: #1A1A1A;">{task.get('finance')}</h2>
+                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: bold; color: #1A1A1A;">{task.get('finance')}</h2>
                         <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
                     </div>
                     """, 
