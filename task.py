@@ -442,6 +442,33 @@ with left_pane:
     st.divider()
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
+    
+    # 1. Define the Success Popup Dialog function
+    @st.dialog("✨ Task Registered Successfully", width="small")
+    def show_success_popup(lan, user_name):
+        st.write("") 
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <h1 style="font-size: 50px; margin: 0;">🎉</h1>
+            <p style="font-weight: bold; margin-top: 10px; color: #28A745;">📢 New Task Added by {user_name}!</p>
+            <p style="color: #4A4A4A; font-size: 16px;">Task for LAN <b>{lan}</b> has been successfully added to the ledger.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.write("")
+        
+        # Clearing happens when the user deliberately interacts with the OK button
+        if st.button("👍 OK", use_container_width=True, type="primary"):
+            for key in ["main_finance_picker", "main_cat_picker", "main_lan_input", "main_prio_slider", "main_task_details"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.session_state.show_submit_popup = False
+            st.rerun()
+
+    # 2. Check state to see if the popup needs to be drawn on screen
+    if st.session_state.get("show_submit_popup"):
+        show_success_popup(st.session_state.get("last_sub_lan", ""), user['name'])
+
+    # 3. The actual form layout container
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
@@ -450,9 +477,9 @@ with left_pane:
         fin_active = f_sel
         
         cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
-        lan_no = c_lan.text_input("LAN No.", placeholder="Required").strip()
-        prio = c3.select_slider("Priority", ["Normal", "Medium", "High"])
-        dtl_main = st.text_area("Task Details", value=st.session_state.get('edit_dtl_top', ""))
+        lan_no = c_lan.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+        prio = c3.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+        dtl_main = st.text_area("Task Details", key="main_task_details")
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
@@ -468,17 +495,11 @@ with left_pane:
                 requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                 
-                st.session_state.edit_dtl_top = ""
-                
-                for key in ["main_finance_picker", "main_cat_picker"]:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                
-                st.success(f"🎉 Success! Task for LAN {lan_no} has been added to the ledger.")
-                st.toast(f"📢 New Task Added by {user['name']}!", icon="✅")
-                
-                time.sleep(1.5) 
+                # Trip the safety flags to open the modal container instantly
+                st.session_state.last_sub_lan = lan_no
+                st.session_state.show_submit_popup = True
                 st.rerun()
+                
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
             else:
