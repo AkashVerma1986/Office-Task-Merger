@@ -415,18 +415,6 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # ==========================================
 with left_pane:
     
-    # Two buttons in one line: Refresh Data & My Tasks
-    btn_col1, btn_col2 = st.columns(2)
-    with btn_col1:
-        if st.button("REFRESH DATA", key="mobile_quick_ref", use_container_width=True):
-            st.rerun()
-    with btn_col2:
-        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-        if st.button(btn_label, key="my_tasks_toggle", use_container_width=True):
-            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-            st.rerun()
-        
-    st.divider()
     
     # This automatically finds the exact folder where your python script lives
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -456,11 +444,15 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         
-        # Clearing happens when the user deliberately interacts with the OK button
+        # Explicitly reset values back to baseline defaults on OK click
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            for key in ["main_finance_picker", "main_cat_picker", "main_lan_input", "main_prio_slider", "main_task_details"]:
-                if key in st.session_state:
-                    del st.session_state[key]
+            st.session_state["main_finance_picker"] = "--- SELECT ---"
+            st.session_state["main_cat_picker"] = "---"
+            st.session_state["main_lan_input"] = ""
+            st.session_state["main_prio_slider"] = "Normal"
+            st.session_state["main_task_details"] = ""
+            
+            # Close popup and refresh layout
             st.session_state.show_submit_popup = False
             st.rerun()
 
@@ -630,7 +622,24 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (COMPACT TASK CARDS)
 # ==========================================
 with right_pane:
-    st.subheader("📋 All Tasks")
+    
+    # Create a clean horizontal row for Title + Action Buttons
+    hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
+    
+    with hdr_title_col:
+        st.subheader("📋 All Tasks")
+        
+    with hdr_btn1:
+        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
+            st.rerun()
+            
+    with hdr_btn2:
+        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun()
+            
+    st.write("") # Micro spacing row
     
     keys = list(filtered_df.index) if not filtered_df.empty else []
 
