@@ -435,7 +435,7 @@ with left_pane:
         st.markdown(f"""
             <div style="background-color: #F8F9FA; padding: 12px 18px; border-radius: 8px; border: 1px solid #DDE1E7; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
                 <span style="font-size: {int(14 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Real Apple</span>
-                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;"> {🍎 user['name']}</h3>
+                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;"> {user['name']}</h3>
             </div>
         """, unsafe_allow_html=True)
         
