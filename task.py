@@ -444,7 +444,6 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         
-        # Explicitly reset values back to baseline defaults on OK click
         if st.button("👍 OK", use_container_width=True, type="primary"):
             st.session_state["main_finance_picker"] = "--- SELECT ---"
             st.session_state["main_cat_picker"] = "---"
@@ -452,7 +451,6 @@ with left_pane:
             st.session_state["main_prio_slider"] = "Normal"
             st.session_state["main_task_details"] = ""
             
-            # Close popup and refresh layout
             st.session_state.show_submit_popup = False
             st.rerun()
 
@@ -463,14 +461,23 @@ with left_pane:
     # 3. The actual form layout container
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
-        c1, c2, c_lan, c3 = st.columns([1.5, 1, 1, 1])
         
-        f_sel = c1.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
-        fin_active = f_sel
-        
-        cat = c2.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
-        lan_no = c_lan.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
-        prio = c3.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+        # ROW 1: Finance and Category side-by-side
+        row1_col1, row1_col2 = st.columns(2)
+        with row1_col1:
+            f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
+            fin_active = f_sel
+        with row1_col2:
+            cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+            
+        # ROW 2: LAN No. and Priority side-by-side below Row 1
+        row2_col1, row2_col2 = st.columns(2)
+        with row2_col1:
+            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+        with row2_col2:
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            
+        # Task Details Text Area below the rows
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
@@ -487,7 +494,6 @@ with left_pane:
                 requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                 
-                # Trip the safety flags to open the modal container instantly
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 st.rerun()
@@ -496,7 +502,6 @@ with left_pane:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
             else:
                 st.warning("⚠️ Please fill in Finance and Task Details.")
-
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
