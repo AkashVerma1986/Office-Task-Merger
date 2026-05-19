@@ -174,7 +174,7 @@ if not st.session_state.authenticated:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
         # 2. Centralized Login Title and Input Fields
-        st.title("🔐 RAAS SECURE ACCESS")
+        st.title("🔐 REAL APPLE CORRECTION LEDGER")
         
         name_in = st.text_input("Name").upper().strip()
         pwd_in = st.text_input("Password", type="password")
