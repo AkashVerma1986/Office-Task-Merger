@@ -475,13 +475,21 @@ with left_pane:
             </div>
         """, unsafe_allow_html=True)
         
-        # --- NEW: LOGOUT BUTTON INSTALLED DIRECTLY BELOW OPERATOR BOX ---
-        st.write("") # Tiny gap spacer
+        # --- LOGOUT BUTTON (UPDATED TO CLEAR BROWSER STORAGE) ---
+        st.write("") 
         if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
-            # Clear critical session authentication variables
             st.session_state.authenticated = False
             if "user_data" in st.session_state:
                 del st.session_state.user_data
+            
+            # Wipes the persistent browser memory so it stays logged out
+            components.html("""
+                <script>
+                    localStorage.removeItem("raas_user_session");
+                    window.location.reload();
+                </script>
+            """, height=0)
+            time.sleep(0.5)
             st.rerun()
         
     st.write("") # Clean separation spacer
