@@ -158,8 +158,10 @@ st.markdown(f"""
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
+
+# CHANGED: Default this to True so users only see their own tasks immediately after login
 if "my_tasks_only" not in st.session_state: 
-    st.session_state.my_tasks_only = False
+    st.session_state.my_tasks_only = True
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -724,6 +726,7 @@ with right_pane:
             st.rerun()
             
     with hdr_btn2:
+        # If my_tasks_only is True, the button should offer to "Show All"
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
         if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
