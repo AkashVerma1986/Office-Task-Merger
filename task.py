@@ -31,7 +31,21 @@ st.markdown(f"""
     /* Global Font, Clean Background, and Tight Layout */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
         font-size: {int(22 * scale_mod)}px !important; 
+        color: #1A1A1A !important;
     }} 
+    
+    /* FIX FOR FADED DROPDOWN / SELECTBOX ITEMS */
+    div[data-baseweb="select"] * {{
+        color: #1A1A1A !important;
+        opacity: 1.0 !important;
+        font-weight: 500 !important;
+    }}
+    
+    /* Fix for dropdown menu popup item list contrast */
+    ul[role="listbox"] li {{
+        color: #1A1A1A !important;
+        opacity: 1.0 !important;
+    }}
     
     /* STOPS MOBILE PULL-TO-REFRESH AND FIXES LOGOUTS */
     .stApp {{ 
@@ -95,7 +109,7 @@ st.markdown(f"""
     /* Tightens padding inside the cards and squishes row gaps */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {{
         padding: 4px 12px !important;   
-        gap: 0.3rem !important;          
+        gap: 0.3rem !important;                    
     }}
     
     /* Strip layout margins on element containers to stop the expanded look */
@@ -724,9 +738,8 @@ with right_pane:
             if len(first_line) > 90:
                 first_line = first_line[:87] + "..."
                 
-            st.markdown(f"**Task Preview:** {first_line}")
-            
-            with st.expander("📄 View Full Details & Actions", expanded=False):
+            # --- UPDATED: Task Preview is now embedded directly as the expander button label ---
+            with st.expander(f"🔍 Preview: {first_line}", expanded=False):
                 st.markdown(f"**Full Task Description:**\n{raw_task_text}")
                 
                 if t_status == "Hold":
