@@ -421,7 +421,7 @@ with left_pane:
     logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
     
     if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=False, width=180)
+        st.image(logo_path, use_container_width=False, width=260)
     else:
         st.caption(f"⚠️ Looking in: {logo_path}")
 
@@ -680,7 +680,7 @@ with right_pane:
                 st.markdown(
                     f"""
                     <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(24 * scale_mod)}px;">{task.get('finance')}</h2>
+                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px;">{task.get('finance')}</h2>
                         <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
                     </div>
                     """, 
@@ -690,10 +690,10 @@ with right_pane:
             with c_side:
                 st.markdown(
                     f"""
-                    <div style="text-align: right; font-size: {int(18 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
+                    <div style="text-align: right; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
                         <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                        <span style="color: #666; font-size: {int(16 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                        <span style="color: #666; font-size: {int(16 * scale_mod)}px;">By: {task.get('assigner')}</span>
+                        <span style="color: #666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                        <span style="color: #666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
                     </div>
                     """,
                     unsafe_allow_html=True
