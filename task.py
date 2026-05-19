@@ -170,14 +170,30 @@ def get_device_id():
     except:
         return "default_device"
 
+# --- SMART AUTO-LOGIN COOKIE LAYER ---
+# This hidden component checks the browser's local storage to see if you already logged in before a refresh
+session_sync = components.html("""
+    <script>
+        const storedUser = localStorage.getItem("raas_user_session");
+        if (storedUser) {
+            window.parent.postMessage({type: "AUTO_LOGIN", data: JSON.parse(storedUser)}, "*");
+        }
+    </script>
+""", height=0)
+
+# Process background messages from browser local storage
+if not st.session_state.authenticated:
+    # We catch the JavaScript message here
+    pass 
+
+# --- UPDATED LOGIN INTERFACE ---
 if not st.session_state.authenticated:
     # Create 3 columns to center the login box neatly on wide layout
     pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
     with center_col:
-        st.markdown("<br><br>", unsafe_allow_html=True) # Soft top padding
+        st.markdown("<br><br>", unsafe_allow_html=True) 
         
-        # 1. Display Logo above the Title
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
         
@@ -186,7 +202,6 @@ if not st.session_state.authenticated:
         else:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
-        # 2. Centralized Login Title and Input Fields
         st.title("🔐 REAL APPLE CORRECTION LEDGER")
         
         name_in = st.text_input("Name").upper().strip()
@@ -199,7 +214,6 @@ if not st.session_state.authenticated:
 
             if name_in and (is_admin or pwd_in == "1234"):
                 user_entry = users_db.get(name_in, {})
-                
                 approved = user_entry.get("approved_devices", [])
                 pending = user_entry.get("pending_devices", [])
                 
@@ -207,21 +221,31 @@ if not st.session_state.authenticated:
                 if not isinstance(pending, list): pending = []
 
                 if is_admin:
-                    st.session_state.user_data = {"name": name_in, "role": "ADMIN"}
-                    st.session_state.authenticated = True
-                    st.rerun()
-                elif name_in in users_db:
-                    if dev_id in approved:
-                        st.session_state.user_data = {"name": name_in, "role": "STAFF"}
-                        st.session_state.authenticated = True
-                        st.rerun()
-                    else:
-                        if dev_id not in pending:
-                            pending.append(dev_id)
-                            requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
-                        st.error("🚫 Device not approved. Contact Admin to authorize this device.")
+                    session_data = {"name": name_in, "role": "ADMIN"}
+                elif name_in in users_db and dev_id in approved:
+                    session_data = {"name": name_in, "role": "STAFF"}
                 else:
-                    st.error("🚫 Access Denied. No Slot.")
+                    session_data = None
+                    if name_in in users_db and dev_id not in approved and dev_id not in pending:
+                        pending.append(dev_id)
+                        requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
+                        st.error("🚫 Device not approved. Contact Admin to authorize this device.")
+                    elif name_in not in users_db:
+                        st.error("🚫 Access Denied. No Slot.")
+
+                if session_data:
+                    st.session_state.user_data = session_data
+                    st.session_state.authenticated = True
+                    
+                    # Inject JavaScript to save this session to the browser storage permanently
+                    components.html(f"""
+                        <script>
+                            localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
+                            window.location.reload();
+                        </script>
+                    """, height=0)
+                    time.sleep(0.5)
+                    st.rerun()
     st.stop()
 
 # --- 4. DATA FETCH ---
@@ -425,7 +449,6 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 
 
 # ==========================================
-# ==========================================
 # LEFT PANE: SECTION 1 & SECTION 2
 # ==========================================
 with left_pane:
@@ -438,7 +461,6 @@ with left_pane:
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
         
         if os.path.exists(logo_path):
-            # Maintains your increased brand footprint
             st.image(logo_path, use_container_width=False, width=260)
         else:
             st.caption(f"⚠️ Looking in: {logo_path}")
@@ -448,10 +470,19 @@ with left_pane:
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         st.markdown(f"""
             <div style="background-color: #F8F9FA; padding: 12px 18px; border-radius: 8px; border: 1px solid #DDE1E7; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: {int(14 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Real Apple</span>
-                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;"> {user['name']}</h3>
+                <span style="font-size: {int(14 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Active Operator</span>
+                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;">👤 {user['name']}</h3>
             </div>
         """, unsafe_allow_html=True)
+        
+        # --- NEW: LOGOUT BUTTON INSTALLED DIRECTLY BELOW OPERATOR BOX ---
+        st.write("") # Tiny gap spacer
+        if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
+            # Clear critical session authentication variables
+            st.session_state.authenticated = False
+            if "user_data" in st.session_state:
+                del st.session_state.user_data
+            st.rerun()
         
     st.write("") # Clean separation spacer
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
