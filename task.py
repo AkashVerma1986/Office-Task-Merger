@@ -84,24 +84,24 @@ st.markdown(f"""
         margin-bottom: 8px !important; 
     }}
     
-    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY */
+    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY - 3PX BOLDER OUTLINES */
     div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
-        border: 1px solid #FFC107 !important; 
+        border: 3px solid #FFC107 !important; 
         border-left: 10px solid #FFC107 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #FFC107 !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
-        border: 1px solid #28A745 !important; 
+        border: 3px solid #28A745 !important; 
         border-left: 10px solid #28A745 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #28A745 !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
-        border: 1px solid #E83E8C !important; 
+        border: 3px solid #E83E8C !important; 
         border-left: 10px solid #E83E8C !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #E83E8C !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
-        border: 1px solid #DC3545 !important; 
+        border: 3px solid #DC3545 !important; 
         border-left: 10px solid #DC3545 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #DC3545 !important;
     }}
@@ -178,11 +178,10 @@ if "login_name" in query_params and "login_role" in query_params and not st.sess
         "role": query_params["login_role"].upper()
     }
     st.session_state.authenticated = True
-    # Clear the parameters from the URL silently to keep the address bar clean
     st.query_params.clear()
     st.rerun()
 
-# This script pulls session data instantly from the browser and forces it into the execution loop via URL tokens
+# This script pulls session data instantly from the browser local storage to maintain session lock on reload
 if not st.session_state.authenticated:
     components.html("""
         <script>
@@ -190,7 +189,6 @@ if not st.session_state.authenticated:
             if (stored) {
                 const user = JSON.parse(stored);
                 const url = new URL(window.location.href);
-                // If parameters aren't set yet, inject them and force an instant reload
                 if (!url.searchParams.has("login_name")) {
                     url.searchParams.set("login_name", user.name);
                     url.searchParams.set("login_role", user.role);
@@ -250,7 +248,6 @@ if not st.session_state.authenticated:
                     st.session_state.user_data = session_data
                     st.session_state.authenticated = True
                     
-                    # Store session securely and trigger the layout reload
                     components.html(f"""
                         <script>
                             localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
@@ -469,8 +466,8 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # ==========================================
 with left_pane:
     
-    # Create 2 columns to put the logo and user name side-by-side
-    logo_col, name_col = st.columns([1.5, 1.2])
+    # Create 2 main columns to put the logo and operator box side-by-side horizontally
+    logo_col, operator_box_col = st.columns([1.4, 1.3])
     
     with logo_col:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -481,39 +478,41 @@ with left_pane:
         else:
             st.caption(f"⚠️ Looking in: {logo_path}")
             
-    with name_col:
+    with operator_box_col:
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         
-        # We use a native streamlit container with a border to simulate the card look cleanly
+        # Micro card wrapper container
         with st.container(border=True):
-            st.markdown(f"""
-                <div style="margin: -10px 0 5px 0; padding: 0;">
-                    <span style="font-size: {int(13 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Active Operator</span>
-                    <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; line-height: 1.2;">👤 {user['name']}</h3>
-                </div>
-            """, unsafe_allow_html=True)
+            card_left, card_right = st.columns([1.6, 1.1])
             
-            # --- INSIDE THE CARD: Embedded Logout Button ---
-            if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
-                st.session_state.authenticated = False
-                if "user_data" in st.session_state:
-                    del st.session_state.user_data
+            with card_left:
+                st.markdown(f"""
+                    <div style="margin: -6px 0 0 0; padding: 0;">
+                        <span style="font-size: {int(12 * scale_mod)}px; color: #666666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0px;">Operator</span>
+                        <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 {user['name']}</h3>
+                    </div>
+                """, unsafe_allow_html=True)
                 
-                # Wipe local storage and pull parameters off the URL completely
-                components.html("""
-                    <script>
-                        localStorage.removeItem("raas_user_session");
-                        const url = new URL(window.parent.location.href);
-                        url.search = ""; // Clears all parameters
-                        window.parent.location.href = url.toString();
-                    </script>
-                """, height=0)
-                time.sleep(0.5)
-                st.rerun()
+            with card_right:
+                st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
+                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
+                    st.session_state.authenticated = False
+                    if "user_data" in st.session_state:
+                        del st.session_state.user_data
+                    
+                    components.html("""
+                        <script>
+                            localStorage.removeItem("raas_user_session");
+                            const url = new URL(window.parent.location.href);
+                            url.search = "";
+                            window.parent.location.href = url.toString();
+                        </script>
+                    """, height=0)
+                    time.sleep(0.5)
+                    st.rerun()
         
-    st.write("") # Clean separation spacer
+    st.write("") 
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
-        
     st.divider()
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
@@ -589,6 +588,7 @@ with left_pane:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
             else:
                 st.warning("⚠️ Please fill in Finance and Task Details.")
+                
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
@@ -670,7 +670,7 @@ with left_pane:
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", use_container_width=True): 
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
                 st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
@@ -699,13 +699,11 @@ with left_pane:
                 use_container_width=True
             )
 
-            # --- ZOOM LAYOUT SLIDER PERFECTLY ALLOCATED IN EXPORT COLUMN ---
             st.write("") 
             new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
             if new_scale != st.session_state.ui_scale:
                 st.session_state.ui_scale = new_scale
                 st.rerun()
-
     else:
         filtered_df = pd.DataFrame()
 
@@ -715,7 +713,7 @@ with left_pane:
 # ==========================================
 with right_pane:
     
-    # Create a clean horizontal row for Title + Action Buttons
+    # Horizontal header alignment layout row
     hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
     
     with hdr_title_col:
@@ -731,7 +729,7 @@ with right_pane:
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun()
             
-    st.write("") # Micro spacing row
+    st.write("") 
     
     keys = list(filtered_df.index) if not filtered_df.empty else []
 
@@ -772,7 +770,7 @@ with right_pane:
                 st.markdown(
                     f"""
                     <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px;">{task.get('finance')}</h2>
+                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(32 * scale_mod)}px; font-weight: bold; color: #1A1A1A;">{task.get('finance')}</h2>
                         <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
                     </div>
                     """, 
@@ -796,7 +794,7 @@ with right_pane:
             if len(first_line) > 90:
                 first_line = first_line[:87] + "..."
                 
-            # --- UPDATED: Task Preview is now embedded directly as the expander button label ---
+            # Task Preview configuration directly set as expander click label wrapper
             with st.expander(f"🔍 Preview: {first_line}", expanded=False):
                 st.markdown(f"**Full Task Description:**\n{raw_task_text}")
                 
