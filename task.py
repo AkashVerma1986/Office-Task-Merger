@@ -171,64 +171,28 @@ def get_device_id():
     except:
         return "default_device"
 
-# --- THE HARDENED LOCAL STORAGE SYNC HUB ---
-# 1. Create a hidden container to pass credentials from Browser Storage to Streamlit instantly
-with st.container():
-    # JavaScript that reads browser storage and forces values into Streamlit elements
+# --- THE AUTO-LOGIN BACKUP LAYER ---
+# This looks for an active session token inside browser storage on page load
+if not st.session_state.authenticated:
+    # A lightweight listener that checks for storage tokens
     components.html("""
         <script>
-            function syncSession() {
-                const stored = localStorage.getItem("raas_user_session");
-                if (stored) {
-                    const user = JSON.parse(stored);
-                    
-                    // Find the hidden inputs inside the Streamlit parent document
-                    const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                    let syncName = null, syncRole = null;
-                    
-                    for (let i of inputs) {
-                        if (i.ariaLabel === "HIDDEN_SYNC_NAME") syncName = i;
-                        if (i.ariaLabel === "HIDDEN_SYNC_ROLE") syncRole = i;
-                    }
-                    
-                    // Inject values and trigger input events so Streamlit registers them instantly
-                    if (syncName && syncRole && (!syncName.value || syncName.value === "NONE")) {
-                        syncName.value = user.name;
-                        syncName.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        syncRole.value = user.role;
-                        syncRole.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                }
+            const stored = localStorage.getItem("raas_user_session");
+            if (stored) {
+                // If found, we temporarily send it to Streamlit via a window message
+                window.parent.postMessage({type: "RAAS_AUTO_LOGIN", data: JSON.parse(stored)}, "*");
             }
-            // Run immediately and micro-delay to ensure DOM is fully painted
-            syncSession();
-            setTimeout(syncSession, 300);
         </script>
     """, height=0)
 
-    # These inputs receive the browser storage tokens silently in the background
-    sync_name = st.text_input("SYNC_NAME", value="NONE", label_visibility="collapsed", key="hid_name_sync").upper().strip()
-    sync_role = st.text_input("SYNC_ROLE", value="NONE", label_visibility="collapsed", key="hid_role_sync").upper().strip()
-    
-    # Force accessibility tags so our JavaScript hook can find them instantly
-    st.markdown(f"""
-        <script>
-            var inputs = window.parent.document.querySelectorAll('input[type="text"]');
-            for(let i of inputs) {{
-                if(i.value === "{sync_name}") i.setAttribute("aria-label", "HIDDEN_SYNC_NAME");
-                if(i.value === "{sync_role}") i.setAttribute("aria-label", "HIDDEN_SYNC_ROLE");
-            }}
-        </script>
-    """, unsafe_allow_html=True)
-
-# 2. Evaluate backgrounds tokens to bypass the form instantly on page refresh
-if not st.session_state.authenticated and sync_name != "NONE" and sync_role != "NONE":
-    st.session_state.user_data = {"name": sync_name, "role": sync_role}
+# Check if a login action was requested by the background script safely
+if 'temp_auto_login' in st.session_state and not st.session_state.authenticated:
+    st.session_state.user_data = st.session_state.temp_auto_login
     st.session_state.authenticated = True
+    del st.session_state.temp_auto_login
     st.rerun()
 
-# 3. Standard Login Portal fallback layout if no token exists in browser cache
+# Render secure login portal if no valid user memory map exists
 if not st.session_state.authenticated:
     pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
@@ -243,8 +207,31 @@ if not st.session_state.authenticated:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
         st.title("🔐 REAL APPLE CORRECTION LEDGER")
-        name_in = st.text_input("Name").upper().strip()
-        pwd_in = st.text_input("Password", type="password")
+        name_in = st.text_input("Name", key="portal_username_field").upper().strip()
+        pwd_in = st.text_input("Password", type="password", key="portal_password_field")
+        
+        # Hidden background bridge to safely catch the localStorage signal
+        html_bridge = components.html("""
+            <script>
+                window.addEventListener("message", function(event) {
+                    if (event.data && event.data.type === "RAAS_AUTO_LOGIN") {
+                        // Securely inject credentials back to parent memory state via query string simulation
+                        const user = event.data.data;
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set("auto_n", user.name);
+                        url.searchParams.set("auto_r", user.role);
+                        window.parent.location.href = url.toString();
+                    }
+                });
+            </script>
+        """, height=0)
+
+        # Catching the seamless URL parameter handshake
+        qp = st.query_params
+        if "auto_n" in qp and "auto_r" in qp:
+            st.session_state.temp_auto_login = {"name": qp["auto_n"], "role": qp["auto_r"]}
+            st.query_params.clear()
+            st.rerun()
         
         if st.button("LOGIN"):
             users_db = requests.get(USERS_URL).json() or {}
@@ -276,7 +263,7 @@ if not st.session_state.authenticated:
                     st.session_state.user_data = session_data
                     st.session_state.authenticated = True
                     
-                    # Hard-write session parameters into browser local storage immediately
+                    # Lock this configuration directly into the browser storage
                     components.html(f"""
                         <script>
                             localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
@@ -521,15 +508,13 @@ with left_pane:
                 
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
-                    # 1. Wipe local memory arrays
+                if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
+                    # Clear session memory completely
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
                         del st.session_state.user_data
-                    st.session_state["hid_name_sync"] = "NONE"
-                    st.session_state["hid_role_sync"] = "NONE"
                     
-                    # 2. Purge browser storage disk cache completely
+                    # Direct local storage disk command to wipe user trace on exit
                     components.html("""
                         <script>
                             localStorage.removeItem("raas_user_session");
