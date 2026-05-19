@@ -86,22 +86,22 @@ st.markdown(f"""
     
     /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY */
     div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
-        border: 3px solid #FFC107 !important; 
+        border: 1px solid #FFC107 !important; 
         border-left: 10px solid #FFC107 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #FFC107 !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
-        border: 3px solid #28A745 !important; 
+        border: 1px solid #28A745 !important; 
         border-left: 10px solid #28A745 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #28A745 !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
-        border: 3px solid #E83E8C !important; 
+        border: 1px solid #E83E8C !important; 
         border-left: 10px solid #E83E8C !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #E83E8C !important;
     }}
     div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
-        border: 3px solid #DC3545 !important; 
+        border: 1px solid #DC3545 !important; 
         border-left: 10px solid #DC3545 !important; 
         box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #DC3545 !important;
     }}
