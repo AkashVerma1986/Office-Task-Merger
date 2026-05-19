@@ -157,40 +157,58 @@ def get_device_id():
         return "default_device"
 
 if not st.session_state.authenticated:
-    st.title("🔐 RAAS SECURE ACCESS")
-    name_in = st.text_input("Name").upper().strip()
-    pwd_in = st.text_input("Password", type="password")
+    # Create 3 columns to center the login box neatly on wide layout
+    pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
-    if st.button("LOGIN"):
-        users_db = requests.get(USERS_URL).json() or {}
-        is_admin = (pwd_in == "1586")
-        dev_id = get_device_id()
-
-        if name_in and (is_admin or pwd_in == "1234"):
-            user_entry = users_db.get(name_in, {})
+    with center_col:
+        st.markdown("<br><br>", unsafe_allow_html=True) # Soft top padding
+        
+        # 1. Display Logo above the Title
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
+        
+        if os.path.exists(logo_path):
+            # Centering image within the column using container width control
+            st.image(logo_path, width=180)
+        else:
+            st.caption(f"⚠️ Looking for logo in: {logo_path}")
             
-            approved = user_entry.get("approved_devices", [])
-            pending = user_entry.get("pending_devices", [])
-            
-            if not isinstance(approved, list): approved = []
-            if not isinstance(pending, list): pending = []
+        # 2. Centralized Login Title and Input Fields
+        st.title("🔐 RAAS SECURE ACCESS")
+        
+        name_in = st.text_input("Name").upper().strip()
+        pwd_in = st.text_input("Password", type="password")
+        
+        if st.button("LOGIN"):
+            users_db = requests.get(USERS_URL).json() or {}
+            is_admin = (pwd_in == "1586")
+            dev_id = get_device_id()
 
-            if is_admin:
-                st.session_state.user_data = {"name": name_in, "role": "ADMIN"}
-                st.session_state.authenticated = True
-                st.rerun()
-            elif name_in in users_db:
-                if dev_id in approved:
-                    st.session_state.user_data = {"name": name_in, "role": "STAFF"}
+            if name_in and (is_admin or pwd_in == "1234"):
+                user_entry = users_db.get(name_in, {})
+                
+                approved = user_entry.get("approved_devices", [])
+                pending = user_entry.get("pending_devices", [])
+                
+                if not isinstance(approved, list): approved = []
+                if not isinstance(pending, list): pending = []
+
+                if is_admin:
+                    st.session_state.user_data = {"name": name_in, "role": "ADMIN"}
                     st.session_state.authenticated = True
                     st.rerun()
+                elif name_in in users_db:
+                    if dev_id in approved:
+                        st.session_state.user_data = {"name": name_in, "role": "STAFF"}
+                        st.session_state.authenticated = True
+                        st.rerun()
+                    else:
+                        if dev_id not in pending:
+                            pending.append(dev_id)
+                            requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
+                        st.error("🚫 Device not approved. Contact Admin to authorize this device.")
                 else:
-                    if dev_id not in pending:
-                        pending.append(dev_id)
-                        requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
-                    st.error("🚫 Device not approved. Contact Admin to authorize this device.")
-            else:
-                st.error("🚫 Access Denied. No Slot.")
+                    st.error("🚫 Access Denied. No Slot.")
     st.stop()
 
 # --- 4. DATA FETCH ---
