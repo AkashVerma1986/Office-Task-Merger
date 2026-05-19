@@ -416,15 +416,18 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # ==========================================
 with left_pane:
     
-    # Global Layout Scale Adjuster
-    new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
-    if new_scale != st.session_state.ui_scale:
-        st.session_state.ui_scale = new_scale
-        st.rerun()
+    
         
-    # Quick Mobile Refresh Tap right under the slider
-    if st.button("REFRESH DATA", key="mobile_quick_ref", use_container_width=True):
-        st.rerun()
+    # Two buttons in one line: Refresh Data & My Tasks
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        if st.button("REFRESH DATA", key="mobile_quick_ref", use_container_width=True):
+            st.rerun()
+    with btn_col2:
+        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+        if st.button(btn_label, key="my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun()
         
     st.divider()
     
@@ -436,6 +439,15 @@ with left_pane:
         st.image(logo_path, use_container_width=False, width=180)
     else:
         st.caption(f"⚠️ Looking in: {logo_path}")
+
+    search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
+        if search:
+            filtered_df = filtered_df[
+                (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
+                (filtered_df['task'].str.contains(search, case=False, na=False)) |
+                (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
+            ]
+    st.divider()
 
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
@@ -487,19 +499,11 @@ with left_pane:
     # --- SECTION 2: VIEW FILTERS, METRICS, SEARCH & EXCEL EXPORT ---
     st.subheader("🔍 Operations Control Panel")
     
-    vf_col, toggle_col = st.columns([2, 1])
-    with vf_col:
-        view_filter = st.selectbox(
-            "📂 View Filter", 
-            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            key="view_filter_main",
-            label_visibility="collapsed"
-        ) 
-    with toggle_col:
-        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-        if st.button(btn_label, key="my_tasks_toggle", use_container_width=True):
-            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-            st.rerun()
+    view_filter = st.selectbox(
+        "📂 View Filter", 
+        ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+        key="view_filter_main"
+    )
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
@@ -553,13 +557,7 @@ with left_pane:
         
         st.divider()
 
-        search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
-        if search:
-            filtered_df = filtered_df[
-                (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
-                (filtered_df['task'].str.contains(search, case=False, na=False)) |
-                (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
-            ]
+        
 
         prio_map = {"High": 0, "Medium": 1, "Normal": 2}
         filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
@@ -599,8 +597,16 @@ with left_pane:
                 file_name=f"Export_{view_filter}.xlsx", 
                 use_container_width=True
             )
-    else:
-        filtered_df = pd.DataFrame()
+
+            # >>> PASTE IT HERE <<<
+            st.write("") # Soft spacing
+            new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
+            if new_scale != st.session_state.ui_scale:
+                st.session_state.ui_scale = new_scale
+                st.rerun()
+
+        else:
+            filtered_df = pd.DataFrame()
 
 
 # ==========================================
