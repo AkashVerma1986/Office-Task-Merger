@@ -170,29 +170,42 @@ def get_device_id():
     except:
         return "default_device"
 
-# --- SMART AUTO-LOGIN COOKIE LAYER ---
-# This hidden component checks the browser's local storage to see if you already logged in before a refresh
-session_sync = components.html("""
-    <script>
-        const storedUser = localStorage.getItem("raas_user_session");
-        if (storedUser) {
-            window.parent.postMessage({type: "AUTO_LOGIN", data: JSON.parse(storedUser)}, "*");
-        }
-    </script>
-""", height=0)
+# Catch direct URL-based session injection from the browser storage layer
+query_params = st.query_params
+if "login_name" in query_params and "login_role" in query_params and not st.session_state.authenticated:
+    st.session_state.user_data = {
+        "name": query_params["login_name"].upper(),
+        "role": query_params["login_role"].upper()
+    }
+    st.session_state.authenticated = True
+    # Clear the parameters from the URL silently to keep the address bar clean
+    st.query_params.clear()
+    st.rerun()
 
-# Process background messages from browser local storage
+# This script pulls session data instantly from the browser and forces it into the execution loop via URL tokens
 if not st.session_state.authenticated:
-    # We catch the JavaScript message here
-    pass 
+    components.html("""
+        <script>
+            const stored = localStorage.getItem("raas_user_session");
+            if (stored) {
+                const user = JSON.parse(stored);
+                const url = new URL(window.location.href);
+                // If parameters aren't set yet, inject them and force an instant reload
+                if (!url.searchParams.has("login_name")) {
+                    url.searchParams.set("login_name", user.name);
+                    url.searchParams.set("login_role", user.role);
+                    window.parent.location.href = url.toString();
+                }
+            }
+        </script>
+    """, height=0)
 
-# --- UPDATED LOGIN INTERFACE ---
+# Render standard login portal if no browser session is active
 if not st.session_state.authenticated:
-    # Create 3 columns to center the login box neatly on wide layout
     pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
     with center_col:
-        st.markdown("<br><br>", unsafe_allow_html=True) 
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
@@ -220,12 +233,12 @@ if not st.session_state.authenticated:
                 if not isinstance(approved, list): approved = []
                 if not isinstance(pending, list): pending = []
 
+                session_data = None
                 if is_admin:
                     session_data = {"name": name_in, "role": "ADMIN"}
                 elif name_in in users_db and dev_id in approved:
                     session_data = {"name": name_in, "role": "STAFF"}
                 else:
-                    session_data = None
                     if name_in in users_db and dev_id not in approved and dev_id not in pending:
                         pending.append(dev_id)
                         requests.patch(f"{DB_BASE_URL}/users/{name_in}.json", json={"pending_devices": pending})
@@ -237,11 +250,14 @@ if not st.session_state.authenticated:
                     st.session_state.user_data = session_data
                     st.session_state.authenticated = True
                     
-                    # Inject JavaScript to save this session to the browser storage permanently
+                    # Store session securely and trigger the layout reload
                     components.html(f"""
                         <script>
                             localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
-                            window.location.reload();
+                            const url = new URL(window.parent.location.href);
+                            url.searchParams.set("login_name", "{session_data['name']}");
+                            url.searchParams.set("login_role", "{session_data['role']}");
+                            window.parent.location.href = url.toString();
                         </script>
                     """, height=0)
                     time.sleep(0.5)
@@ -466,31 +482,34 @@ with left_pane:
             st.caption(f"⚠️ Looking in: {logo_path}")
             
     with name_col:
-        # Pushes the text down slightly so it sits centered with the logo height
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <div style="background-color: #F8F9FA; padding: 12px 18px; border-radius: 8px; border: 1px solid #DDE1E7; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: {int(14 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Active Operator</span>
-                <h3 style="margin: 4px 0 0 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px;">👤 {user['name']}</h3>
-            </div>
-        """, unsafe_allow_html=True)
         
-        # --- LOGOUT BUTTON (UPDATED TO CLEAR BROWSER STORAGE) ---
-        st.write("") 
-        if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
-            st.session_state.authenticated = False
-            if "user_data" in st.session_state:
-                del st.session_state.user_data
+        # We use a native streamlit container with a border to simulate the card look cleanly
+        with st.container(border=True):
+            st.markdown(f"""
+                <div style="margin: -10px 0 5px 0; padding: 0;">
+                    <span style="font-size: {int(13 * scale_mod)}px; color: #666666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Active Operator</span>
+                    <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; line-height: 1.2;">👤 {user['name']}</h3>
+                </div>
+            """, unsafe_allow_html=True)
             
-            # Wipes the persistent browser memory so it stays logged out
-            components.html("""
-                <script>
-                    localStorage.removeItem("raas_user_session");
-                    window.location.reload();
-                </script>
-            """, height=0)
-            time.sleep(0.5)
-            st.rerun()
+            # --- INSIDE THE CARD: Embedded Logout Button ---
+            if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
+                st.session_state.authenticated = False
+                if "user_data" in st.session_state:
+                    del st.session_state.user_data
+                
+                # Wipe local storage and pull parameters off the URL completely
+                components.html("""
+                    <script>
+                        localStorage.removeItem("raas_user_session");
+                        const url = new URL(window.parent.location.href);
+                        url.search = ""; // Clears all parameters
+                        window.parent.location.href = url.toString();
+                    </script>
+                """, height=0)
+                time.sleep(0.5)
+                st.rerun()
         
     st.write("") # Clean separation spacer
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
