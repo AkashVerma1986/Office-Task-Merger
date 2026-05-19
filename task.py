@@ -609,13 +609,17 @@ with left_pane:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
     if not df_all.empty:
-        df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'], format="%d/%b/%Y %H:%M:%S", errors='coerce')
+        # 1. Type-safe conversion: Force parsing while removing any trailing/leading whitespaces from dates
+        df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
         filtered_df = df_all.copy()
         
+        # 2. STEP A: Apply Assignee Toggle Layer (Only restrict if my_tasks_only is explicitly True)
         if st.session_state.my_tasks_only:
             filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
         
+        # 3. STEP B: Apply Dropdown View Selection Filter
         today_dt = datetime.now(IST).date()
+        
         if view_filter == "Pending":
             filtered_df = filtered_df[filtered_df['status'] == "Pending"]
         elif view_filter == "Hold":
@@ -627,11 +631,14 @@ with left_pane:
         elif view_filter == "Yesterday":
             yesterday = today_dt - pd.Timedelta(days=1)
             filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
+        # Note: If view_filter == "All Tasks", we deliberately do not drop rows here
 
+        # 4. STEP C: Apply Date Range Picker Filter (Only if both boundaries are physically chosen)
         if len(date_range) == 2:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
+        # 5. STEP D: Apply Global Search Filter String Matches
         if search:
             filtered_df = filtered_df[
                 (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
@@ -639,6 +646,7 @@ with left_pane:
                 (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
             ]
 
+        # 6. STEP E: Calculate Real-time Visual Counter Metrics from the Final Filtered Slice
         st.markdown(f"**Live Status Overview ({view_filter})**")
         
         m_total = len(filtered_df)
@@ -648,28 +656,25 @@ with left_pane:
         m_done = len(filtered_df[filtered_df['status'] == "Completed"])
 
         m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-        
-        with m_col1:
-            st.metric("Total", m_total)
-        with m_col2:
-            st.metric("⏳ Pending", m_pending)
-        with m_col3:
-            st.metric("🔥 High", m_high)
-        with m_col4:
-            st.metric("⏸️ Hold", m_hold)
-        with m_col5:
-            st.metric("✅ Done", m_done)
+        with m_col1: st.metric("Total", m_total)
+        with m_col2: st.metric("⏳ Pending", m_pending)
+        with m_col3: st.metric("🔥 High", m_high)
+        with m_col4: st.metric("⏸️ Hold", m_hold)
+        with m_col5: st.metric("✅ Done", m_done)
         
         st.divider()
 
+        # 7. STEP F: Priority Hierarchy Index Mapping and Comprehensive Dataset Sort
         prio_map = {"High": 0, "Medium": 1, "Normal": 2}
         filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
 
+        # Ensure fallback ordering so data doesn't clip out on execution state mismatches
         if view_filter == "All Tasks":
             filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
         else:
             filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
 
+        # Render action execution utility rows cleanly below analytics metrics
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
