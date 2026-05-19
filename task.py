@@ -168,7 +168,6 @@ if not st.session_state.authenticated:
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
         
         if os.path.exists(logo_path):
-            # Centering image within the column using container width control
             st.image(logo_path, width=180)
         else:
             st.caption(f"⚠️ Looking for logo in: {logo_path}")
@@ -416,8 +415,6 @@ left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
 # ==========================================
 with left_pane:
     
-    
-        
     # Two buttons in one line: Refresh Data & My Tasks
     btn_col1, btn_col2 = st.columns(2)
     with btn_col1:
@@ -441,14 +438,8 @@ with left_pane:
         st.caption(f"⚠️ Looking in: {logo_path}")
 
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
-        if search:
-            filtered_df = filtered_df[
-                (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
-                (filtered_df['task'].str.contains(search, case=False, na=False)) |
-                (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
-            ]
+        
     st.divider()
-
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
     st.subheader("📝 Create New Task")
@@ -534,6 +525,13 @@ with left_pane:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
+        if search:
+            filtered_df = filtered_df[
+                (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
+                (filtered_df['task'].str.contains(search, case=False, na=False)) |
+                (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
+            ]
+
         st.markdown(f"**Live Status Overview ({view_filter})**")
         
         m_total = len(filtered_df)
@@ -556,8 +554,6 @@ with left_pane:
             st.metric("✅ Done", m_done)
         
         st.divider()
-
-        
 
         prio_map = {"High": 0, "Medium": 1, "Normal": 2}
         filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
@@ -598,15 +594,15 @@ with left_pane:
                 use_container_width=True
             )
 
-            # >>> PASTE IT HERE <<<
-            st.write("") # Soft spacing
+            # --- ZOOM LAYOUT SLIDER PERFECTLY ALLOCATED IN EXPORT COLUMN ---
+            st.write("") 
             new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5)
             if new_scale != st.session_state.ui_scale:
                 st.session_state.ui_scale = new_scale
                 st.rerun()
 
-        else:
-            filtered_df = pd.DataFrame()
+    else:
+        filtered_df = pd.DataFrame()
 
 
 # ==========================================
