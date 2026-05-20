@@ -85,26 +85,26 @@ st.markdown(f"""
     }}
     
     /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY - 3PX BOLDER OUTLINES */
-    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { 
+    div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
         border: 3px solid #FFC107 !important; 
         border-left: 12px solid #FFC107 !important; 
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
         border: 3px solid #28A745 !important; 
         border-left: 12px solid #28A745 !important; 
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
         border: 3px solid #E83E8C !important; 
         border-left: 12px solid #E83E8C !important; 
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"].border-high { 
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
         border: 3px solid #DC3545 !important; 
         border-left: 12px solid #DC3545 !important; 
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }
+    }}
 
     /* Tightens padding inside the cards and squishes row gaps */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {{
