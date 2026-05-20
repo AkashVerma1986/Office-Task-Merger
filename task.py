@@ -753,7 +753,7 @@ with right_pane:
         elif t_prio == "High" and t_status == "Pending": 
             indicator_color = "#DC3545"
 
-        # 1. Base wrapper column layout to inject inline custom frames safely
+        # 1. Base wrapper column layout grouping
         with st.container(border=False):
             
             # Setup dynamic hold notes block safely
@@ -768,59 +768,52 @@ with right_pane:
             # Text processor for header summary string slice
             raw_task_text = str(task.get('task', ''))
             first_line = raw_task_text.split('\n')[0]
-            if len(first_line) > 70:
-                first_line = first_line[:67] + "..."
+            if len(first_line) > 65:
+                first_line = first_line[:62] + "..."
 
-            # 2. Check expansion state natively via toggle tracking
-            expanded_key = f"card_exp_state_{tid}"
-            
-            # Draw custom top card panel framing boundary
-            st.markdown(f"""
-                <div style="
-                    border: 2px solid #B0B7C3; 
-                    border-left: 10px solid {indicator_color}; 
-                    border-radius: 12px 12px 0px 0px; 
-                    padding: 16px 20px 10px 20px; 
-                    background-color: #FFFFFF; 
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-                    margin-bottom: 0px;
-                ">
-                    <table style="width: 100%; border-collapse: collapse; background: transparent;">
-                        <tr>
-                            <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
-                                <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
-                                <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
-                            </td>
-                            <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
-                                <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                                <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                                <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # 3. Open core content wrapper matching card styles perfectly
+            # 2. Main High-Visibility Unified Card Container
             with st.container(border=True):
                 
-                # Interactive toggle button acting as our card open engine
-                is_open = st.toggle(f"🔍 Details: {first_line}", key=expanded_key)
+                # HTML layout injected cleanly inside the border framework
+                st.markdown(f"""
+                    <div style="
+                        border-left: 10px solid {indicator_color}; 
+                        margin: -12px -16px 12px -16px; 
+                        padding: 16px 20px; 
+                        background-color: #FFFFFF;
+                    ">
+                        <table style="width: 100%; border-collapse: collapse; background: transparent;">
+                            <tr>
+                                <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
+                                    <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
+                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
+                                </td>
+                                <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
+                                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                # The Toggle button sits completely inside the main outline frame
+                is_open = st.toggle(f"🔍 Details: {first_line}", key=f"card_exp_state_{tid}")
                 
                 if is_open:
                     st.markdown(f"""
-                        <div style="margin-top: 8px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_task_text}
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Inject active hold log messages if applicable
                     if hold_html_block:
                         st.markdown(hold_html_block, unsafe_allow_html=True)
                     
                     st.divider()
 
-                    # Render context-driven action execution engine inputs inside card
+                    # Context-driven action controls
                     if t_status == "Completed":
                         st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
                         st.info(f"Final Note: {task.get('comment', 'N/A')}")
@@ -845,7 +838,7 @@ with right_pane:
                             })
                             st.rerun()
 
-                    # Admin and Assigner administrative controls layout row inside card
+                    # Administrative action layer
                     if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
                         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
                         adm1, adm2 = st.columns([1, 1])
@@ -858,5 +851,4 @@ with right_pane:
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun()
 
-        # Print layout line breaks to offset next array element grid block cleanly
         st.write("")
