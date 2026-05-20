@@ -85,26 +85,26 @@ st.markdown(f"""
     }}
     
     /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY - 3PX BOLDER OUTLINES */
-    div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
+    div[data-testid="stVerticalBlockBorderWrapper"].border-pending { 
         border: 3px solid #FFC107 !important; 
-        border-left: 10px solid #FFC107 !important; 
-        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #FFC107 !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
+        border-left: 12px solid #FFC107 !important; 
+        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-completed { 
         border: 3px solid #28A745 !important; 
-        border-left: 10px solid #28A745 !important; 
-        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #28A745 !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
+        border-left: 12px solid #28A745 !important; 
+        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-hold { 
         border: 3px solid #E83E8C !important; 
-        border-left: 10px solid #E83E8C !important; 
-        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #E83E8C !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
+        border-left: 12px solid #E83E8C !important; 
+        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"].border-high { 
         border: 3px solid #DC3545 !important; 
-        border-left: 10px solid #DC3545 !important; 
-        box-shadow: inset 0 0 0 4px #FFFFFF, inset 0 0 0 6px #DC3545 !important;
-    }}
+        border-left: 12px solid #DC3545 !important; 
+        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
 
     /* Tightens padding inside the cards and squishes row gaps */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {{
@@ -840,7 +840,7 @@ with right_pane:
                 st.markdown(
                     f"""
                     <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: bold; color: #1A1A1A;">{task.get('finance')}</h2>
+                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
                         <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
                     </div>
                     """, 
