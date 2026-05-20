@@ -713,7 +713,7 @@ with left_pane:
 
 
 # ==========================================
-# RIGHT PANE: SECTION 3 (COMPACT TASK CARDS)
+# RIGHT PANE: SECTION 3 (COMPACT UNIFIED TASK CARDS)
 # ==========================================
 with right_pane:
     
@@ -753,36 +753,39 @@ with right_pane:
         elif t_prio == "High" and t_status == "Pending": 
             indicator_color = "#DC3545"
 
-        # 1. Native container handles structural layout grouping without conflicts
+        # 1. Base wrapper column layout to inject inline custom frames safely
         with st.container(border=False):
             
-            # Extract and clip preview text line safely
-            raw_task_text = str(task.get('task', ''))
-            first_line = raw_task_text.split('\n')[0]
-            if len(first_line) > 75:
-                first_line = first_line[:72] + "..."
-
-            # Setup hold note text if active
+            # Setup dynamic hold notes block safely
             hold_html_block = ""
             if t_status == "Hold":
                 hold_html_block = f"""
-                <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: {int(16 * scale_mod)}px;">
+                <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 12px; font-size: {int(16 * scale_mod)}px;">
                     <b>⏸️ ON HOLD:</b> {task.get('hold_by')} said: "{task.get('comment', 'N/A')}"
                 </div>
                 """
 
-            # 2. Inject the custom card containing the native HTML dropdown engine# 2. Inject the custom card containing the structure framing layout
+            # Text processor for header summary string slice
+            raw_task_text = str(task.get('task', ''))
+            first_line = raw_task_text.split('\n')[0]
+            if len(first_line) > 70:
+                first_line = first_line[:67] + "..."
+
+            # 2. Check expansion state natively via toggle tracking
+            expanded_key = f"card_exp_state_{tid}"
+            
+            # Draw custom top card panel framing boundary
             st.markdown(f"""
                 <div style="
                     border: 2px solid #B0B7C3; 
                     border-left: 10px solid {indicator_color}; 
-                    border-radius: 12px; 
-                    padding: 16px 20px; 
+                    border-radius: 12px 12px 0px 0px; 
+                    padding: 16px 20px 10px 20px; 
                     background-color: #FFFFFF; 
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-                    margin-bottom: 4px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+                    margin-bottom: 0px;
                 ">
-                    <table style="width: 100%; border-collapse: collapse; background: transparent; margin-bottom: 0px;">
+                    <table style="width: 100%; border-collapse: collapse; background: transparent;">
                         <tr>
                             <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
                                 <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
@@ -798,62 +801,62 @@ with right_pane:
                 </div>
             """, unsafe_allow_html=True)
 
-            # 3. Streamlit Native Toggle Switch styled cleanly inside the column gap flow
-            show_preview = st.toggle(f"🔍 Preview: {first_line}", key=f"prev_tgl_{tid}")
-            
-            if show_preview:
-                st.markdown(f"""
-                    <div style="
-                        margin-top: -4px; 
-                        margin-bottom: 12px; 
-                        padding: 14px; 
-                        background-color: #F8F9FA; 
-                        border-radius: 8px; 
-                        border: 2px solid #B0B7C3; 
-                        border-left: 6px solid {indicator_color};
-                        white-space: pre-wrap; 
-                        font-size: {int(18 * scale_mod)}px; 
-                        color: #1A1A1A;
-                    ">
-                        <b>Full Task Description:</b><br>{raw_task_text}
-                        {hold_html_block}
-                    </div>
-                """, unsafe_allow_html=True)
-
-            # 3. Streamlit action control buttons render right below the card framing safely
-            if t_status == "Completed":
-                st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                st.info(f"Final Note: {task.get('comment', 'N/A')}")
-            else:
-                c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+            # 3. Open core content wrapper matching card styles perfectly
+            with st.container(border=True):
                 
-                h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                    if t_status != "Hold":
-                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                    else:
-                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                    st.rerun()
+                # Interactive toggle button acting as our card open engine
+                is_open = st.toggle(f"🔍 Details: {first_line}", key=expanded_key)
+                
+                if is_open:
+                    st.markdown(f"""
+                        <div style="margin-top: 8px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                            <b>Full Task Description:</b><br>{raw_task_text}
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                        "status": "Completed", "completed_by": user['name'], 
-                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                    })
-                    st.rerun()
+                    # Inject active hold log messages if applicable
+                    if hold_html_block:
+                        st.markdown(hold_html_block, unsafe_allow_html=True)
+                    
+                    st.divider()
 
-            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                st.write("") 
-                adm1, adm2 = st.columns([1, 1])
-                if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                    edit_task_dialog(tid, task)
-                
-                if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                        st.rerun()
+                    # Render context-driven action execution engine inputs inside card
+                    if t_status == "Completed":
+                        st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                        st.info(f"Final Note: {task.get('comment', 'N/A')}")
+                    else:
+                        c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                        note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                        w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                        
+                        h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                        if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                            if t_status != "Hold":
+                                payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                            else:
+                                payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                            st.rerun()
+                            
+                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                "status": "Completed", "completed_by": user['name'], 
+                                "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                            })
+                            st.rerun()
 
+                    # Admin and Assigner administrative controls layout row inside card
+                    if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                        adm1, adm2 = st.columns([1, 1])
+                        if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, task)
+                        
+                        with adm2:
+                            if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                                if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                    st.rerun()
+
+        # Print layout line breaks to offset next array element grid block cleanly
         st.write("")
