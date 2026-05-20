@@ -106,10 +106,13 @@ st.markdown(f"""
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
     }}
 
-    /* Tightens padding inside the cards and squishes row gaps */
-    div[data-testid="stVerticalBlockBorderWrapper"] > div {{
-        padding: 4px 12px !important;   
-        gap: 0.3rem !important;                    
+    /* FORCES A CRISP, HIGH-VISIBILITY GREY SURROUNDING BOUNDARY FOR ALL TASK CARDS */
+    div[data-testid="stVerticalBlockBorderWrapper"] { 
+        border: 2px solid #B0B7C3 !important; 
+        border-radius: 12px !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        margin-bottom: 12px !important;
     }}
     
     /* Strip layout margins on element containers to stop the expanded look */
