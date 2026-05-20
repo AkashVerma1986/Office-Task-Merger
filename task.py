@@ -511,7 +511,7 @@ with left_pane:
                 
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-                if st.button("🔒 OUT", key="app_logout_btn", use_container_width=True):
+                if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
                     # Purge memory states
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
@@ -710,12 +710,55 @@ with left_pane:
                     return text.split("]", 1)[1].strip()
                 return text
 
+            # 1. Apply your custom text extractions
             export_df['Category'] = export_df['task'].apply(extract_cat)
             export_df['task'] = export_df['task'].apply(clean_task)
 
+            # 2. Ensure all required database keys exist as columns to avoid KeyErrors
+            required_cols = [
+                'assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 
+                'priority', 'work_type', 'completed_by', 'finished_at', 'status', 
+                'hold_at', 'hold_by', 'comment'
+            ]
+            for col in required_cols:
+                if col not in export_df.columns:
+                    export_df[col] = ""
+
+            # 3. Smart Separation for the comment field
+            export_df['rt Done Comment'] = export_df.apply(
+                lambda row: row['comment'] if row['status'] == 'Completed' else "", axis=1
+            )
+            export_df['Hold Reason'] = export_df.apply(
+                lambda row: row['comment'] if row['status'] == 'Hold' else "", axis=1
+            )
+
+            # 4. Strict selection and column mapping ordering (0 to 14)
+            final_ordered_columns = [
+                'assigned_at',      # 0
+                'assigner',         # 1
+                'finance',          # 2
+                'lan',              # 3
+                'Category',         # 4
+                'task',             # 5
+                'priority',         # 6
+                'work_type',        # 7
+                'rt Done Comment',  # 8
+                'completed_by',     # 9
+                'finished_at',      # 10
+                'status',           # 11
+                'hold_at',          # 12
+                'hold_by',          # 13
+                'Hold Reason'       # 14
+            ]
+            
+            # Slice the dataset into your preference order
+            export_df = export_df[final_ordered_columns]
+
+            # 5. Build openpyxl memory buffer engine
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine='openpyxl') as wr:
-                export_df.drop(columns=['date_dt', 'prio_num'], errors='ignore').to_excel(wr, index=True)
+                # index=False avoids exporting the raw Firebase hash keys/dataframe row numbers
+                export_df.to_excel(wr, index=False)
             
             st.download_button(
                 label="📥 Excel Export", 
