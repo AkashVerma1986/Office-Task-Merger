@@ -106,18 +106,18 @@ st.markdown(f"""
         box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
     }}
 
-    /* FORCES A CRISP, HIGH-VISIBILITY GREY SURROUNDING BOUNDARY FOR ALL TASK CARDS */
-    div[data-testid="stVerticalBlockBorderWrapper"] {{ 
-        border: 2px solid #B0B7C3 !important; 
+    /* FORCE CRISP GREY BOUNDARY OUTLINES ON STREAMLIT INTERNAL WRAPPERS */
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {{ 
+        border: 2px solid #A6AEBB !important; 
         border-radius: 12px !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-        margin-bottom: 12px !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04) !important;
     }}
-    
-    /* Strip layout margins on element containers to stop the expanded look */
-    div[data-testid="element-container"] {{
-        margin-bottom: 0px !important;
+
+    /* Clean vertical spacing layout between cards */
+    div[data-testid="element-container"] + div[data-testid="element-container"] {{
+        margin-top: 10px !important;
     }}
     
     /* Makes dividers thinner with less whitespace */
