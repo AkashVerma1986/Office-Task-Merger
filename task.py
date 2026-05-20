@@ -771,7 +771,7 @@ with right_pane:
                 </div>
                 """
 
-            # 2. Inject the custom card containing the native HTML dropdown engine
+            # 2. Inject the custom card containing the native HTML dropdown engine# 2. Inject the custom card containing the structure framing layout
             st.markdown(f"""
                 <div style="
                     border: 2px solid #B0B7C3; 
@@ -780,9 +780,9 @@ with right_pane:
                     padding: 16px 20px; 
                     background-color: #FFFFFF; 
                     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-                    margin-bottom: 8px;
+                    margin-bottom: 4px;
                 ">
-                    <table style="width: 100%; border-collapse: collapse; background: transparent; margin-bottom: 12px;">
+                    <table style="width: 100%; border-collapse: collapse; background: transparent; margin-bottom: 0px;">
                         <tr>
                             <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
                                 <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
@@ -795,20 +795,30 @@ with right_pane:
                             </td>
                         </tr>
                     </table>
-                    
-                    <hr style="border: 0; border-top: 1px solid #EAECEF; margin: 8px 0 12px 0;">
-
-                    <details style="width: 100%; cursor: pointer;">
-                        <summary style="font-size: {int(18 * scale_mod)}px; font-weight: 600; color: #4A4A4A; outline: none; list-style: none;">
-                            🔍 CLICK TO PREVIEW: <span style="font-weight: 400; color: #666666; font-style: italic;">{first_line}</span>
-                        </summary>
-                        <div style="margin-top: 12px; padding: 12px; background-color: #F8F9FA; border-radius: 6px; border: 1px solid #E3E6EB; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A; cursor: default;">
-                            <b>Full Task Description:</b><br>{raw_task_text}
-                            {hold_html_block}
-                        </div>
-                    </details>
                 </div>
             """, unsafe_allow_html=True)
+
+            # 3. Streamlit Native Toggle Switch styled cleanly inside the column gap flow
+            show_preview = st.toggle(f"🔍 Preview: {first_line}", key=f"prev_tgl_{tid}")
+            
+            if show_preview:
+                st.markdown(f"""
+                    <div style="
+                        margin-top: -4px; 
+                        margin-bottom: 12px; 
+                        padding: 14px; 
+                        background-color: #F8F9FA; 
+                        border-radius: 8px; 
+                        border: 2px solid #B0B7C3; 
+                        border-left: 6px solid {indicator_color};
+                        white-space: pre-wrap; 
+                        font-size: {int(18 * scale_mod)}px; 
+                        color: #1A1A1A;
+                    ">
+                        <b>Full Task Description:</b><br>{raw_task_text}
+                        {hold_html_block}
+                    </div>
+                """, unsafe_allow_html=True)
 
             # 3. Streamlit action control buttons render right below the card framing safely
             if t_status == "Completed":
