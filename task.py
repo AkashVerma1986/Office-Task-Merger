@@ -824,9 +824,25 @@ with right_pane:
             indicator_color = "#DC3545"
 
         # 1. Turn off the native border to prevent conflicts
+        # 1. Native container handles structural layout grouping without borders
         with st.container(border=False):
             
-            # 2. Inject a clean, high-visibility custom card layout wrapper
+            # Extract and clip preview text line safely
+            raw_task_text = str(task.get('task', ''))
+            first_line = raw_task_text.split('\n')[0]
+            if len(first_line) > 75:
+                first_line = first_line[:72] + "..."
+
+            # Setup hold note text if active
+            hold_html_block = ""
+            if t_status == "Hold":
+                hold_html_block = f"""
+                <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: {int(16 * scale_mod)}px;">
+                    <b>⏸️ ON HOLD:</b> {task.get('hold_by')} said: "{task.get('comment', 'N/A')}"
+                </div>
+                """
+
+            # 2. Inject the custom card containing the native HTML dropdown engine
             st.markdown(f"""
                 <div style="
                     border: 2px solid #B0B7C3; 
@@ -835,9 +851,9 @@ with right_pane:
                     padding: 16px 20px; 
                     background-color: #FFFFFF; 
                     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-                    margin-bottom: 4px;
+                    margin-bottom: 8px;
                 ">
-                    <table style="width: 100%; border-collapse: collapse; background: transparent;">
+                    <table style="width: 100%; border-collapse: collapse; background: transparent; margin-bottom: 12px;">
                         <tr>
                             <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
                                 <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
@@ -850,56 +866,55 @@ with right_pane:
                             </td>
                         </tr>
                     </table>
+                    
+                    <hr style="border: 0; border-top: 1px solid #EAECEF; margin: 8px 0 12px 0;">
+
+                    <details style="width: 100%; cursor: pointer;">
+                        <summary style="font-size: {int(18 * scale_mod)}px; font-weight: 600; color: #4A4A4A; outline: none; list-style: none;">
+                            🔍 CLICK TO PREVIEW: <span style="font-weight: 400; color: #666666; font-style: italic;">{first_line}</span>
+                        </summary>
+                        <div style="margin-top: 12px; padding: 12px; background-color: #F8F9FA; border-radius: 6px; border: 1px solid #E3E6EB; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A; cursor: default;">
+                            <b>Full Task Description:</b><br>{raw_task_text}
+                            {hold_html_block}
+                        </div>
+                    </details>
                 </div>
             """, unsafe_allow_html=True)
 
-            # 3. Your preview expander and action layout remains intact right beneath it
-            raw_task_text = str(task.get('task', ''))
-            first_line = raw_task_text.split('\n')[0]
-            if len(first_line) > 90:
-                first_line = first_line[:87] + "..."
+            # 3. Streamlit action control buttons render right below the card framing safely
+            if t_status == "Completed":
+                st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                st.info(f"Final Note: {task.get('comment', 'N/A')}")
+            else:
+                c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                 
-            with st.expander(f"🔍 Preview: {first_line}", expanded=False):
-                st.markdown(f"**Full Task Description:**\n{raw_task_text}")
+                h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                    if t_status != "Hold":
+                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                    else:
+                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                    st.rerun()
+                    
+                if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                        "status": "Completed", "completed_by": user['name'], 
+                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                    })
+                    st.rerun()
+
+            if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                st.write("") 
+                adm1, adm2 = st.columns([1, 1])
+                if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                    edit_task_dialog(tid, task)
                 
-                if t_status == "Hold":
-                    st.error(f"⏸️ ON HOLD: {task.get('hold_by')} said: {task.get('comment', 'N/A')}")
-
-                st.divider()
-
-                if t_status == "Completed":
-                    st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                    st.info(f"Final Note: {task.get('comment', 'N/A')}")
-                else:
-                    c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                    note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                    w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                    
-                    h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                    if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                        if t_status != "Hold":
-                            payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                        else:
-                            payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                         st.rerun()
-                        
-                    if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                            "status": "Completed", "completed_by": user['name'], 
-                            "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                        })
-                        st.rerun()
-
-                if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
-                    st.write("") 
-                    adm1, adm2 = st.columns([1, 1])
-                    if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                        edit_task_dialog(tid, task)
-                    
-                    if adm2.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                        if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                            st.rerun()
 
         st.write("")
