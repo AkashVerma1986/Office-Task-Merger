@@ -79,47 +79,6 @@ st.markdown(f"""
         color: #000000 !important;
     }}
 
-    /* Updated Card CSS Layout Gaps */
-    div[data-testid="stVerticalBlockBorderWrapper"] {{
-        margin-bottom: 8px !important; 
-    }}
-    
-    /* TARGETS THE NATIVE STREAMLIT BORDER CONTAINER WITH AN INTERNAL SECONDARY BOUNDARY - 3PX BOLDER OUTLINES */
-    div[data-testid="stVerticalBlockBorderWrapper"].border-pending {{ 
-        border: 3px solid #FFC107 !important; 
-        border-left: 12px solid #FFC107 !important; 
-        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-completed {{ 
-        border: 3px solid #28A745 !important; 
-        border-left: 12px solid #28A745 !important; 
-        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-hold {{ 
-        border: 3px solid #E83E8C !important; 
-        border-left: 12px solid #E83E8C !important; 
-        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"].border-high {{ 
-        border: 3px solid #DC3545 !important; 
-        border-left: 12px solid #DC3545 !important; 
-        box-shadow: inset 0 0 0 2px #FFFFFF, 0 2px 8px rgba(0,0,0,0.08) !important;
-    }}
-
-    /* FORCE CRISP GREY BOUNDARY OUTLINES ON STREAMLIT INTERNAL WRAPPERS */
-    div[data-testid="stVerticalBlockBorderWrapper"],
-    div[data-testid="stVerticalBlockBorderWrapper"] > div {{ 
-        border: 2px solid #A6AEBB !important; 
-        border-radius: 12px !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04) !important;
-    }}
-
-    /* Clean vertical spacing layout between cards */
-    div[data-testid="element-container"] + div[data-testid="element-container"] {{
-        margin-top: 10px !important;
-    }}
-    
     /* Makes dividers thinner with less whitespace */
     hr {{
         margin: 0.4rem 0 !important;
@@ -175,9 +134,7 @@ def get_device_id():
         return "default_device"
 
 # --- SOLID CLIENT HYDRATION BRIDGE ---
-# Read secure headers directly from the hosting instance or check if session state is preserved
 if not st.session_state.authenticated:
-    # Safely catch temporary background cookie updates if set
     if "saved_user" in st.session_state and "saved_role" in st.session_state:
         st.session_state.user_data = {
             "name": st.session_state.saved_user,
@@ -204,7 +161,6 @@ if not st.session_state.authenticated:
         name_in = st.text_input("Name", key="portal_username_input").upper().strip()
         pwd_in = st.text_input("Password", type="password", key="portal_password_input")
         
-        # Pure silent browser storage extraction that triggers strictly once on manual reload
         components.html("""
             <script>
                 const stored = localStorage.getItem("raas_user_session");
@@ -219,7 +175,6 @@ if not st.session_state.authenticated:
             </script>
         """, height=0)
 
-        # Catching the passive fallback parameters cleanly without intercepting form operations
         qp = st.query_params
         if "login_name" in qp and "login_role" in qp:
             st.session_state.user_data = {
@@ -263,16 +218,14 @@ if not st.session_state.authenticated:
                         st.session_state.user_data = session_data
                         st.session_state.authenticated = True
                         
-                        # Set session memory arrays in memory state securely
                         st.session_state.saved_user = session_data["name"]
                         st.session_state.saved_role = session_data["role"]
                         
-                        # Lock this configuration directly into the browser client local storage
                         components.html(f"""
                             <script>
                                 localStorage.setItem("raas_user_session", '{{ "name": "{session_data['name']}", "role": "{session_data['role']}" }}');
                                 const url = new URL(window.parent.location.href);
-                                url.search = ""; // Sanitize address bar paths completely
+                                url.search = ""; 
                                 window.parent.location.href = url.toString();
                             </script>
                         """, height=0)
@@ -515,14 +468,12 @@ with left_pane:
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
                 if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
-                    # Purge memory states
                     st.session_state.authenticated = False
                     if "user_data" in st.session_state:
                         del st.session_state.user_data
                     if "saved_user" in st.session_state: del st.session_state.saved_user
                     if "saved_role" in st.session_state: del st.session_state.saved_role
                     
-                    # Purge client device storage completely
                     components.html("""
                         <script>
                             localStorage.removeItem("raas_user_session");
@@ -540,7 +491,6 @@ with left_pane:
     
     # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
     
-    # 1. Define the Success Popup Dialog function
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
         st.write("") 
@@ -563,15 +513,12 @@ with left_pane:
             st.session_state.show_submit_popup = False
             st.rerun()
 
-    # 2. Check state to see if the popup needs to be drawn on screen
     if st.session_state.get("show_submit_popup"):
         show_success_popup(st.session_state.get("last_sub_lan", ""), user['name'])
 
-    # 3. The actual form layout container
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         
-        # ROW 1: Finance and Category side-by-side
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
             f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
@@ -579,14 +526,12 @@ with left_pane:
         with row1_col2:
             cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
             
-        # ROW 2: LAN No. and Priority side-by-side below Row 1
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
             lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
         with row2_col2:
             prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
-        # Task Details Text Area below the rows
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
@@ -630,15 +575,12 @@ with left_pane:
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
     if not df_all.empty:
-        # 1. Type-safe conversion: Force parsing while removing any trailing/leading whitespaces from dates
         df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
         filtered_df = df_all.copy()
         
-        # 2. STEP A: Apply Assignee Toggle Layer (Only restrict if my_tasks_only is explicitly True)
         if st.session_state.my_tasks_only:
             filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
         
-        # 3. STEP B: Apply Dropdown View Selection Filter
         today_dt = datetime.now(IST).date()
         
         if view_filter == "Pending":
@@ -652,14 +594,11 @@ with left_pane:
         elif view_filter == "Yesterday":
             yesterday = today_dt - pd.Timedelta(days=1)
             filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
-        # Note: If view_filter == "All Tasks", we deliberately do not drop rows here
 
-        # 4. STEP C: Apply Date Range Picker Filter (Only if both boundaries are physically chosen)
         if len(date_range) == 2:
             start_date, end_date = date_range
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
 
-        # 5. STEP D: Apply Global Search Filter String Matches
         if search:
             filtered_df = filtered_df[
                 (filtered_df['finance'].str.contains(search, case=False, na=False)) | 
@@ -667,7 +606,6 @@ with left_pane:
                 (filtered_df['lan'].astype(str).str.contains(search, case=False, na=False))
             ]
 
-        # 6. STEP E: Calculate Real-time Visual Counter Metrics from the Final Filtered Slice
         st.markdown(f"**Live Status Overview ({view_filter})**")
         
         m_total = len(filtered_df)
@@ -685,17 +623,14 @@ with left_pane:
         
         st.divider()
 
-        # 7. STEP F: Priority Hierarchy Index Mapping and Comprehensive Dataset Sort
         prio_map = {"High": 0, "Medium": 1, "Normal": 2}
         filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
 
-        # Ensure fallback ordering so data doesn't clip out on execution state mismatches
         if view_filter == "All Tasks":
             filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
         else:
             filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
 
-        # Render action execution utility row split 50/50
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
@@ -754,13 +689,11 @@ with left_pane:
                 'Hold Reason'       # 14
             ]
             
-            # Slice the dataset into your preference order
             export_df = export_df[final_ordered_columns]
 
             # 5. Build openpyxl memory buffer engine
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine='openpyxl') as wr:
-                # index=False avoids exporting the raw Firebase hash keys/dataframe row numbers
                 export_df.to_excel(wr, index=False)
             
             st.download_button(
@@ -770,7 +703,6 @@ with left_pane:
                 use_container_width=True
             )
 
-        # --- MOVED & UPDATED: Zoom Layout Slider now occupies its own clean full row ---
         st.write("") 
         new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5, key="global_zoom_slider")
         if new_scale != st.session_state.ui_scale:
@@ -785,7 +717,6 @@ with left_pane:
 # ==========================================
 with right_pane:
     
-    # Horizontal header alignment layout row
     hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
     
     with hdr_title_col:
@@ -796,7 +727,6 @@ with right_pane:
             st.rerun()
             
     with hdr_btn2:
-        # If my_tasks_only is True, the button should offer to "Show All"
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
         if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
@@ -823,8 +753,7 @@ with right_pane:
         elif t_prio == "High" and t_status == "Pending": 
             indicator_color = "#DC3545"
 
-        # 1. Turn off the native border to prevent conflicts
-        # 1. Native container handles structural layout grouping without borders
+        # 1. Native container handles structural layout grouping without conflicts
         with st.container(border=False):
             
             # Extract and clip preview text line safely
