@@ -93,7 +93,6 @@ st.markdown(f"""
     }}
     .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
     
-    
     /* Status Colors */
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
@@ -775,7 +774,6 @@ with right_pane:
             with st.container(border=True):
                 
                 # HTML layout injected cleanly inside the border framework
-                # HTML layout injected cleanly inside the border framework
                 st.markdown(f"""
                     <div style="
                         border-left: 10px solid {indicator_color}; 
@@ -811,8 +809,6 @@ with right_pane:
                     
                     if hold_html_block:
                         st.markdown(hold_html_block, unsafe_allow_html=True)
-                    
-                    st.divider()
 
                     # Context-driven action controls
                     if t_status == "Completed":
