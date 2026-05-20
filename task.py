@@ -107,7 +107,7 @@ st.markdown(f"""
     }}
 
     /* FORCES A CRISP, HIGH-VISIBILITY GREY SURROUNDING BOUNDARY FOR ALL TASK CARDS */
-    div[data-testid="stVerticalBlockBorderWrapper"] { 
+    div[data-testid="stVerticalBlockBorderWrapper"] {{ 
         border: 2px solid #B0B7C3 !important; 
         border-radius: 12px !important;
         background-color: #FFFFFF !important;
