@@ -92,7 +92,7 @@ st.markdown(f"""
         padding-bottom: 10px;
     }}
     .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
-    .card-footer {{ background-color: #F8F9FA; padding: 7px; border-top: 1px solid #F0F0F0; }}
+    
     
     /* Status Colors */
     .status-pending {{ background-color: #FFC107 !important; }}
