@@ -460,8 +460,8 @@ with left_pane:
             with card_left:
                 st.markdown(f"""
                     <div style="margin: -6px 0 0 0; padding: 0;">
-                        <span style="font-size: {int(12 * scale_mod)}px; color: #666666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0px;">Real Apple</span>
-                        <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(22 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {user['name']}</h3>
+                        <span style="font-size: {int(18 * scale_mod)}px; color: #555555; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 2px;">Real Apple</span>
+                        <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {user['name']}</h3>
                     </div>
                 """, unsafe_allow_html=True)
                 
@@ -774,6 +774,7 @@ with right_pane:
             # 2. Main High-Visibility Unified Card Container
             with st.container(border=True):
                 
+                # HTML layout injected cleanly inside the border framework
                 # HTML layout injected cleanly inside the border framework
                 st.markdown(f"""
                     <div style="
