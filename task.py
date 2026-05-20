@@ -815,59 +815,50 @@ with right_pane:
         t_status = task.get('status', 'Pending')
         t_prio = task.get('priority', 'Normal')
         
-        b_class = "border-pending"
         indicator_color = "#FFC107"
-        
         if t_status == "Completed": 
-            b_class = "border-completed"
             indicator_color = "#28A745"
         elif t_status == "Hold": 
-            b_class = "border-hold"
             indicator_color = "#E83E8C"
         elif t_prio == "High" and t_status == "Pending": 
-            b_class = "border-high"
             indicator_color = "#DC3545"
 
-        with st.container(border=True):
-            components.html(f"""
-                <script>
-                    var elements = window.parent.document.querySelectorAll('[data-testid="stVerticalBlockBorderWrapper"]');
-                    var lastElement = elements[elements.length - 1];
-                    lastElement.classList.add('{b_class}');
-                </script>
-            """, height=0)
-
-            c_main, c_side = st.columns([2.0, 1.4])
+        # 1. Turn off the native border to prevent conflicts
+        with st.container(border=False):
             
-            with c_main:
-                st.markdown(
-                    f"""
-                    <div style="border-left: 8px solid {indicator_color}; padding-left: 12px; margin-bottom: 0px;">
-                        <h2 style="margin: 0 0 2px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
-                        <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code>{task.get('lan', 'N/A')}</code></span>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-                
-            with c_side:
-                st.markdown(
-                    f"""
-                    <div style="text-align: right; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A; margin-top: 2px;">
-                        <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                        <span style="color: #666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                        <span style="color: #666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            # 2. Inject a clean, high-visibility custom card layout wrapper
+            st.markdown(f"""
+                <div style="
+                    border: 2px solid #B0B7C3; 
+                    border-left: 10px solid {indicator_color}; 
+                    border-radius: 12px; 
+                    padding: 16px 20px; 
+                    background-color: #FFFFFF; 
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+                    margin-bottom: 4px;
+                ">
+                    <table style="width: 100%; border-collapse: collapse; background: transparent;">
+                        <tr>
+                            <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
+                                <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
+                                <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
+                            </td>
+                            <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
+                                <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
+                                <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                                <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            """, unsafe_allow_html=True)
 
+            # 3. Your preview expander and action layout remains intact right beneath it
             raw_task_text = str(task.get('task', ''))
             first_line = raw_task_text.split('\n')[0]
             if len(first_line) > 90:
                 first_line = first_line[:87] + "..."
                 
-            # Task Preview configuration directly set as expander click label wrapper
             with st.expander(f"🔍 Preview: {first_line}", expanded=False):
                 st.markdown(f"**Full Task Description:**\n{raw_task_text}")
                 
