@@ -715,31 +715,30 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (COMPACT UNIFIED TASK CARDS)
 # ==========================================
 with right_pane:
-    
-    # 4-column split for Title, Filter Dropdown, and Action Buttons
-    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.0, 1.3, 1.0, 1.0], gap="small")
-    
-    with hdr_title_col:
-        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-        st.subheader("📋 Tasks")
-        
-    with hdr_filter_col:
-        view_filter = st.selectbox(
-            "📂 View Filter", 
-            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            key="view_filter_main",
-            label_visibility="collapsed"
-        )
-        
-    with hdr_btn1:
-        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
-            st.rerun()
-            
-    with hdr_btn2:
-        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
-            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-            st.rerun()
+    # 4-column split for Title, Filter Dropdown, and Action Buttons
+    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.0, 1.3, 1.0, 1.0], gap="small")
+    
+    with hdr_title_col:
+        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+        st.subheader("📋 Tasks")
+        
+    with hdr_filter_col:
+        view_filter = st.selectbox(
+            "📂 View Filter", 
+            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+            key="view_filter_main",
+            label_visibility="collapsed"
+        )
+        
+    with hdr_btn1:
+        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
+            st.rerun()
+            
+    with hdr_btn2:
+        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun()
         
     with hdr_btn1:
         if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
