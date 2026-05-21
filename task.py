@@ -716,10 +716,33 @@ with left_pane:
 # ==========================================
 with right_pane:
     
-    hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
+    with right_pane:
+    
+    # Adjusted column ratios to fit the title, dropdown filter, and refresh buttons side-by-side
+    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.0, 1.3, 1.0, 1.0], gap="small")
     
     with hdr_title_col:
-        st.subheader("📋 All Tasks")
+        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True) # Aligns text vertically with widgets
+        st.subheader("📋 Tasks")
+        
+    with hdr_filter_col:
+        # The View Filter is now rendered safely right here inside the header column row
+        view_filter = st.selectbox(
+            "📂 View Filter", 
+            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+            key="view_filter_main",
+            label_visibility="collapsed" # Hides the top text label to keep the top layout clean and perfectly tight
+        )
+        
+    with hdr_btn1:
+        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
+            st.rerun()
+            
+    with hdr_btn2:
+        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun()
         
     with hdr_btn1:
         if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
@@ -822,11 +845,18 @@ with right_pane:
                         h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
                         if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                             if t_status != "Hold":
-                                payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                            else:
-                                payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                            st.rerun()
+                                # Check if the user left the Comment field empty
+                                if not note.strip():
+                                    st.error("🛑 Hold Reason is mandatory! Please enter a comment before holding.")
+                                else:
+                                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                                    st.rerun()
+    else:
+        # Unholding doesn't require a mandatory comment check
+        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+        st.rerun()
                             
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
