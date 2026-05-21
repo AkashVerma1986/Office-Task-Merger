@@ -25,10 +25,6 @@ if "ui_scale" not in st.session_state:
 # Compute scale multiplier safely before CSS blocks evaluate
 scale_mod = st.session_state.ui_scale / 100.0
 
-# Initialize global filter state safely at the top
-if "global_view_filter" not in st.session_state:
-    st.session_state.global_view_filter = "Today's"
-
 # --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
 st.markdown(f"""
     <style>
@@ -566,21 +562,11 @@ with left_pane:
     # --- SECTION 2: VIEW FILTERS, METRICS, SEARCH & EXCEL EXPORT ---
     st.subheader("🔍 Operations Control Panel")
     
-    # Left Pane View Filter Dropdown
-    view_filter_left = st.selectbox(
+    view_filter = st.selectbox(
         "📂 View Filter", 
         ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-        index=["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"].index(st.session_state.global_view_filter),
-        key="left_pane_view_filter"
+        key="view_filter_main"
     )
-
-    # Sync the state and rerun if changed on left side
-    if view_filter_left != st.session_state.global_view_filter:
-        st.session_state.global_view_filter = view_filter_left
-        st.rerun()
-
-    # Map the active choice to your existing operational logic variable
-    view_filter = st.session_state.global_view_filter
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
@@ -729,27 +715,11 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (COMPACT UNIFIED TASK CARDS)
 # ==========================================
 with right_pane:
-    # 4-column split for Title, Filter Dropdown, and Action Buttons
-    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.0, 1.3, 1.0, 1.0], gap="small")
+    
+    hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
     
     with hdr_title_col:
-        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-        st.subheader("📋 Tasks")
-        
-    with hdr_filter_col:
-        # Right Pane View Filter Dropdown
-        view_filter_right = st.selectbox(
-            "📂 View Filter", 
-            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            index=["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"].index(st.session_state.global_view_filter),
-            key="right_pane_view_filter",
-            label_visibility="collapsed"
-        )
-        
-        # Sync the state and rerun if changed on right side
-        if view_filter_right != st.session_state.global_view_filter:
-            st.session_state.global_view_filter = view_filter_right
-            st.rerun()
+        st.subheader("📋 All Tasks")
         
     with hdr_btn1:
         if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
@@ -852,17 +822,12 @@ with right_pane:
                         h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
                         if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                             if t_status != "Hold":
-                                if not note.strip():
-                                    st.error("🛑 Hold Reason is mandatory! Please enter a comment before holding.")
-                                else:
-                                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                                    st.rerun()
+                                payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                             else:
                                 payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                                st.rerun()
-                                
+                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                            st.rerun()
+                            
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                                 "status": "Completed", "completed_by": user['name'], 
