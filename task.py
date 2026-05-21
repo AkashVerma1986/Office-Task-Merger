@@ -739,16 +739,6 @@ with right_pane:
         if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun()
-        
-    with hdr_btn1:
-        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
-            st.rerun()
-            
-    with hdr_btn2:
-        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
-            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-            st.rerun()
             
     st.write("") 
     
@@ -852,18 +842,6 @@ with right_pane:
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                                 st.rerun()
                                 
-                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                                "status": "Completed", "completed_by": user['name'], 
-                                "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                            })
-                            st.rerun()
-    else:
-        # Unholding doesn't require a mandatory comment check
-        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-        st.rerun()
-                            
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                                 "status": "Completed", "completed_by": user['name'], 
