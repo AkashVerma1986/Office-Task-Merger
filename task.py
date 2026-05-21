@@ -25,6 +25,10 @@ if "ui_scale" not in st.session_state:
 # Compute scale multiplier safely before CSS blocks evaluate
 scale_mod = st.session_state.ui_scale / 100.0
 
+# Initialize global filter state safely at the top
+if "global_view_filter" not in st.session_state:
+    st.session_state.global_view_filter = "Today's"
+
 # --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
 st.markdown(f"""
     <style>
@@ -562,11 +566,21 @@ with left_pane:
     # --- SECTION 2: VIEW FILTERS, METRICS, SEARCH & EXCEL EXPORT ---
     st.subheader("🔍 Operations Control Panel")
     
-    view_filter = st.selectbox(
+    # Left Pane View Filter Dropdown
+    view_filter_left = st.selectbox(
         "📂 View Filter", 
         ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-        key="view_filter_main"
+        index=["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"].index(st.session_state.global_view_filter),
+        key="left_pane_view_filter"
     )
+
+    # Sync the state and rerun if changed on left side
+    if view_filter_left != st.session_state.global_view_filter:
+        st.session_state.global_view_filter = view_filter_left
+        st.rerun()
+
+    # Map the active choice to your existing operational logic variable
+    view_filter = st.session_state.global_view_filter
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
@@ -723,12 +737,19 @@ with right_pane:
         st.subheader("📋 Tasks")
         
     with hdr_filter_col:
-        view_filter = st.selectbox(
+        # Right Pane View Filter Dropdown
+        view_filter_right = st.selectbox(
             "📂 View Filter", 
             ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            key="view_filter_main",
+            index=["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"].index(st.session_state.global_view_filter),
+            key="right_pane_view_filter",
             label_visibility="collapsed"
         )
+        
+        # Sync the state and rerun if changed on right side
+        if view_filter_right != st.session_state.global_view_filter:
+            st.session_state.global_view_filter = view_filter_right
+            st.rerun()
         
     with hdr_btn1:
         if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
