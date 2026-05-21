@@ -841,13 +841,23 @@ with right_pane:
                         h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
                         if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
                             if t_status != "Hold":
-                                # Check if the user left the Comment field empty
                                 if not note.strip():
                                     st.error("🛑 Hold Reason is mandatory! Please enter a comment before holding.")
                                 else:
                                     payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                                     st.rerun()
+                            else:
+                                payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                                st.rerun()
+                                
+                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                "status": "Completed", "completed_by": user['name'], 
+                                "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                            })
+                            st.rerun()
     else:
         # Unholding doesn't require a mandatory comment check
         payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
