@@ -562,8 +562,8 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                # Safe way to reset widget values without causing an API state exception
-                for k in ["main_lan_input", "main_task_details"]:
+                # Safe way to reset widget values including the screenshot uploader state cache
+                for k in ["main_lan_input", "main_task_details", "main_screenshot_uploader"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 
@@ -862,13 +862,15 @@ with right_pane:
                         """, unsafe_allow_html=True)
                         
                         # Render guidance screenshot safely if it exists in the database record
-                        if task.get("screenshot"):
-                            import base64
+                        # Render guidance screenshot safely if it exists in the database record
+                        if task.get("screenshot") and str(task.get("screenshot")).strip() != "":
                             try:
                                 st.markdown("<div style='margin-top: 10px;'><b>📸 Attached Guidance Screenshot:</b></div>", unsafe_allow_html=True)
-                                st.image(base64.b64decode(task.get("screenshot")), use_container_width=True)
-                            except:
-                                st.caption("⚠️ Failed to parse attachment matrix string.")
+                                # Pre-construct a clean Data URI string structure to display the binary string reliably inside the card
+                                img_data_uri = f"data:image/png;base64,{task.get('screenshot')}"
+                                st.image(img_data_uri, use_container_width=True)
+                            except Exception as img_err:
+                                st.caption(f"⚠️ Failed to parse attachment matrix string.")
                         
                         if hold_html_block:
                             st.markdown(hold_html_block, unsafe_allow_html=True)
