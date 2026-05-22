@@ -808,7 +808,7 @@ with right_pane:
                             if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    fetch_tasks.clear()
                                     st.rerun(scope="fragment")
             st.write("")
 
