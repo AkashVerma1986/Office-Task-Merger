@@ -717,13 +717,22 @@ with left_pane:
 # ==========================================
 with right_pane:
     
-    hdr_title_col, hdr_btn1, hdr_btn2 = st.columns([1.5, 1, 1])
+    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
     
     with hdr_title_col:
         st.subheader("📋 All Tasks")
         
+    with hdr_filter_col:
+        # Synced with the same options as left side but utilizes right side logic
+        view_filter = st.selectbox(
+            "📂 View Filter", 
+            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+            key="view_filter_right",
+            label_visibility="collapsed"
+        )
+        
     with hdr_btn1:
-        if st.button("REFRESH DATA", key="right_pane_refresh", use_container_width=True):
+        if st.button("REFRESH", key="right_pane_refresh", use_container_width=True):
             st.rerun()
             
     with hdr_btn2:
@@ -840,7 +849,8 @@ with right_pane:
                             st.rerun()
 
                     # Administrative action layer
-                    if user['role'] == "ADMIN" or task.get('assigner') == user['name']:
+                    # Administrative action layer (Only visible if task is NOT Completed)
+                    if (user['role'] == "ADMIN" or task.get('assigner') == user['name']) and t_status != "Completed":
                         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
                         adm1, adm2 = st.columns([1, 1])
                         if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
