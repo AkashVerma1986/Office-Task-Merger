@@ -474,9 +474,15 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            for target_key in ["main_finance_picker", "main_cat_picker", "main_applicant_input", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader"]:
-                if target_key in st.session_state:
-                    del st.session_state[target_key]
+            # Clean state values directly before rerun
+            st.session_state["main_finance_picker"] = "--- SELECT ---"
+            st.session_state["main_cat_picker"] = "---"
+            st.session_state["main_applicant_input"] = ""
+            st.session_state["main_lan_input"] = ""
+            st.session_state["main_task_details"] = ""
+            st.session_state["main_prio_slider"] = "Normal"
+            if "main_screenshot_uploader" in st.session_state:
+                del st.session_state["main_screenshot_uploader"]
             st.session_state.show_submit_popup = False
             st.rerun()
 
