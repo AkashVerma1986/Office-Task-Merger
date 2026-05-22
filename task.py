@@ -844,12 +844,15 @@ with right_pane:
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
                                 st.rerun()
                             
-                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                                "status": "Completed", "completed_by": user['name'], 
-                                "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                            })
-                            st.rerun()
+                        if c_done.button("✅ Completed", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            if not note.strip():
+                                st.error("🛑 Completed note is compulsory! Write a comment before closing.")
+                            else:
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                    "status": "Completed", "completed_by": user['name'], 
+                                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                                })
+                                st.rerun()
 
                     # Administrative action layer
                     # Administrative action layer (Only visible if task is NOT Completed)
