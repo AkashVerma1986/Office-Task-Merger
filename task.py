@@ -785,9 +785,13 @@ with right_pane:
 
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
-                if len(f_line) > 65: f_line = f_line[:62] + "..."
+                if len(f_line) > 50: 
+                    f_line = f_line[:47] + "..."
+                
+                # Strip out any legacy brackets or accidental symbols that could break the HTML parser
+                clean_toggle_label = f"🔍 Details: {f_line}".replace("<", "&lt;").replace(">", "&gt;")
 
-                if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
+                if st.toggle(clean_toggle_label, key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
                         <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
