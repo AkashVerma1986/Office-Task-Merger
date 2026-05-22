@@ -537,11 +537,9 @@ with left_pane:
             });
         </script>
         """
-        paste_stream = components.html(paste_component_html, height=160)
-        if paste_stream:
-            st.session_state["paste_img_b64"] = paste_stream
-            
-        img_b64 = st.session_state.get("paste_img_b64", img_b64)
+        # Ensure img_b64 is always a valid safe string before payload processing
+        if not isinstance(img_b64, str):
+            img_b64 = ""
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
