@@ -504,14 +504,14 @@ with left_pane:
         st.write("")
         
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            # Deep clean all widget cache variables completely from state storage
+            # Completely clear structural widget tracking keys to clear the screen layout
             for target_key in [
                 "main_finance_picker", 
                 "main_cat_picker", 
                 "main_lan_input", 
                 "main_prio_slider", 
                 "main_task_details",
-                "paste_img_b64"
+                "main_screenshot_uploader"
             ]:
                 if target_key in st.session_state:
                     del st.session_state[target_key]
@@ -540,11 +540,15 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
-        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom: 2px;'>📸 Attach Guidance Screenshot (Paste Ctrl+V or Drag-and-Drop)</div>", unsafe_allow_html=True)
+        # Native, zero-friction file uploader supporting drag-and-drop and clipboard file-pasting natively in modern browsers
+        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot (Paste or Drag & Drop)", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
         
-        # Capture the image string directly from our HTML clipboard injection bridge
-        if "paste_img_b64" not in st.session_state:
-            st.session_state.paste_img_b64 = ""
+        img_b64 = ""
+        if uploaded_file is not None:
+            import base64
+            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+        
+        if st.button("SUBMIT", use_container_width=True, type="primary"):
 
         # HTML/JS component to handle instant paste and traditional drag/drop image processing
         paste_component_html = """
