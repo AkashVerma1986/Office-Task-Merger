@@ -9,7 +9,10 @@ import time
 import base64
 import streamlit.components.v1 as components
 
-# --- GLOBAL CLIPBOARD PASTE COMPONENT ENGINE ---
+# --- GLOBAL CLIPBOARD PASTE COMPONENT REGISTRATION ---
+# FIXED: Declaring the component name globally once to eliminate the TypeError
+_clip_paste_component = components.declare_component("clip_paste_bridge", inline=True)
+
 def st_paste_bridge(key=None):
     html_src = """
     <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
@@ -44,8 +47,7 @@ def st_paste_bridge(key=None):
         });
     </script>
     """
-    register_component = components.declare_component("clip_paste_bridge", inline=True)
-    return register_component(html_src=html_src, key=key)
+    return _clip_paste_component(html_src=html_src, key=key)
 
 # --- 1. CONFIGURATION ---
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -322,7 +324,7 @@ with left_pane:
         st.write("") 
         st.markdown(f'<div style="text-align: center;"><p style="color: #28A745; font-weight: bold;">📢 New Task Added successfully!</p></div>', unsafe_allow_html=True)
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            st.session_state.form_reset_counter += 1  # Force full form regeneration context
+            st.session_state.form_reset_counter += 1  
             st.session_state.show_submit_popup = False
             st.rerun()
 
@@ -348,14 +350,12 @@ with left_pane:
         dtl_main = st.text_area("Task Details", key=f"main_task_details_{f_ctr}")
         uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_screenshot_uploader_{f_ctr}")
         
-        # FIXED: Clipboard Bridge tracking inside unique dynamic iframe wrappers
         pasted_payload = st_paste_bridge(key=f"clipboard_bridge_{f_ctr}")
         
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
         elif pasted_payload and isinstance(pasted_payload, str):
-            # FIXED: Correct type check reading extraction from custom bridge wrapper
             img_b64 = pasted_payload
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
@@ -368,7 +368,7 @@ with left_pane:
                     "assigner": user['name'], 
                     "status": "Pending", 
                     "assigned_at": get_now_ist(),
-                    "screenshot": str(img_b64)  # Force String mapping for Firebase payload compatibility
+                    "screenshot": str(img_b64)  
                 }
                 requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={f_sel: True})
@@ -403,9 +403,8 @@ with left_pane:
             st.rerun()
 
 # ==========================================
-# RIGHT PANE: TASK CARDS DECK (NO FRAGMENT)
+# RIGHT PANE: TASK CARDS DECK
 # ==========================================
-# FIXED: Fragment decoration removed to allow global expansion button state toggles to fire flawlessly
 with right_pane:
     hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
     hdr_title_col.subheader("📋 All Tasks")
@@ -480,7 +479,6 @@ with right_pane:
             if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                 st.markdown(f'<div style="padding: 10px; background: #F8F9FA;">{raw_txt}</div>', unsafe_allow_html=True)
                 
-                # FIXED: Checking truthiness cleanly, avoiding stringified empty responses
                 img_data = tsk.get("screenshot", "")
                 if img_data and str(img_data).strip() not in ["", "None"]:
                     try: st.image(f"data:image/png;base64,{img_data}", use_container_width=True)
