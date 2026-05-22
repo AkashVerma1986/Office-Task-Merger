@@ -24,6 +24,22 @@ if "ui_scale" not in st.session_state:
 
 scale_mod = st.session_state.ui_scale / 100.0
 
+# --- CACHED DATA FETCHING ---
+@st.cache_data(ttl=10) # Keeps data in memory for 10 seconds to stop lag
+def fetch_tasks():
+    try: return requests.get(TASKS_URL).json() or {}
+    except: return {}
+
+@st.cache_data(ttl=60) # Categories change rarely, cache for 1 minute
+def fetch_categories():
+    try: return requests.get(CATEGORIES_URL).json() or {}
+    except: return {}
+
+@st.cache_data(ttl=60) # Finance list cached for 1 minute
+def fetch_finance_master():
+    try: return requests.get(FINANCE_MASTER_URL).json() or {}
+    except: return {}
+
 # --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
 st.markdown(f"""
     <style>
@@ -218,10 +234,14 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- 4. DATA FETCH ---
+# --- 4. DATA FETCH ---
 user = st.session_state.user_data
-tasks_dict = requests.get(TASKS_URL).json() or {}
-master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
-master_cat_data = requests.get(CATEGORIES_URL).json() or {}
+
+# CHANGED LINES: Now using caching instead of hitting the URL directly
+tasks_dict = fetch_tasks()
+master_fin_data = fetch_finance_master()
+master_cat_data = fetch_categories()
+
 all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
@@ -556,6 +576,8 @@ with left_pane:
                 
                 requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+
+                fetch_tasks.clear()
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
@@ -763,6 +785,7 @@ with right_pane:
                             else:
                                 p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()} if stat != "Hold" else {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                fetch_tasks.clear()
                                 st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
@@ -773,6 +796,7 @@ with right_pane:
                                     "status": "Completed", "completed_by": user['name'], 
                                     "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
                                 })
+                                fetch_tasks.clear()
                                 st.rerun(scope="fragment")
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
@@ -784,6 +808,7 @@ with right_pane:
                             if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     st.rerun(scope="fragment")
             st.write("")
 
