@@ -6,6 +6,7 @@ import pytz
 import io
 import os
 import time
+import base64
 import streamlit.components.v1 as components
 
 # --- 1. CONFIGURATION ---
@@ -18,49 +19,41 @@ IST = pytz.timezone('Asia/Kolkata')
 
 st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 
-# Initialize global UI zoom tracking safely at the top
 if "ui_scale" not in st.session_state: 
     st.session_state.ui_scale = 100
 
-# Compute scale multiplier safely before CSS blocks evaluate
 scale_mod = st.session_state.ui_scale / 100.0
 
 # --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
 st.markdown(f"""
     <style>
-    /* Global Font, Clean Background, and Tight Layout */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
         font-size: {int(22 * scale_mod)}px !important; 
         color: #1A1A1A !important;
     }} 
     
-    /* FIX FOR FADED DROPDOWN / SELECTBOX ITEMS */
     div[data-baseweb="select"] * {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
         font-weight: 500 !important;
     }}
     
-    /* Fix for dropdown menu popup item list contrast */
     ul[role="listbox"] li {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
     }}
     
-    /* STOPS MOBILE PULL-TO-REFRESH AND FIXES LOGOUTS */
     .stApp {{ 
         color: #1A1A1A; 
         overscroll-behavior-y: contain !important; 
     }}
 
-    /* Force Streamlit to drop general empty vertical whitespace */
     .stAppViewMain .block-container {{
         padding-top: 1.5rem !important;
         padding-bottom: 1.5rem !important;
         gap: 0.5rem !important; 
     }}
     
-    /* PROFESSIONAL LIGHT BUTTONS */
     .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
@@ -79,7 +72,6 @@ st.markdown(f"""
         color: #000000 !important;
     }}
 
-    /* Makes dividers thinner with less whitespace */
     hr {{
         margin: 0.4rem 0 !important;
     }}
@@ -93,14 +85,11 @@ st.markdown(f"""
     }}
     .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
     
-    
-    /* Status Colors */
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    /* Completion Box */
     .completion-box {{ 
         background-color: #E9F7EF; 
         border: 1px solid #28A745; 
@@ -110,9 +99,8 @@ st.markdown(f"""
         margin: 10px;
     }}
 
-    /* Metric internal overrides scaled up dynamically */
-    div[data-testid="stMetricSimpleValue"] {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] {{ font-size: {int(14 * scale_mod)}px !important; }}
+    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(14 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -120,9 +108,7 @@ st.markdown(f"""
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
-
-if "my_tasks_only" not in st.session_state: 
-    st.session_state.my_tasks_only = True
+if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -133,7 +119,6 @@ def get_device_id():
     except:
         return "default_device"
 
-# --- SOLID CLIENT HYDRATION BRIDGE ---
 if not st.session_state.authenticated:
     if "saved_user" in st.session_state and "saved_role" in st.session_state:
         st.session_state.user_data = {
@@ -143,7 +128,6 @@ if not st.session_state.authenticated:
         st.session_state.authenticated = True
         st.rerun()
 
-# Render secure login portal if no valid user memory map exists
 if not st.session_state.authenticated:
     pad_left, center_col, pad_right = st.columns([1.5, 1.2, 1.5])
     
@@ -235,10 +219,9 @@ if not st.session_state.authenticated:
 
 # --- 4. DATA FETCH ---
 user = st.session_state.user_data
-tasks_dict = requests.get(TASKS_URL, verify=False).json() or {}
-
-master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
-master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
+tasks_dict = requests.get(TASKS_URL).json() or {}
+master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
+master_cat_data = requests.get(CATEGORIES_URL).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
@@ -285,7 +268,7 @@ def edit_task_dialog(tid, task):
         
         msg_placeholder = st.empty()
         msg_placeholder.success("✅ Modification Done!")
-        time.sleep(3)
+        time.sleep(2)
         msg_placeholder.empty()
         st.rerun()
 
@@ -336,23 +319,23 @@ if user['role'] == "ADMIN":
                     for d_id in p_list:
                         btn_col1, btn_col2 = st.columns(2)
                         with btn_col1:
-                            if st.button(f"✅ Approve", key=f"app_{u_name}_{d_id}", use_container_width=True):
+                            if st.button("✅ Approve", key=f"app_{u_name}_{d_id}", use_container_width=True):
                                 if len(a_list) < 2:
                                     a_list.append(d_id)
                                     p_list.remove(d_id)
                                     requests.patch(f"{DB_BASE_URL}/users/{u_name}.json", 
                                                    json={"approved_devices": a_list, "pending_devices": p_list})
-                                    st.success(f"Device Linked!")
+                                    st.success("Device Linked!")
                                     st.rerun()
                                 else:
                                     st.error("User already has 2 devices!")
                                     
                         with btn_col2:
-                            if st.button(f"❌ Reject", key=f"rej_{u_name}_{d_id}", use_container_width=True):
+                            if st.button("❌ Reject", key=f"rej_{u_name}_{d_id}", use_container_width=True):
                                 p_list.remove(d_id)
                                 requests.patch(f"{DB_BASE_URL}/users/{u_name}.json", 
                                                json={"pending_devices": p_list})
-                                st.warning(f"Request Rejected!")
+                                st.warning("Request Rejected!")
                                 time.sleep(1)
                                 st.rerun()
             if not request_found:
@@ -388,7 +371,7 @@ if user['role'] == "ADMIN":
             target_f = st.selectbox("Select Category", ["---"] + all_fins, key="admin_fin_sel")
             if target_f != "---":
                 rename_f = st.text_input(f"Rename '{target_f}' to:").upper().strip()
-                if st.button(f"Update Globally", use_container_width=True):
+                if st.button("Update Globally", use_container_width=True):
                     requests.patch(FINANCE_MASTER_URL, json={rename_f: True})
                     requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
                     for tid, d in tasks_dict.items():
@@ -397,7 +380,7 @@ if user['role'] == "ADMIN":
                     st.rerun()
 
                 if st.checkbox(f"Remove '{target_f}' from List?"):
-                    if st.button(f"🗑️ DELETE FROM DROPDOWN", use_container_width=True):
+                    if st.button("🗑️ DELETE FROM DROPDOWN", use_container_width=True):
                         requests.delete(f"{DB_BASE_URL}/finance_list/{target_f}.json")
                         st.rerun()
 
@@ -428,35 +411,27 @@ if user['role'] == "ADMIN":
                         requests.delete(f"{DB_BASE_URL}/categories/{target_c}.json")
                         st.rerun()
 
-
 # --- 6. SPLIT SCREEN THREE-SECTION LAYOUT ---
 left_pane, right_pane = st.columns([1.3, 1.7], gap="medium")
-
 
 # ==========================================
 # LEFT PANE: SECTION 1 & SECTION 2
 # ==========================================
 with left_pane:
-    
-    # Create 2 main columns to put the logo and operator box side-by-side horizontally
     logo_col, operator_box_col = st.columns([1.4, 1.3])
     
     with logo_col:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(script_dir, "your_logo_filename.jpg")
-        
         if os.path.exists(logo_path):
-            st.image(logo_path, use_container_width=False, width=260)
+            st.image(logo_path, use_container_width=True)
         else:
             st.caption(f"⚠️ Looking in: {logo_path}")
             
     with operator_box_col:
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-        
-        # Micro card wrapper container
         with st.container(border=True):
             card_left, card_right = st.columns([1.6, 1.1])
-            
             with card_left:
                 st.markdown(f"""
                     <div style="margin: -6px 0 0 0; padding: 0;">
@@ -464,13 +439,11 @@ with left_pane:
                         <h3 style="margin: 0; padding: 0; color: #1A1A1A; font-weight: 700; font-size: {int(24 * scale_mod)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {user['name']}</h3>
                     </div>
                 """, unsafe_allow_html=True)
-                
             with card_right:
                 st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
                 if st.button("🔒 LOGOUT", key="app_logout_btn", use_container_width=True):
                     st.session_state.authenticated = False
-                    if "user_data" in st.session_state:
-                        del st.session_state.user_data
+                    if "user_data" in st.session_state: del st.session_state.user_data
                     if "saved_user" in st.session_state: del st.session_state.saved_user
                     if "saved_role" in st.session_state: del st.session_state.saved_role
                     
@@ -489,8 +462,7 @@ with left_pane:
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
     st.divider()
     
-    # --- SECTION 1: CREATE NEW CORRECTION & LEDGER ENTRY FORM ---
-    
+    # --- SECTION 1: CREATE NEW CORRECTION ---
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
         st.write("") 
@@ -502,20 +474,10 @@ with left_pane:
         </div>
         """, unsafe_allow_html=True)
         st.write("")
-        
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            # Completely clear structural widget tracking keys to clear the screen layout
-            for target_key in [
-                "main_finance_picker", 
-                "main_cat_picker", 
-                "main_lan_input", 
-                "main_prio_slider", 
-                "main_task_details",
-                "main_screenshot_uploader"
-            ]:
+            for target_key in ["main_finance_picker", "main_cat_picker", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader"]:
                 if target_key in st.session_state:
                     del st.session_state[target_key]
-            
             st.session_state.show_submit_popup = False
             st.rerun()
 
@@ -524,7 +486,6 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
-        
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
             f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
@@ -539,38 +500,24 @@ with left_pane:
             prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
-        
-        # Native file uploader supporting drag-and-drop and clipboard pasting natively
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot (Paste or Drag & Drop)", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
         
         img_b64 = ""
         if uploaded_file is not None:
-            import base64
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
         
-        if st.button("SUBMIT", use_container_width=True, type="primary"):
-
-        # HTML/JS component to handle instant paste and traditional drag/drop image processing
         paste_component_html = """
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
             <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
             <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
         </div>
-
         <script>
             const zone = document.getElementById('drop-zone');
             const preview = document.getElementById('preview');
             const msg = document.getElementById('prompt-msg');
-
             function sendToStreamlit(b64Str) {
-                // Bridge payload transmission straight back to Streamlit engine environment
-                window.parent.postMessage({
-                    type: 'streamlit:set_component_value',
-                    value: b64Str
-                }, '*');
+                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
             }
-
-            // 1. Handle Clipboard Paste Events
             window.addEventListener('paste', (e) => {
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let i = 0; i < items.length; i++) {
@@ -588,44 +535,20 @@ with left_pane:
                     }
                 }
             });
-
-            // 2. Handle Drag & Drop Events
-            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = '#28A745'; });
-            zone.addEventListener('dragleave', () => { zone.style.borderColor = '#B0B7C3'; });
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                zone.style.borderColor = '#B0B7C3';
-                const files = e.dataTransfer.files;
-                if (files.length > 0 && files[0].type.indexOf('image') !== -1) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const rawB64 = event.target.result.split(',')[1];
-                        preview.src = event.target.result;
-                        preview.style.display = 'block';
-                        msg.innerHTML = "✅ Image dropped successfully!";
-                        sendToStreamlit(rawB64);
-                    };
-                    reader.readAsDataURL(files[0]);
-                }
-            });
         </script>
         """
-        
-        # Render the custom input component bridge
-        # Render the custom input component bridge
-        components.html(paste_component_html, height=160)
-        
-        # Pull the safe string transmitted via postMessage out of your session cache
-        img_b64 = st.session_state.get("paste_img_b64", "")
-        if not isinstance(img_b64, str):
-            img_b64 = ""
+        paste_stream = components.html(paste_component_html, height=160)
+        if paste_stream:
+            st.session_state["paste_img_b64"] = paste_stream
+            
+        img_b64 = st.session_state.get("paste_img_b64", img_b64)
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                 payload = {
                     "finance": fin_active, 
                     "lan": lan_no,
-                    "task": f"[{cat}] {dtl_main}", 
+                    "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
                     "priority": prio, 
                     "assigner": user['name'], 
                     "status": "Pending", 
@@ -639,28 +562,21 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                # Safe way to reset widget values including the screenshot uploader state cache
-                for k in ["main_lan_input", "main_task_details", "main_screenshot_uploader"]:
+                for k in ["main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
-                
             elif not lan_no:
-                st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
+                st.error("🛑 LAN No. is mandatory!")
             else:
                 st.warning("⚠️ Please fill in Finance and Task Details.")
                 
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
-    # --- SECTION 2: VIEW FILTERS, METRICS, SEARCH & EXCEL EXPORT ---
+    # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
-    
-    view_filter = st.selectbox(
-        "📂 View Filter", 
-        ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-        key="view_filter_main"
-    )
+    view_filter = st.selectbox("📂 View Filter", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], key="view_filter_main")
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
@@ -675,22 +591,15 @@ with left_pane:
             filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
         
         today_dt = datetime.now(IST).date()
-        
-        if view_filter == "Pending":
-            filtered_df = filtered_df[filtered_df['status'] == "Pending"]
-        elif view_filter == "Hold":
-            filtered_df = filtered_df[filtered_df['status'] == "Hold"]
-        elif view_filter == "Completed":
-            filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-        elif view_filter == "Today's":
-            filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
+        if view_filter == "Pending": filtered_df = filtered_df[filtered_df['status'] == "Pending"]
+        elif view_filter == "Hold": filtered_df = filtered_df[filtered_df['status'] == "Hold"]
+        elif view_filter == "Completed": filtered_df = filtered_df[filtered_df['status'] == "Completed"]
+        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
         elif view_filter == "Yesterday":
-            yesterday = today_dt - pd.Timedelta(days=1)
-            filtered_df = filtered_df[filtered_df['date_dt'].dt.date == yesterday]
+            filtered_df = filtered_df[filtered_df['date_dt'].dt.date == (today_dt - pd.Timedelta(days=1))]
 
         if len(date_range) == 2:
-            start_date, end_date = date_range
-            filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= start_date) & (filtered_df['date_dt'].dt.date <= end_date)]
+            filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= date_range[0]) & (filtered_df['date_dt'].dt.date <= date_range[1])]
 
         if search:
             filtered_df = filtered_df[
@@ -700,305 +609,184 @@ with left_pane:
             ]
 
         st.markdown(f"**Live Status Overview ({view_filter})**")
-        
-        m_total = len(filtered_df)
-        m_pending = len(filtered_df[filtered_df['status'] == "Pending"])
-        m_high = len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")])
-        m_hold = len(filtered_df[filtered_df['status'] == "Hold"])
-        m_done = len(filtered_df[filtered_df['status'] == "Completed"])
-
         m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
-        with m_col1: st.metric("Total", m_total)
-        with m_col2: st.metric("⏳ Pending", m_pending)
-        with m_col3: st.metric("🔥 High", m_high)
-        with m_col4: st.metric("⏸️ Hold", m_hold)
-        with m_col5: st.metric("✅ Done", m_done)
+        m_col1.metric("Total", len(filtered_df))
+        m_col2.metric("⏳ Pending", len(filtered_df[filtered_df['status'] == "Pending"]))
+        m_col3.metric("🔥 High", len(filtered_df[(filtered_df['priority'] == "High") & (filtered_df['status'] != "Completed")]))
+        m_col4.metric("⏸️ Hold", len(filtered_df[filtered_df['status'] == "Hold"]))
+        m_col5.metric("✅ Done", len(filtered_df[filtered_df['status'] == "Completed"]))
         
         st.divider()
 
-        prio_map = {"High": 0, "Medium": 1, "Normal": 2}
-        filtered_df['prio_num'] = filtered_df['priority'].map(prio_map)
-
-        if view_filter == "All Tasks":
-            filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
-        else:
-            filtered_df = filtered_df.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
+        filtered_df['prio_num'] = filtered_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
+        filtered_df = filtered_df.sort_values(by='date_dt' if view_filter == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter == "All Tasks" else [True, False])
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
-                st.rerun()
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
-            
-            def extract_cat(text):
-                if isinstance(text, str) and text.startswith("[") and "]" in text:
-                    return text.split("]")[0].replace("[", "").strip()
-                return "None"
+            export_df['Category'] = export_df['task'].apply(lambda t: t.split("]")[0].replace("[", "").strip() if isinstance(t, str) and t.startswith("[") else "None")
+            export_df['task'] = export_df['task'].apply(lambda t: t.split("]", 1)[1].strip() if isinstance(t, str) and t.startswith("[") else t)
 
-            def clean_task(text):
-                if isinstance(text, str) and text.startswith("[") and "]" in text:
-                    return text.split("]", 1)[1].strip()
-                return text
-
-            # 1. Apply your custom text extractions
-            export_df['Category'] = export_df['task'].apply(extract_cat)
-            export_df['task'] = export_df['task'].apply(clean_task)
-
-            # 2. Ensure all required database keys exist as columns to avoid KeyErrors
-            required_cols = [
-                'assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 
-                'priority', 'work_type', 'completed_by', 'finished_at', 'status', 
-                'hold_at', 'hold_by', 'comment'
-            ]
+            required_cols = ['assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 'priority', 'work_type', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'comment']
             for col in required_cols:
-                if col not in export_df.columns:
-                    export_df[col] = ""
+                if col not in export_df.columns: export_df[col] = ""
 
-            # 3. Smart Separation for the comment field
-            export_df['rt Done Comment'] = export_df.apply(
-                lambda row: row['comment'] if row['status'] == 'Completed' else "", axis=1
-            )
-            export_df['Hold Reason'] = export_df.apply(
-                lambda row: row['comment'] if row['status'] == 'Hold' else "", axis=1
-            )
+            export_df['rt Done Comment'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Completed' else "", axis=1)
+            export_df['Hold Reason'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Hold' else "", axis=1)
 
-            # 4. Strict selection and column mapping ordering (0 to 14)
-            final_ordered_columns = [
-                'assigned_at',      # 0
-                'assigner',         # 1
-                'finance',          # 2
-                'lan',              # 3
-                'Category',         # 4
-                'task',             # 5
-                'priority',         # 6
-                'work_type',        # 7
-                'rt Done Comment',  # 8
-                'completed_by',     # 9
-                'finished_at',      # 10
-                'status',           # 11
-                'hold_at',          # 12
-                'hold_by',          # 13
-                'Hold Reason'       # 14
-            ]
-            
-            export_df = export_df[final_ordered_columns]
+            final_cols = ['assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
+            export_df = export_df[final_cols]
 
-            # 5. Build openpyxl memory buffer engine
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine='openpyxl') as wr:
                 export_df.to_excel(wr, index=False)
             
-            st.download_button(
-                label="📥 Excel Export", 
-                data=buf.getvalue(), 
-                file_name=f"Export_{view_filter}.xlsx", 
-                use_container_width=True
-            )
+            st.download_button(label="📥 Excel Export", data=buf.getvalue(), file_name=f"Export_{view_filter}.xlsx", use_container_width=True)
 
         st.write("") 
         new_scale = st.slider("🔍 Zoom Layout Scale (%)", 10, 150, value=st.session_state.ui_scale, step=5, key="global_zoom_slider")
         if new_scale != st.session_state.ui_scale:
             st.session_state.ui_scale = new_scale
             st.rerun()
-    else:
-        filtered_df = pd.DataFrame()
-
 
 # ==========================================
-# RIGHT PANE: SECTION 3 (COMPACT UNIFIED TASK CARDS)
+# RIGHT PANE: SECTION 3 (TASK CARDS)
 # ==========================================
 with right_pane:
-    
-    # 1. Define the isolated task deck fragment
     @st.fragment
     def render_task_deck():
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
+        hdr_title_col.subheader("📋 All Tasks")
         
-        with hdr_title_col:
-            st.subheader("📋 All Tasks")
+        view_filter_right = hdr_filter_col.selectbox(
+            "📂 View Filter Right", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+            key="view_filter_right", label_visibility="collapsed"
+        )
             
-        with hdr_filter_col:
-            view_filter = st.selectbox(
-                "📂 View Filter", 
-                ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-                key="view_filter_right",
-                label_visibility="collapsed"
-            )
-            
-        with hdr_btn1:
-            # Re-running just the fragment makes the refresh instant and unnoticeable
-            if st.button("REFRESH", key="right_pane_refresh", use_container_width=True):
-                st.rerun(scope="fragment")
+        if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
+            st.rerun(scope="fragment")
                 
-        with hdr_btn2:
-            btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-            if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
-                st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-                st.rerun(scope="fragment")
+        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+        if hdr_btn2.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
+            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+            st.rerun(scope="fragment")
                 
         st.write("") 
         
-        # Pull live operational data quietly inside the fragment
-        live_tasks_dict = requests.get(TASKS_URL, verify=False).json() or {}
-        live_df_all = pd.DataFrame.from_dict(live_tasks_dict, orient='index')
+        live_tasks = requests.get(TASKS_URL).json() or {}
+        live_df = pd.DataFrame.from_dict(live_tasks, orient='index')
         
-        if not live_df_all.empty:
-            live_df_all['date_dt'] = pd.to_datetime(live_df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
-            filtered_df_right = live_df_all.copy()
+        if not live_df.empty:
+            live_df['date_dt'] = pd.to_datetime(live_df['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+            f_df = live_df.copy()
             
             if st.session_state.my_tasks_only:
-                filtered_df_right = filtered_df_right[filtered_df_right['assigner'] == user['name']]
+                f_df = f_df[f_df['assigner'] == user['name']]
             
-            today_dt = datetime.now(IST).date()
-            if view_filter == "Pending":
-                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Pending"]
-            elif view_filter == "Hold":
-                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Hold"]
-            elif view_filter == "Completed":
-                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Completed"]
-            elif view_filter == "Today's":
-                filtered_df_right = filtered_df_right[filtered_df_right['date_dt'].dt.date == today_dt]
-            elif view_filter == "Yesterday":
-                yesterday = today_dt - pd.Timedelta(days=1)
-                filtered_df_right = filtered_df_right[filtered_df_right['date_dt'].dt.date == yesterday]
+            t_dt = datetime.now(IST).date()
+            if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
+            elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
+            elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
+            elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
 
-            prio_map = {"High": 0, "Medium": 1, "Normal": 2}
-            filtered_df_right['prio_num'] = filtered_df_right['priority'].map(prio_map)
-            
-            if view_filter == "All Tasks":
-                filtered_df_right = filtered_df_right.sort_values(by='date_dt', ascending=False)
-            else:
-                filtered_df_right = filtered_df_right.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
-                
-            keys = list(filtered_df_right.index)
+            f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
+            f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
+            keys = list(f_df.index)
         else:
             keys = []
 
         if not keys:
-            st.info("No matching tasks found for the current configuration details.")
+            st.info("No matching tasks found.")
         
         for tid in keys[:150]:
-            task = live_tasks_dict[tid]
+            tsk = live_tasks[tid]
+            stat = tsk.get('status', 'Pending')
+            prio_val = tsk.get('priority', 'Normal')
             
-            t_status = task.get('status', 'Pending')
-            t_prio = task.get('priority', 'Normal')
-            
-            indicator_color = "#FFC107"
-            if t_status == "Completed": 
-                indicator_color = "#28A745"
-            elif t_status == "Hold": 
-                indicator_color = "#E83E8C"
-            elif t_prio == "High" and t_status == "Pending": 
-                indicator_color = "#DC3545"
+            col_ind = "#FFC107"
+            if stat == "Completed": col_ind = "#28A745"
+            elif stat == "Hold": col_ind = "#E83E8C"
+            elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
-            with st.container(border=False):
-                hold_html_block = ""
-                if t_status == "Hold":
-                    hold_html_block = f"""
-                    <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 12px; font-size: {int(16 * scale_mod)}px;">
-                        <b>⏸️ ON HOLD:</b> {task.get('hold_by')} said: "{task.get('comment', 'N/A')}"
+            with st.container(border=True):
+                st.markdown(f"""
+                    <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
+                        <table style="width: 100%; border-collapse: collapse; border: none;">
+                            <tr>
+                                <td style="vertical-align: top; text-align: left; padding: 0;">
+                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
+                                </td>
+                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
+                                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {tsk.get('assigned_at')}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {tsk.get('assigner')}</span>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
-                    """
+                """, unsafe_allow_html=True)
 
-                raw_task_text = str(task.get('task', ''))
-                first_line = raw_task_text.split('\n')[0]
-                if len(first_line) > 65:
-                    first_line = first_line[:62] + "..."
+                raw_txt = str(tsk.get('task', ''))
+                f_line = raw_txt.split('\n')[0]
+                if len(f_line) > 65: f_line = f_line[:62] + "..."
 
-                with st.container(border=True):
+                if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
-                        <div style="
-                            border-left: 10px solid {indicator_color}; 
-                            margin: -12px -16px 12px -16px; 
-                            padding: 16px 20px; 
-                            background-color: #FFFFFF;
-                        ">
-                            <table style="width: 100%; border-collapse: collapse; background: transparent; border: none;">
-                                <tr>
-                                    <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
-                                        <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
-                                        <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
-                                    </td>
-                                    <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
-                                        <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                                        <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                                        <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
-                                    </td>
-                                </tr>
-                            </table>
+                        <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                            <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
-
-                    is_open = st.toggle(f"🔍 Details: {first_line}", key=f"card_exp_state_{tid}")
                     
-                    if is_open:
-                        st.markdown(f"""
-                            <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
-                                <b>Full Task Description:</b><br>{raw_task_text}
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Render guidance screenshot safely if it exists in the database record
-                        # Render guidance screenshot safely if it exists in the database record
-                        if task.get("screenshot") and str(task.get("screenshot")).strip() != "":
-                            try:
-                                st.markdown("<div style='margin-top: 10px;'><b>📸 Attached Guidance Screenshot:</b></div>", unsafe_allow_html=True)
-                                # Pre-construct a clean Data URI string structure to display the binary string reliably inside the card
-                                img_data_uri = f"data:image/png;base64,{task.get('screenshot')}"
-                                st.image(img_data_uri, use_container_width=True)
-                            except Exception as img_err:
-                                st.caption(f"⚠️ Failed to parse attachment matrix string.")
-                        
-                        if hold_html_block:
-                            st.markdown(hold_html_block, unsafe_allow_html=True)
-                        
-                        st.divider()
+                    if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                        try:
+                            st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                        except:
+                            st.caption("⚠️ Failed to display attachment image.")
+                    
+                    if stat == "Hold":
+                        st.markdown(f'<div style="color:#E83E8C; padding:10px;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                    
+                    st.divider()
 
-                        if t_status == "Completed":
-                            st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                            st.info(f"Final Note: {task.get('comment', 'N/A')}")
-                        else:
-                            c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                            
-                            h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                            if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                                if t_status != "Hold" and not note.strip():
-                                    st.error("🛑 Hold note is compulsory! Write a comment before putting on hold.")
-                                else:
-                                    if t_status != "Hold":
-                                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                                    else:
-                                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                                    st.rerun(scope="fragment")
+                    if stat == "Completed":
+                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                    else:
+                        c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                        note = c_note.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                        w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                        
+                        if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                            if stat != "Hold" and not note.strip():
+                                st.error("🛑 Hold note is required.")
+                            else:
+                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()} if stat != "Hold" else {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                st.rerun(scope="fragment")
                                 
-                            if c_done.button("✅ Completed", key=f"d_{tid}", use_container_width=True, type="primary"):
-                                if not note.strip():
-                                    st.error("🛑 Completed note is compulsory! Write a comment before closing.")
-                                else:
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                                        "status": "Completed", "completed_by": user['name'], 
-                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist(),
-                                        "screenshot": None
-                                    })
+                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            if not note.strip():
+                                st.error("🛑 Closing note is required.")
+                            else:
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                    "status": "Completed", "completed_by": user['name'], 
+                                    "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
+                                })
+                                st.rerun(scope="fragment")
+
+                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
+                        st.write("")
+                        adm1, adm2 = st.columns(2)
+                        if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, tsk)
+                        with adm2:
+                            if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
-
-                        if (user['role'] == "ADMIN" or task.get('assigner') == user['name']) and t_status != "Completed":
-                            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                            adm1, adm2 = st.columns([1, 1])
-                            if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                                edit_task_dialog(tid, task)
-                            
-                            with adm2:
-                                if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                                        st.rerun(scope="fragment")
-
             st.write("")
 
-    # 2. Fire the fragment to display the UI pane smoothly
     render_task_deck()
