@@ -608,13 +608,13 @@ with left_pane:
         """
         
         # Render the custom input component bridge
-        component_response = components.html(paste_component_html, height=160)
+        # Render the custom input component bridge
+        components.html(paste_component_html, height=160)
         
-        # Save structural image string down to active processing scope memory state
-        if component_response is not None:
-            st.session_state.paste_img_b64 = component_response
-            
-        img_b64 = st.session_state.paste_img_b64
+        # Pull the safe string transmitted via postMessage out of your session cache
+        img_b64 = st.session_state.get("paste_img_b64", "")
+        if not isinstance(img_b64, str):
+            img_b64 = ""
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
