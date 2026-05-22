@@ -541,6 +541,7 @@ with left_pane:
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
         # Native, zero-friction file uploader supporting drag-and-drop and clipboard file-pasting natively in modern browsers
+        # Native file uploader supporting drag-and-drop and clipboard pasting natively
         uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot (Paste or Drag & Drop)", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
         
         img_b64 = ""
