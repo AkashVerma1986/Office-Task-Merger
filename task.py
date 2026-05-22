@@ -751,16 +751,24 @@ with right_pane:
             with st.container(border=True):
                 # Retrieve Applicant Name safely if it exists in DB record
                 app_name = tsk.get('applicant_name', '').strip()
-                app_display = f"<div><span style='font-size: {int(18 * scale_mod)}px; color: #1A1A1A;'><b>Applicant:</b> {app_name if app_name else 'N/A'}</span></div>"
+                app_string = app_name if app_name else 'N/A'
+                lan_string = tsk.get('lan', 'N/A')
+                
+                # Single inline line layout mapping Applicant and LAN side by side
+                combined_details_html = f"""
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-top: 4px; margin-bottom: 2px;">
+                    <span style="font-size: {int(17 * scale_mod)}px; color: #1A1A1A;"><b>Applicant:</b> {app_string}</span>
+                    <span style="font-size: {int(17 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px; color: #1A1A1A;">{lan_string}</code></span>
+                </div>
+                """
                 
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
-                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
-                                    {app_display}
-                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
+                                    <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    {combined_details_html}
                                 </td>
                                 <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
                                     <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
