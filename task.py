@@ -544,7 +544,9 @@ with left_pane:
                     "assigner": user['name'], 
                     "status": "Pending", 
                     "assigned_at": get_now_ist()
-                }requests.post(TASKS_URL, json=payload)
+                }
+                
+                requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                 
                 st.session_state.last_sub_lan = lan_no
