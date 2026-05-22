@@ -544,13 +544,14 @@ with left_pane:
                     "assigner": user['name'], 
                     "status": "Pending", 
                     "assigned_at": get_now_ist()
-                }
-                requests.post(TASKS_URL, json=payload)
+                }requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
-                st.rerun()
+                # Clean up input cache variables locally instead of doing a hard screen flash rerun
+                st.session_state["main_lan_input"] = ""
+                st.session_state["main_task_details"] = ""
                 
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
@@ -717,155 +718,183 @@ with left_pane:
 # ==========================================
 with right_pane:
     
-    hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
-    
-    with hdr_title_col:
-        st.subheader("📋 All Tasks")
+    # 1. Define the isolated task deck fragment
+    @st.fragment
+    def render_task_deck():
+        hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
         
-    with hdr_filter_col:
-        # Synced with the same options as left side but utilizes right side logic
-        view_filter = st.selectbox(
-            "📂 View Filter", 
-            ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            key="view_filter_right",
-            label_visibility="collapsed"
-        )
-        
-    with hdr_btn1:
-        if st.button("REFRESH", key="right_pane_refresh", use_container_width=True):
-            st.rerun()
+        with hdr_title_col:
+            st.subheader("📋 All Tasks")
             
-    with hdr_btn2:
-        btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
-        if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
-            st.session_state.my_tasks_only = not st.session_state.my_tasks_only
-            st.rerun()
+        with hdr_filter_col:
+            view_filter = st.selectbox(
+                "📂 View Filter", 
+                ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+                key="view_filter_right",
+                label_visibility="collapsed"
+            )
             
-    st.write("") 
-    
-    keys = list(filtered_df.index) if not filtered_df.empty else []
-
-    if not keys:
-        st.info("No matching tasks found for the current configuration details.")
-    
-    for tid in keys[:150]:
-        task = tasks_dict[tid]
-        
-        t_status = task.get('status', 'Pending')
-        t_prio = task.get('priority', 'Normal')
-        
-        indicator_color = "#FFC107"
-        if t_status == "Completed": 
-            indicator_color = "#28A745"
-        elif t_status == "Hold": 
-            indicator_color = "#E83E8C"
-        elif t_prio == "High" and t_status == "Pending": 
-            indicator_color = "#DC3545"
-
-        # 1. Base wrapper column layout grouping
-        with st.container(border=False):
-            
-            # Setup dynamic hold notes block safely
-            hold_html_block = ""
-            if t_status == "Hold":
-                hold_html_block = f"""
-                <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 12px; font-size: {int(16 * scale_mod)}px;">
-                    <b>⏸️ ON HOLD:</b> {task.get('hold_by')} said: "{task.get('comment', 'N/A')}"
-                </div>
-                """
-
-            # Text processor for header summary string slice
-            raw_task_text = str(task.get('task', ''))
-            first_line = raw_task_text.split('\n')[0]
-            if len(first_line) > 65:
-                first_line = first_line[:62] + "..."
-
-            # 2. Main High-Visibility Unified Card Container
-            with st.container(border=True):
+        with hdr_btn1:
+            # Re-running just the fragment makes the refresh instant and unnoticeable
+            if st.button("REFRESH", key="right_pane_refresh", use_container_width=True):
+                st.rerun(scope="fragment")
                 
-                # HTML layout injected cleanly inside the border framework
-                # HTML layout injected cleanly inside the border framework
-                st.markdown(f"""
-                    <div style="
-                        border-left: 10px solid {indicator_color}; 
-                        margin: -12px -16px 12px -16px; 
-                        padding: 16px 20px; 
-                        background-color: #FFFFFF;
-                    ">
-                        <table style="width: 100%; border-collapse: collapse; background: transparent;">
-                            <tr>
-                                <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
-                                    <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
-                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
-                                </td>
-                                <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
-                                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
-                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
-                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
-                                </td>
-                            </tr>
-                        </table>
+        with hdr_btn2:
+            btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
+            if st.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
+                st.session_state.my_tasks_only = not st.session_state.my_tasks_only
+                st.rerun(scope="fragment")
+                
+        st.write("") 
+        
+        # Pull live operational data quietly inside the fragment
+        live_tasks_dict = requests.get(TASKS_URL, verify=False).json() or {}
+        live_df_all = pd.DataFrame.from_dict(live_tasks_dict, orient='index')
+        
+        if not live_df_all.empty:
+            live_df_all['date_dt'] = pd.to_datetime(live_df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+            filtered_df_right = live_df_all.copy()
+            
+            if st.session_state.my_tasks_only:
+                filtered_df_right = filtered_df_right[filtered_df_right['assigner'] == user['name']]
+            
+            today_dt = datetime.now(IST).date()
+            if view_filter == "Pending":
+                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Pending"]
+            elif view_filter == "Hold":
+                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Hold"]
+            elif view_filter == "Completed":
+                filtered_df_right = filtered_df_right[filtered_df_right['status'] == "Completed"]
+            elif view_filter == "Today's":
+                filtered_df_right = filtered_df_right[filtered_df_right['date_dt'].dt.date == today_dt]
+            elif view_filter == "Yesterday":
+                yesterday = today_dt - pd.Timedelta(days=1)
+                filtered_df_right = filtered_df_right[filtered_df_right['date_dt'].dt.date == yesterday]
+
+            prio_map = {"High": 0, "Medium": 1, "Normal": 2}
+            filtered_df_right['prio_num'] = filtered_df_right['priority'].map(prio_map)
+            
+            if view_filter == "All Tasks":
+                filtered_df_right = filtered_df_right.sort_values(by='date_dt', ascending=False)
+            else:
+                filtered_df_right = filtered_df_right.sort_values(by=['prio_num', 'date_dt'], ascending=[True, False])
+                
+            keys = list(filtered_df_right.index)
+        else:
+            keys = []
+
+        if not keys:
+            st.info("No matching tasks found for the current configuration details.")
+        
+        for tid in keys[:150]:
+            task = live_tasks_dict[tid]
+            
+            t_status = task.get('status', 'Pending')
+            t_prio = task.get('priority', 'Normal')
+            
+            indicator_color = "#FFC107"
+            if t_status == "Completed": 
+                indicator_color = "#28A745"
+            elif t_status == "Hold": 
+                indicator_color = "#E83E8C"
+            elif t_prio == "High" and t_status == "Pending": 
+                indicator_color = "#DC3545"
+
+            with st.container(border=False):
+                hold_html_block = ""
+                if t_status == "Hold":
+                    hold_html_block = f"""
+                    <div style="background-color: #FDF2F4; border: 1px solid #E83E8C; color: #E83E8C; padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 12px; font-size: {int(16 * scale_mod)}px;">
+                        <b>⏸️ ON HOLD:</b> {task.get('hold_by')} said: "{task.get('comment', 'N/A')}"
                     </div>
-                """, unsafe_allow_html=True)
+                    """
 
-                # The Toggle button sits completely inside the main outline frame
-                is_open = st.toggle(f"🔍 Details: {first_line}", key=f"card_exp_state_{tid}")
-                
-                if is_open:
+                raw_task_text = str(task.get('task', ''))
+                first_line = raw_task_text.split('\n')[0]
+                if len(first_line) > 65:
+                    first_line = first_line[:62] + "..."
+
+                with st.container(border=True):
                     st.markdown(f"""
-                        <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
-                            <b>Full Task Description:</b><br>{raw_task_text}
+                        <div style="
+                            border-left: 10px solid {indicator_color}; 
+                            margin: -12px -16px 12px -16px; 
+                            padding: 16px 20px; 
+                            background-color: #FFFFFF;
+                        ">
+                            <table style="width: 100%; border-collapse: collapse; background: transparent; border: none;">
+                                <tr>
+                                    <td style="vertical-align: top; text-align: left; background: transparent; border: none; padding: 0;">
+                                        <h2 style="margin: 0 0 4px 0; padding: 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{task.get('finance')}</h2>
+                                        <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{task.get('lan', 'N/A')}</code></span>
+                                    </td>
+                                    <td style="vertical-align: top; text-align: right; background: transparent; border: none; padding: 0; font-size: {int(20 * scale_mod)}px; line-height: 1.3; color: #1A1A1A;">
+                                        <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {indicator_color};">{t_status}</span><br>
+                                        <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {task.get('assigned_at')}</span><br>
+                                        <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {task.get('assigner')}</span>
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
                     """, unsafe_allow_html=True)
-                    
-                    if hold_html_block:
-                        st.markdown(hold_html_block, unsafe_allow_html=True)
-                    
-                    st.divider()
 
-                    # Context-driven action controls
-                    if t_status == "Completed":
-                        st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
-                        st.info(f"Final Note: {task.get('comment', 'N/A')}")
-                    else:
-                        c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                        note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
-                        w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                    is_open = st.toggle(f"🔍 Details: {first_line}", key=f"card_exp_state_{tid}")
+                    
+                    if is_open:
+                        st.markdown(f"""
+                            <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                                <b>Full Task Description:</b><br>{raw_task_text}
+                            </div>
+                        """, unsafe_allow_html=True)
                         
-                        h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
-                        if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                            if t_status != "Hold" and not note.strip():
-                                st.error("🛑 Hold note is compulsory! Write a comment before putting on hold.")
-                            else:
-                                if t_status != "Hold":
-                                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                                else:
-                                    payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                                st.rerun()
+                        if hold_html_block:
+                            st.markdown(hold_html_block, unsafe_allow_html=True)
+                        
+                        st.divider()
+
+                        if t_status == "Completed":
+                            st.success(f"✅ Closed by {task.get('completed_by')} | Type: {task.get('work_type')}")
+                            st.info(f"Final Note: {task.get('comment', 'N/A')}")
+                        else:
+                            c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                            note = c_note.text_input("Comment", key=f"n_{tid}", label_visibility="collapsed", placeholder="Note...")
+                            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                             
-                        if c_done.button("✅ Completed", key=f"d_{tid}", use_container_width=True, type="primary"):
-                            if not note.strip():
-                                st.error("🛑 Completed note is compulsory! Write a comment before closing.")
-                            else:
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
-                                    "status": "Completed", "completed_by": user['name'], 
-                                    "work_type": w_type, "comment": note, "finished_at": get_now_ist()
-                                })
-                                st.rerun()
+                            h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
+                            if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
+                                if t_status != "Hold" and not note.strip():
+                                    st.error("🛑 Hold note is compulsory! Write a comment before putting on hold.")
+                                else:
+                                    if t_status != "Hold":
+                                        payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                                    else:
+                                        payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                                    st.rerun(scope="fragment")
+                                
+                            if c_done.button("✅ Completed", key=f"d_{tid}", use_container_width=True, type="primary"):
+                                if not note.strip():
+                                    st.error("🛑 Completed note is compulsory! Write a comment before closing.")
+                                else:
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                        "status": "Completed", "completed_by": user['name'], 
+                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                                    })
+                                    st.rerun(scope="fragment")
 
-                    # Administrative action layer
-                    # Administrative action layer (Only visible if task is NOT Completed)
-                    if (user['role'] == "ADMIN" or task.get('assigner') == user['name']) and t_status != "Completed":
-                        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                        adm1, adm2 = st.columns([1, 1])
-                        if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                            edit_task_dialog(tid, task)
-                        
-                        with adm2:
-                            if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                                if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
-                                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                                    st.rerun()
+                        if (user['role'] == "ADMIN" or task.get('assigner') == user['name']) and t_status != "Completed":
+                            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                            adm1, adm2 = st.columns([1, 1])
+                            if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                                edit_task_dialog(tid, task)
+                            
+                            with adm2:
+                                if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                                    if st.button("CONFIRM DELETE", key=f"del_btn_{tid}", use_container_width=True):
+                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                        st.rerun(scope="fragment")
 
-        st.write("")
+            st.write("")
+
+    # 2. Fire the fragment to display the UI pane smoothly
+    render_task_deck()
