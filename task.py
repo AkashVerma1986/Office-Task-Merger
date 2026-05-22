@@ -507,7 +507,16 @@ with left_pane:
         prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        
+        # Initialize an upload version counter to completely clear image cache on submit
+        if "uploader_version" not in st.session_state:
+            st.session_state.uploader_version = 0
+            
+        uploaded_file = st.file_uploader(
+            "📸 Attach Guidance Screenshot", 
+            type=["jpg", "jpeg", "png"], 
+            key=f"main_screenshot_uploader_{st.session_state.uploader_version}"
+        )
         
         img_b64 = ""
         if uploaded_file is not None:
