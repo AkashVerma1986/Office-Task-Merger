@@ -767,15 +767,7 @@ with right_pane:
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     {combined_details_html}
-                                </td>
-                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
-                                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
-                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {tsk.get('assigned_at')}</span><br>
-                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {tsk.get('assigner')}</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                                
                 """
                 
                 st.markdown(card_header_html, unsafe_allow_html=True)
