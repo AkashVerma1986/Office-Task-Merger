@@ -643,6 +643,7 @@ with left_pane:
                 for k in ["main_lan_input", "main_task_details", "main_screenshot_uploader"]:
                     if k in st.session_state:
                         del st.session_state[k]
+                st.rerun()
                 
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
