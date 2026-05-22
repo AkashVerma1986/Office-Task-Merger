@@ -462,7 +462,6 @@ with left_pane:
     search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
     st.divider()
     
-    # --- SECTION 1: CREATE NEW CORRECTION ---
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
         st.write("") 
@@ -475,7 +474,7 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            for target_key in ["main_finance_picker", "main_cat_picker", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader"]:
+            for target_key in ["main_finance_picker", "main_cat_picker", "main_applicant_input", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader"]:
                 if target_key in st.session_state:
                     del st.session_state[target_key]
             st.session_state.show_submit_popup = False
@@ -495,9 +494,11 @@ with left_pane:
             
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+            applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
         with row2_col2:
-            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+            
+        prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
@@ -546,6 +547,7 @@ with left_pane:
                 payload = {
                     "finance": fin_active, 
                     "lan": lan_no,
+                    "applicant_name": st.session_state.get("main_applicant_input", "").strip(),
                     "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
                     "priority": prio, 
                     "assigner": user['name'], 
@@ -560,7 +562,7 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                for k in ["main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
