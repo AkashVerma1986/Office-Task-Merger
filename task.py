@@ -534,6 +534,15 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
+        # Optional file uploader for troubleshooting / guidance screenshots
+        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot (Optional)", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        
+        # Convert file to base64 string if present
+        img_b64 = ""
+        if uploaded_file is not None:
+            import base64
+            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+        
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                 payload = {
@@ -543,7 +552,8 @@ with left_pane:
                     "priority": prio, 
                     "assigner": user['name'], 
                     "status": "Pending", 
-                    "assigned_at": get_now_ist()
+                    "assigned_at": get_now_ist(),
+                    "screenshot": img_b64
                 }
                 
                 requests.post(TASKS_URL, json=payload)
@@ -849,6 +859,15 @@ with right_pane:
                             </div>
                         """, unsafe_allow_html=True)
                         
+                        # Render guidance screenshot safely if it exists in the database record
+                        if task.get("screenshot"):
+                            import base64
+                            try:
+                                st.markdown("<div style='margin-top: 10px;'><b>📸 Attached Guidance Screenshot:</b></div>", unsafe_allow_html=True)
+                                st.image(base64.b64decode(task.get("screenshot")), use_container_width=True)
+                            except:
+                                st.caption("⚠️ Failed to parse attachment matrix string.")
+                        
                         if hold_html_block:
                             st.markdown(hold_html_block, unsafe_allow_html=True)
                         
@@ -880,7 +899,8 @@ with right_pane:
                                 else:
                                     requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
                                         "status": "Completed", "completed_by": user['name'], 
-                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist()
+                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist(),
+                                        "screenshot": None
                                     })
                                     st.rerun(scope="fragment")
 
