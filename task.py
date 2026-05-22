@@ -504,11 +504,17 @@ with left_pane:
         st.write("")
         
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            st.session_state["main_finance_picker"] = "--- SELECT ---"
-            st.session_state["main_cat_picker"] = "---"
-            st.session_state["main_lan_input"] = ""
-            st.session_state["main_prio_slider"] = "Normal"
-            st.session_state["main_task_details"] = ""
+            # Deep clean all widget cache variables completely from state storage
+            for target_key in [
+                "main_finance_picker", 
+                "main_cat_picker", 
+                "main_lan_input", 
+                "main_prio_slider", 
+                "main_task_details",
+                "paste_img_b64"
+            ]:
+                if target_key in st.session_state:
+                    del st.session_state[target_key]
             
             st.session_state.show_submit_popup = False
             st.rerun()
@@ -534,14 +540,81 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
-        # Optional file uploader for troubleshooting / guidance screenshots
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot (Optional)", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        st.markdown("<div style='font-size:16px; font-weight:600; margin-bottom: 2px;'>📸 Attach Guidance Screenshot (Paste Ctrl+V or Drag-and-Drop)</div>", unsafe_allow_html=True)
         
-        # Convert file to base64 string if present
-        img_b64 = ""
-        if uploaded_file is not None:
-            import base64
-            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+        # Capture the image string directly from our HTML clipboard injection bridge
+        if "paste_img_b64" not in st.session_state:
+            st.session_state.paste_img_b64 = ""
+
+        # HTML/JS component to handle instant paste and traditional drag/drop image processing
+        paste_component_html = """
+        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
+            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
+            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
+        </div>
+
+        <script>
+            const zone = document.getElementById('drop-zone');
+            const preview = document.getElementById('preview');
+            const msg = document.getElementById('prompt-msg');
+
+            function sendToStreamlit(b64Str) {
+                // Bridge payload transmission straight back to Streamlit engine environment
+                window.parent.postMessage({
+                    type: 'streamlit:set_component_value',
+                    value: b64Str
+                }, '*');
+            }
+
+            // 1. Handle Clipboard Paste Events
+            window.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const rawB64 = event.target.result.split(',')[1];
+                            preview.src = event.target.result;
+                            preview.style.display = 'block';
+                            msg.innerHTML = "✅ Image pasted successfully!";
+                            sendToStreamlit(rawB64);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+
+            // 2. Handle Drag & Drop Events
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.style.borderColor = '#28A745'; });
+            zone.addEventListener('dragleave', () => { zone.style.borderColor = '#B0B7C3'; });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.style.borderColor = '#B0B7C3';
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.indexOf('image') !== -1) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const rawB64 = event.target.result.split(',')[1];
+                        preview.src = event.target.result;
+                        preview.style.display = 'block';
+                        msg.innerHTML = "✅ Image dropped successfully!";
+                        sendToStreamlit(rawB64);
+                    };
+                    reader.readAsDataURL(files[0]);
+                }
+            });
+        </script>
+        """
+        
+        # Render the custom input component bridge
+        component_response = components.html(paste_component_html, height=160)
+        
+        # Save structural image string down to active processing scope memory state
+        if component_response is not None:
+            st.session_state.paste_img_b64 = component_response
+            
+        img_b64 = st.session_state.paste_img_b64
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
