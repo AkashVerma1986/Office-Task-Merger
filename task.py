@@ -310,8 +310,8 @@ with left_pane:
         dtl_main = st.text_area("Task Details", key=f"main_task_details_{f_ctr}")
         uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_screenshot_uploader_{f_ctr}")
         
-        # FIXED: Native HTML bridge passing inputs via a shared text container element to fix the type errors
-        paste_html_snippet = f"""
+        # FIXED: Removed the 'f' prefix from the multi-line string to stop Python from interpreting Javascript braces
+        paste_html_snippet = """
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
             <div id="prompt-msg">📥 Click inside this box & press <b>Ctrl + V</b> to attach a screenshot directly</div>
             <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
@@ -331,7 +331,7 @@ with left_pane:
                             
                             // Sets values into the companion layout text input box cleanly
                             window.parent.document.querySelector('textarea[aria-label="hidden_paste_target"]').value = rawB64;
-                            window.parent.document.querySelector('textarea[aria-label="hidden_paste_target"]').dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            window.parent.document.querySelector('textarea[aria-label="hidden_paste_target"]').dispatchEvent(new Event('input', { bubbles: true }));
                         };
                         reader.readAsDataURL(file);
                     }
