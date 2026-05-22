@@ -762,7 +762,8 @@ with right_pane:
                 </div>
                 """
                 
-                st.markdown(f"""
+                # Using a standard clean string concatenation to prevent f-string bracket escaping issues
+                card_header_html = f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
@@ -778,7 +779,9 @@ with right_pane:
                             </tr>
                         </table>
                     </div>
-                """, unsafe_allow_html=True)
+                """
+                
+                st.markdown(card_header_html, unsafe_allow_html=True)
 
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
