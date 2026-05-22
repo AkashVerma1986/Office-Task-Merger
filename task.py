@@ -561,9 +561,11 @@ with left_pane:
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
-                # Clean up input cache variables locally instead of doing a hard screen flash rerun
-                st.session_state["main_lan_input"] = ""
-                st.session_state["main_task_details"] = ""
+                
+                # Safe way to reset widget values without causing an API state exception
+                for k in ["main_lan_input", "main_task_details"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
                 
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory! Please enter it before pushing.")
