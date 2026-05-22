@@ -543,7 +543,7 @@ with left_pane:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
         elif pasted_b64:
             img_b64 = pasted_b64
-        
+
         paste_component_html = """
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
             <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
@@ -576,6 +576,7 @@ with left_pane:
             });
         </script>
         """
+        
         # Ensure img_b64 is always a valid safe string before payload processing
         if not isinstance(img_b64, str):
             img_b64 = ""
