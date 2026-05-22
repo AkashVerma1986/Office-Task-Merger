@@ -9,46 +9,6 @@ import time
 import base64
 import streamlit.components.v1 as components
 
-# --- GLOBAL CLIPBOARD PASTE COMPONENT REGISTRATION ---
-# FIXED: Declaring the component name globally once to eliminate the TypeError
-_clip_paste_component = components.declare_component("clip_paste_bridge", inline=True)
-
-def st_paste_bridge(key=None):
-    html_src = """
-    <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-        <div id="prompt-msg">📥 Click inside this box & press <b>Ctrl + V</b> to attach a screenshot directly</div>
-        <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-    </div>
-    <script>
-        const zone = document.getElementById('drop-zone');
-        const preview = document.getElementById('preview');
-        const msg = document.getElementById('prompt-msg');
-        
-        function sendToStreamlit(b64Str) {
-            window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-        }
-        
-        window.addEventListener('paste', (e) => {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const file = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const rawB64 = event.target.result.split(',')[1];
-                        preview.src = event.target.result;
-                        preview.style.display = 'block';
-                        msg.innerHTML = "✅ Image attached from clipboard!";
-                        sendToStreamlit(rawB64);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            }
-        });
-    </script>
-    """
-    return _clip_paste_component(html_src=html_src, key=key)
-
 # --- 1. CONFIGURATION ---
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
 TASKS_URL = f"{DB_BASE_URL}/tasks.json"
@@ -350,13 +310,45 @@ with left_pane:
         dtl_main = st.text_area("Task Details", key=f"main_task_details_{f_ctr}")
         uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_screenshot_uploader_{f_ctr}")
         
-        pasted_payload = st_paste_bridge(key=f"clipboard_bridge_{f_ctr}")
+        # FIXED: Native HTML bridge passing inputs via a shared text container element to fix the type errors
+        paste_html_snippet = f"""
+        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
+            <div id="prompt-msg">📥 Click inside this box & press <b>Ctrl + V</b> to attach a screenshot directly</div>
+            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
+        </div>
+        <script>
+            window.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const rawB64 = event.target.result.split(',')[1];
+                            document.getElementById('preview').src = event.target.result;
+                            document.getElementById('preview').style.display = 'block';
+                            document.getElementById('prompt-msg').innerHTML = "✅ Image attached from clipboard!";
+                            
+                            // Sets values into the companion layout text input box cleanly
+                            window.parent.document.querySelector('textarea[aria-label="hidden_paste_target"]').value = rawB64;
+                            window.parent.document.querySelector('textarea[aria-label="hidden_paste_target"]').dispatchEvent(new Event('input', {{ bubbles: true }}));
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        </script>
+        """
+        components.html(paste_html_snippet, height=140)
+        
+        # Hidden bridge collection text container
+        clip_data_receiver = st.text_area("hidden_paste_target", key=f"hidden_p_tgt_{f_ctr}", label_visibility="collapsed")
         
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        elif pasted_payload and isinstance(pasted_payload, str):
-            img_b64 = pasted_payload
+        elif clip_data_receiver and str(clip_data_receiver).strip() != "":
+            img_b64 = clip_data_receiver
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if f_sel != "--- SELECT ---" and lan_no and dtl_main:
