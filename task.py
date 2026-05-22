@@ -9,6 +9,39 @@ import time
 import base64
 import streamlit.components.v1 as components
 
+paste_component_html = """
+        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
+            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
+            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
+        </div>
+        <script>
+            const zone = document.getElementById('drop-zone');
+            const preview = document.getElementById('preview');
+            const msg = document.getElementById('prompt-msg');
+            function sendToStreamlit(b64Str) {
+                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
+            }
+            window.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const rawB64 = event.target.result.split(',')[1];
+                            preview.src = event.target.result;
+                            preview.style.display = 'block';
+                            msg.innerHTML = "✅ Image pasted successfully!";
+                            // Passes clipboard binary data straight into your Streamlit session payload
+                            window.parent.postMessage({type: 'streamlit:set_component_value', value: rawB64}, '*');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        </script>
+        """
+
 # --- 1. CONFIGURATION ---
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
 TASKS_URL = f"{DB_BASE_URL}/tasks.json"
@@ -544,38 +577,7 @@ with left_pane:
         elif pasted_b64:
             img_b64 = pasted_b64
 
-        paste_component_html = """
-        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
-            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-        </div>
-        <script>
-            const zone = document.getElementById('drop-zone');
-            const preview = document.getElementById('preview');
-            const msg = document.getElementById('prompt-msg');
-            function sendToStreamlit(b64Str) {
-                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-            }
-            window.addEventListener('paste', (e) => {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const file = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const rawB64 = event.target.result.split(',')[1];
-                            preview.src = event.target.result;
-                            preview.style.display = 'block';
-                            msg.innerHTML = "✅ Image pasted successfully!";
-                            // Passes clipboard binary data straight into your Streamlit session payload
-                            window.parent.postMessage({type: 'streamlit:set_component_value', value: rawB64}, '*');
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
-            });
-        </script>
-        """
+        
         
         # Ensure img_b64 is always a valid safe string before payload processing
         if not isinstance(img_b64, str):
