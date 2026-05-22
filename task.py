@@ -110,6 +110,10 @@ if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
+# Persistent filters setup
+if "left_filter_state" not in st.session_state: st.session_state.left_filter_state = "Today's"
+if "right_filter_state" not in st.session_state: st.session_state.right_filter_state = "Today's"
+
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
 
@@ -591,16 +595,25 @@ with left_pane:
 
     # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
-    view_filter = st.selectbox("📂 View Filter", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], key="view_filter_main")
+    filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
+    view_filter = st.selectbox(
+        "📂 View Filter", 
+        filter_options_left, 
+        index=filter_options_left.index(st.session_state.left_filter_state),
+        key="view_filter_main"
+    )
+    st.session_state.left_filter_state = view_filter
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
 
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-    if not df_all.empty:
-        df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
-        filtered_df = df_all.copy()
+    # Fast calculation fallback block using session_state data cache if present
+    if tasks_dict:
+        df_calc = pd.DataFrame.from_dict(tasks_dict, orient='index')
+        df_calc['date_dt'] = pd.to_datetime(df_calc['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+        filtered_df = df_calc.copy()
         
         if st.session_state.my_tasks_only:
             filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
@@ -638,7 +651,9 @@ with left_pane:
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): st.rerun()
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True):
+                # Explicitly update fragment-only scope data instead of global page reload
+                st.rerun(scope="fragment")
         with act_col2:
             export_df = filtered_df.copy()
             export_df['Category'] = export_df['task'].apply(lambda t: t.split("]")[0].replace("[", "").strip() if isinstance(t, str) and t.startswith("[") else "None")
@@ -670,17 +685,24 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (TASK CARDS)
 # ==========================================
 with right_pane:
+    # Use explicit live tracking interval to sync cards without page flashing
     @st.fragment
     def render_task_deck():
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
         hdr_title_col.subheader("📋 All Tasks")
         
+        filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
         view_filter_right = hdr_filter_col.selectbox(
-            "📂 View Filter Right", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
-            key="view_filter_right", label_visibility="collapsed"
+            "📂 View Filter Right", 
+            filter_options_right, 
+            index=filter_options_right.index(st.session_state.right_filter_state),
+            key="view_filter_right_widget", 
+            label_visibility="collapsed"
         )
+        st.session_state.right_filter_state = view_filter_right
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
+            # Fragment rerun performs a micro-second targeted container sweep
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
@@ -727,12 +749,17 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             with st.container(border=True):
+                # Retrieve Applicant Name safely if it exists in DB record
+                app_name = tsk.get('applicant_name', '').strip()
+                app_display = f"<div><span style='font-size: {int(18 * scale_mod)}px; color: #1A1A1A;'><b>Applicant:</b> {app_name if app_name else 'N/A'}</span></div>"
+                
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    {app_display}
                                     <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
                                 <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
