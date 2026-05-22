@@ -22,6 +22,9 @@ st.set_page_config(page_title="RAAS | Ultimate Ledger 5.0", layout="wide")
 if "ui_scale" not in st.session_state: 
     st.session_state.ui_scale = 100
 
+if "form_reset_counter" not in st.session_state:
+    st.session_state.form_reset_counter = 0
+
 scale_mod = st.session_state.ui_scale / 100.0
 
 # --- CACHED DATA FETCHING ---
@@ -506,25 +509,40 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
+        # Create a unique string suffix based on our reset counter
+        f_ctr = st.session_state.form_reset_counter
+        
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
-            f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
+            # CHANGED: Added counter suffix to key
+            f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_finance_picker_{f_ctr}")
             fin_active = f_sel
         with row1_col2:
-            cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+            # CHANGED: Added counter suffix to key
+            cat = st.selectbox("Category", ["---"] + all_cats, key=f"main_cat_picker_{f_ctr}")
             
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+            # CHANGED: Added counter suffix to key
+            lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_input_{f_ctr}").strip()
         with row2_col2:
-            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            # CHANGED: Added counter suffix to key
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key=f"main_prio_slider_{f_ctr}")
             
-        dtl_main = st.text_area("Task Details", key="main_task_details")
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        # CHANGED: Added counter suffix to key
+        dtl_main = st.text_area("Task Details", key=f"main_task_details_{f_ctr}")
+        
+        # CHANGED: Added counter suffix to key
+        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_screenshot_uploader_{f_ctr}")
+        
+        # Displays the interactive clipboard paste container box on the UI
+        pasted_b64 = components.html(paste_component_html, height=150)
         
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+        elif pasted_b64:
+            img_b64 = pasted_b64
         
         paste_component_html = """
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
@@ -549,7 +567,8 @@ with left_pane:
                             preview.src = event.target.result;
                             preview.style.display = 'block';
                             msg.innerHTML = "✅ Image pasted successfully!";
-                            sendToStreamlit(rawB64);
+                            // Passes clipboard binary data straight into your Streamlit session payload
+                            window.parent.postMessage({type: 'streamlit:set_component_value', value: rawB64}, '*');
                         };
                         reader.readAsDataURL(file);
                     }
