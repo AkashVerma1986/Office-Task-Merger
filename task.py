@@ -834,12 +834,15 @@ with right_pane:
                         
                         h_label = "⏸️ Hold" if t_status != "Hold" else "Unhold"
                         if c_hold.button(h_label, key=f"h_{tid}", use_container_width=True):
-                            if t_status != "Hold":
-                                payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                            if t_status != "Hold" and not note.strip():
+                                st.error("🛑 Hold note is compulsory! Write a comment before putting on hold.")
                             else:
-                                payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
-                            st.rerun()
+                                if t_status != "Hold":
+                                    payload = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                                else:
+                                    payload = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=payload)
+                                st.rerun()
                             
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
