@@ -610,7 +610,7 @@ with left_pane:
         index=filter_options_left.index(st.session_state.current_global_filter),
         key="current_global_filter"
     )
-        st.info(f"Viewing tasks by: {user['name']}")
+        
 
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
