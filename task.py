@@ -781,10 +781,6 @@ with right_pane:
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     {combined_details_html}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
                 """
                 
                 st.markdown(card_header_html, unsafe_allow_html=True)
