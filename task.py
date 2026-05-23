@@ -640,7 +640,7 @@ with left_pane:
             export_df['rt Done Comment'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Completed' else "", axis=1)
             export_df['Hold Reason'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Hold' else "", axis=1)
 
-            final_cols = ['assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
+            final_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
             export_df = export_df[final_cols]
 
             buf = io.BytesIO()
