@@ -226,6 +226,8 @@ all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
+# Pulls the right-pane search text globally so the left-pane filters don't crash
+search = st.session_state.get("search_bar_right", "").lower()
 
 @st.dialog("Edit Task Details", width="large")
 def edit_task_dialog(tid, task):
@@ -670,6 +672,8 @@ with right_pane:
         if hdr_btn2.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun(scope="fragment")
+        # New Right Pane Search Box position
+        search = st.text_input("🔍 Search Tasks...", key="search_bar_right", placeholder="Type to filter...", label_visibility="collapsed").lower()
                 
         # --- NEW POSITION: Search filter right below the buttons ---
         search = st.text_input(
@@ -697,6 +701,15 @@ with right_pane:
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
             elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
             elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
+
+            # === PASTE THIS BLOCK HERE ===
+            if search:
+                f_df = f_df[
+                    (f_df['finance'].str.contains(search, case=False, na=False)) | 
+                    (f_df['task'].str.contains(search, case=False, na=False)) |
+                    (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
+                ]
+            # =============================
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
             f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
