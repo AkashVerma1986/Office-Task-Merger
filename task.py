@@ -672,8 +672,7 @@ with right_pane:
         if hdr_btn2.button(btn_label, key="right_pane_my_tasks_toggle", use_container_width=True):
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun(scope="fragment")
-        # New Right Pane Search Box position
-        search = st.text_input("🔍 Search Tasks...", key="search_bar_right", placeholder="Type to filter...", label_visibility="collapsed").lower()
+        
                 
         # New Position with an entirely unique key to eliminate conflicts
         search = st.text_input(
