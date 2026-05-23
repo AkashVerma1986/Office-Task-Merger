@@ -114,13 +114,10 @@ if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = Tru
 # Persistent filters setup
 if "current_global_filter" not in st.session_state: 
     st.session_state.current_global_filter = "Today's"
-if "previous_filter_holder" not in st.session_state:
-    st.session_state.previous_filter_holder = "Today's"
 
-# If the right fragment updates the value, this snippet catches it and redraws the whole page
-if st.session_state.current_global_filter != st.session_state.previous_filter_holder:
-    st.session_state.previous_filter_holder = st.session_state.current_global_filter
-    st.rerun()
+def sync_left_to_right():
+    # Instantly pushes changes to the shared session state key
+    pass
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -608,7 +605,8 @@ with left_pane:
         "📂 View Filter", 
         filter_options_left, 
         index=filter_options_left.index(st.session_state.current_global_filter),
-        key="current_global_filter"
+        key="current_global_filter",
+        on_change=sync_left_to_right
     )
         
 
@@ -696,18 +694,13 @@ with right_pane:
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
         hdr_title_col.subheader("📋 All Tasks")
         
-        def sync_right_to_left():
-            st.session_state.left_filter_state = st.session_state.right_filter_state
-            st.rerun()
-
         filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
         view_filter_right = hdr_filter_col.selectbox(
             "📂 View Filter Right", 
             filter_options_right, 
-            index=filter_options_right.index(st.session_state.right_filter_state),
-            key="right_filter_state", 
-            label_visibility="collapsed",
-            on_change=sync_right_to_left
+            index=filter_options_right.index(st.session_state.current_global_filter),
+            key="current_global_filter", 
+            label_visibility="collapsed"
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
