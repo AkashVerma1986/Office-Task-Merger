@@ -111,13 +111,19 @@ if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
 # Persistent filters setup
-# Persistent filters setup
-if "current_global_filter" not in st.session_state: 
-    st.session_state.current_global_filter = "Today's"
-
-def sync_left_to_right():
-    # Instantly pushes changes to the shared session state key
-    pass
+# --- SECTION 2: OPERATIONS CONTROL PANEL ---
+    st.subheader("🔍 Operations Control Panel")
+    filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
+    
+    # Reads index from our single source of truth, updates via separate widget key
+    view_filter = st.selectbox(
+        "📂 View Filter", 
+        filter_options_left, 
+        index=filter_options_left.index(st.session_state.shared_filter_value),
+        key="left_filter_unique_key",
+        on_change=sync_filters,
+        args=("left_filter_unique_key",)
+    )
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
