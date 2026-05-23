@@ -708,11 +708,12 @@ with right_pane:
             elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
             elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
 
-            # --- THIS BLOCK FILTERS THE RIGHT DECK CARDS ---
+            # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
                 f_df = f_df[
                     (f_df['finance'].str.contains(search, case=False, na=False)) | 
                     (f_df['task'].str.contains(search, case=False, na=False)) |
+                    (f_df['applicant_name'].str.contains(search, case=False, na=False)) | 
                     (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
                 ]
             # -----------------------------------------------
@@ -737,13 +738,18 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             with st.container(border=True):
+                # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
+                app_name = tsk.get('applicant_name', '').strip()
+                app_display = f"<b>Applicant:</b> {app_name} | " if app_name else ""
+
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
-                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
+                                    {/* === ADDED APPLICANT DISPLAY VARIABLE RIGHT HERE === */}
+                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;">{app_display}<b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
                                 <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
                                     <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
