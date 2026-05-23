@@ -512,69 +512,89 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
-        # Initialize an upload version counter to completely clear image cache on submit
-        # Initialize an upload version counter to completely clear image cache on submit
+        # Initialize form state variables safely inside session_state cache if missing
         if "uploader_version" not in st.session_state:
             st.session_state.uploader_version = 0
-
-        if "pasted_b64_data" not in st.session_state:
-            st.session_state.pasted_b64_data = ""
             
+        if "pasted_image_b64" not in st.session_state:
+            st.session_state.pasted_image_b64 = ""
+
         uploaded_file = st.file_uploader(
             "📸 Attach Guidance Screenshot", 
             type=["jpg", "jpeg", "png"], 
             key=f"main_screenshot_uploader_{st.session_state.uploader_version}"
         )
         
-        # Hidden text input that JavaScript can inject the pasted base64 data into directly
-        # Using a very unique key so it stays out of sight
-        b64_bridge = st.text_input("b64_bridge", value=st.session_state.pasted_b64_data, key="js_b64_bridge_input", label_visibility="collapsed")
+        # Display a sleek visual card status indicating if a clipboard item has been captured
+        if st.session_state.pasted_image_b64:
+            st.markdown(f"""
+                <div style="background-color: #E9F7EF; border: 1px solid #28A745; padding: 12px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #155724; font-weight: 600; font-size: 16px;">✅ Clipboard Image Captured Successfully!</span>
+                    <button style="background: none; border: none; color: #DC3545; font-weight: bold; cursor: pointer;" onclick="window.parent.postMessage({{type: 'clear_clipboard'}}, '*')">❌ Clear</button>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+                <div style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 15px; text-align: center; background: #F8F9FA; color: #4A4A4A; font-size: 15px; margin-bottom: 12px;">
+                    💡 <b>Tip:</b> Press <b>Ctrl + V</b> anywhere on this screen to instantly paste a clipboard screenshot.
+                </div>
+            """, unsafe_allow_html=True)
 
-        paste_component_html = f"""
-        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste Clipboard Image</div>
-            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-        </div>
+        # The global JavaScript bridge injector
+        # This listens directly to the parent browser window context, removing the iframe focus bug
+        global_paste_js = """
         <script>
-            window.parent.addEventListener('paste', (e) => {{
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {{
-                    if (items[i].type.indexOf('image') !== -1) {{
-                        const file = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {{
-                            const rawB64 = event.target.result.split(',')[1];
-                            document.getElementById('preview').src = event.target.result;
-                            document.getElementById('preview').style.display = 'block';
-                            document.getElementById('prompt-msg').innerHTML = "✅ Image pasted successfully! Click Submit.";
-                            
-                            // Target the parent document's input element to inject raw string data safely
-                            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                            // Find our specific bridge component and push data
-                            for(let input of inputs) {{
-                                if(input.parentElement && input.parentElement.innerHTML.includes('b64_bridge')) {{
-                                    input.value = rawB64;
-                                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                    break;
-                                }}
-                            }}
-                        }};
-                        reader.readAsDataURL(file);
-                    }}
-                }}
-            }});
+            // Ensure listeners are registered cleanly on the true parent viewport frame
+            if (!window.parent.hasGlobalPasteListener) {
+                window.parent.hasGlobalPasteListener = true;
+                
+                window.parent.addEventListener('paste', function(e) {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            const file = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                const rawB64 = event.target.result.split(',')[1];
+                                
+                                // Direct stream back to our proxy text element
+                                const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+                                for (let input of inputs) {
+                                    if (input.parentElement && input.parentElement.innerHTML.includes('clipboard_bridge_key')) {
+                                        input.value = rawB64;
+                                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                                        break;
+                                    }
+                                }
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                });
+            }
         </script>
         """
+        components.html(global_paste_js, height=0)
+
+        # Hidden bridge text widget to securely catch data passed up by the parent script execution frame
+        bridge_data = st.text_input(
+            "clipboard_bridge_key", 
+            value=st.session_state.pasted_image_b64, 
+            key="hidden_clipboard_bridge_input", 
+            label_visibility="collapsed"
+        )
         
-        # Render the custom HTML container cleanly
-        components.html(paste_component_html, height=160)
-        
-        # Calculate clean string image asset payload 
+        # Keep internal python session state memory synced up dynamically with widget feedback strings
+        if bridge_data != st.session_state.pasted_image_b64:
+            st.session_state.pasted_image_b64 = bridge_data
+            st.rerun()
+
+        # Final base64 payload evaluation rule
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        elif b64_bridge and str(b64_bridge).strip() != "":
-            img_b64 = str(b64_bridge).strip()
+        elif st.session_state.pasted_image_b64:
+            img_b64 = st.session_state.pasted_image_b64
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
@@ -595,15 +615,14 @@ with left_pane:
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
-                st.session_state.pasted_b64_data = ""
                 
-                # Safe clearing of manual text values by targeting specific keys 
-                # instead of trying to loop over bound widget keys directly
+                # Clean your clipboard data variable safely upon data save execution
+                st.session_state.pasted_image_b64 = ""
+                
                 st.session_state["main_applicant_input"] = ""
                 st.session_state["main_lan_input"] = ""
                 st.session_state["main_task_details"] = ""
                 
-                # Advance the uploader version counter to completely dump file & input state naturally
                 st.session_state.uploader_version += 1
                 st.rerun()
             elif not lan_no:
