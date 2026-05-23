@@ -513,8 +513,12 @@ with left_pane:
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
         # Initialize an upload version counter to completely clear image cache on submit
+        # Initialize an upload version counter to completely clear image cache on submit
         if "uploader_version" not in st.session_state:
             st.session_state.uploader_version = 0
+
+        if "pasted_b64_data" not in st.session_state:
+            st.session_state.pasted_b64_data = ""
             
         uploaded_file = st.file_uploader(
             "📸 Attach Guidance Screenshot", 
@@ -522,53 +526,55 @@ with left_pane:
             key=f"main_screenshot_uploader_{st.session_state.uploader_version}"
         )
         
-        img_b64 = ""
-        if uploaded_file is not None:
-            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        
-        paste_component_html = """
+        # Hidden text input that JavaScript can inject the pasted base64 data into directly
+        # Using a very unique key so it stays out of sight
+        b64_bridge = st.text_input("b64_bridge", value=st.session_state.pasted_b64_data, key="js_b64_bridge_input", label_visibility="collapsed")
+
+        paste_component_html = f"""
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
             <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste Clipboard Image</div>
             <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
         </div>
         <script>
-            const zone = document.getElementById('drop-zone');
-            const preview = document.getElementById('preview');
-            const msg = document.getElementById('prompt-msg');
-            
-            function sendToStreamlit(b64Str) {
-                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-            }
-            
-            window.addEventListener('paste', (e) => {
+            window.parent.addEventListener('paste', (e) => {{
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
+                for (let i = 0; i < items.length; i++) {{
+                    if (items[i].type.indexOf('image') !== -1) {{
                         const file = items[i].getAsFile();
                         const reader = new FileReader();
-                        reader.onload = (event) => {
+                        reader.onload = (event) => {{
                             const rawB64 = event.target.result.split(',')[1];
-                            preview.src = event.target.result;
-                            preview.style.display = 'block';
-                            msg.innerHTML = "✅ Image pasted successfully!";
-                            sendToStreamlit(rawB64);
-                        };
+                            document.getElementById('preview').src = event.target.result;
+                            document.getElementById('preview').style.display = 'block';
+                            document.getElementById('prompt-msg').innerHTML = "✅ Image pasted successfully! Click Submit.";
+                            
+                            // Target the parent document's input element to inject raw string data safely
+                            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+                            // Find our specific bridge component and push data
+                            for(let input of inputs) {{
+                                if(input.parentElement && input.parentElement.innerHTML.includes('b64_bridge')) {{
+                                    input.value = rawB64;
+                                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                    break;
+                                }}
+                            }}
+                        }};
                         reader.readAsDataURL(file);
-                    }
-                }
-            });
+                    }}
+                }}
+            }});
         </script>
         """
         
-        # Render the custom component and catch its returned value
-        pasted_b64 = components.html(paste_component_html, height=170)
+        # Render the custom HTML container cleanly
+        components.html(paste_component_html, height=160)
         
-        # Prioritize File Uploader image; if empty, use the Pasted Clipboard image
+        # Calculate clean string image asset payload 
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        elif pasted_b64:
-            img_b64 = pasted_b64
+        elif b64_bridge and str(b64_bridge).strip() != "":
+            img_b64 = str(b64_bridge).strip()
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
@@ -581,7 +587,7 @@ with left_pane:
                     "assigner": user['name'], 
                     "status": "Pending", 
                     "assigned_at": get_now_ist(),
-                    "screenshot": img_b64
+                    "screenshot": str(img_b64)  # Guaranteed clean python string type for JSON assembly
                 }
                 
                 requests.post(TASKS_URL, json=payload)
@@ -589,15 +595,14 @@ with left_pane:
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
+                st.session_state.pasted_b64_data = ""
                 
-                # Safe clearing of session state values
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details"]:
+                # Clear standard input states safely
+                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "js_b64_bridge_input"]:
                     if k in st.session_state:
                         st.session_state[k] = ""
-                
-                # Advance the uploader version to force a complete visual reset of file input
+                        
                 st.session_state.uploader_version += 1
-                
                 st.rerun()
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory!")
