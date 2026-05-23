@@ -701,12 +701,16 @@ with right_pane:
         hdr_title_col.subheader("📋 All Tasks")
         
         filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
+        
+        # Reads from same central source, but uses its own isolated key
         view_filter_right = hdr_filter_col.selectbox(
             "📂 View Filter Right", 
             filter_options_right, 
-            index=filter_options_right.index(st.session_state.current_global_filter),
-            key="current_global_filter", 
-            label_visibility="collapsed"
+            index=filter_options_right.index(st.session_state.shared_filter_value),
+            key="right_filter_unique_key", 
+            label_visibility="collapsed",
+            on_change=sync_filters,
+            args=("right_filter_unique_key",)
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
