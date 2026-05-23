@@ -512,89 +512,54 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
-        # Initialize form state variables safely inside session_state cache if missing
+        # Initialize an upload version counter to completely clear image cache on submit
         if "uploader_version" not in st.session_state:
             st.session_state.uploader_version = 0
             
-        if "pasted_image_b64" not in st.session_state:
-            st.session_state.pasted_image_b64 = ""
-
         uploaded_file = st.file_uploader(
             "📸 Attach Guidance Screenshot", 
             type=["jpg", "jpeg", "png"], 
             key=f"main_screenshot_uploader_{st.session_state.uploader_version}"
         )
         
-        # Display a sleek visual card status indicating if a clipboard item has been captured
-        if st.session_state.pasted_image_b64:
-            st.markdown(f"""
-                <div style="background-color: #E9F7EF; border: 1px solid #28A745; padding: 12px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="color: #155724; font-weight: 600; font-size: 16px;">✅ Clipboard Image Captured Successfully!</span>
-                    <button style="background: none; border: none; color: #DC3545; font-weight: bold; cursor: pointer;" onclick="window.parent.postMessage({{type: 'clear_clipboard'}}, '*')">❌ Clear</button>
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-                <div style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 15px; text-align: center; background: #F8F9FA; color: #4A4A4A; font-size: 15px; margin-bottom: 12px;">
-                    💡 <b>Tip:</b> Press <b>Ctrl + V</b> anywhere on this screen to instantly paste a clipboard screenshot.
-                </div>
-            """, unsafe_allow_html=True)
-
-        # The global JavaScript bridge injector
-        # This listens directly to the parent browser window context, removing the iframe focus bug
-        global_paste_js = """
-        <script>
-            // Ensure listeners are registered cleanly on the true parent viewport frame
-            if (!window.parent.hasGlobalPasteListener) {
-                window.parent.hasGlobalPasteListener = true;
-                
-                window.parent.addEventListener('paste', function(e) {
-                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].type.indexOf('image') !== -1) {
-                            const file = items[i].getAsFile();
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                const rawB64 = event.target.result.split(',')[1];
-                                
-                                // Direct stream back to our proxy text element
-                                const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                                for (let input of inputs) {
-                                    if (input.parentElement && input.parentElement.innerHTML.includes('clipboard_bridge_key')) {
-                                        input.value = rawB64;
-                                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                                        break;
-                                    }
-                                }
-                            };
-                            reader.readAsDataURL(file);
-                        }
-                    }
-                });
-            }
-        </script>
-        """
-        components.html(global_paste_js, height=0)
-
-        # Hidden bridge text widget to securely catch data passed up by the parent script execution frame
-        bridge_data = st.text_input(
-            "clipboard_bridge_key", 
-            value=st.session_state.pasted_image_b64, 
-            key="hidden_clipboard_bridge_input", 
-            label_visibility="collapsed"
-        )
-        
-        # Keep internal python session state memory synced up dynamically with widget feedback strings
-        if bridge_data != st.session_state.pasted_image_b64:
-            st.session_state.pasted_image_b64 = bridge_data
-            st.rerun()
-
-        # Final base64 payload evaluation rule
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        elif st.session_state.pasted_image_b64:
-            img_b64 = st.session_state.pasted_image_b64
+        
+        paste_component_html = """
+        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
+            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
+            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
+        </div>
+        <script>
+            const zone = document.getElementById('drop-zone');
+            const preview = document.getElementById('preview');
+            const msg = document.getElementById('prompt-msg');
+            function sendToStreamlit(b64Str) {
+                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
+            }
+            window.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const rawB64 = event.target.result.split(',')[1];
+                            preview.src = event.target.result;
+                            preview.style.display = 'block';
+                            msg.innerHTML = "✅ Image pasted successfully!";
+                            sendToStreamlit(rawB64);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+        </script>
+        """
+        # Ensure img_b64 is always a valid safe string before payload processing
+        if not isinstance(img_b64, str):
+            img_b64 = ""
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
@@ -607,7 +572,7 @@ with left_pane:
                     "assigner": user['name'], 
                     "status": "Pending", 
                     "assigned_at": get_now_ist(),
-                    "screenshot": str(img_b64)  # Guaranteed clean python string type for JSON assembly
+                    "screenshot": img_b64
                 }
                 
                 requests.post(TASKS_URL, json=payload)
@@ -616,14 +581,9 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                # Clean your clipboard data variable safely upon data save execution
-                st.session_state.pasted_image_b64 = ""
-                
-                st.session_state["main_applicant_input"] = ""
-                st.session_state["main_lan_input"] = ""
-                st.session_state["main_task_details"] = ""
-                
-                st.session_state.uploader_version += 1
+                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
                 st.rerun()
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory!")
@@ -807,6 +767,7 @@ with right_pane:
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     {combined_details_html}
+                                
                 """
                 
                 st.markdown(card_header_html, unsafe_allow_html=True)
