@@ -528,16 +528,18 @@ with left_pane:
         
         paste_component_html = """
         <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
+            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste Clipboard Image</div>
             <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
         </div>
         <script>
             const zone = document.getElementById('drop-zone');
             const preview = document.getElementById('preview');
             const msg = document.getElementById('prompt-msg');
+            
             function sendToStreamlit(b64Str) {
                 window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
             }
+            
             window.addEventListener('paste', (e) => {
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let i = 0; i < items.length; i++) {
@@ -557,9 +559,16 @@ with left_pane:
             });
         </script>
         """
-        # Ensure img_b64 is always a valid safe string before payload processing
-        if not isinstance(img_b64, str):
-            img_b64 = ""
+        
+        # Render the custom component and catch its returned value
+        pasted_b64 = components.html(paste_component_html, height=170)
+        
+        # Prioritize File Uploader image; if empty, use the Pasted Clipboard image
+        img_b64 = ""
+        if uploaded_file is not None:
+            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+        elif pasted_b64:
+            img_b64 = pasted_b64
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
@@ -581,9 +590,14 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                # Safe clearing of session state values
+                for k in ["main_applicant_input", "main_lan_input", "main_task_details"]:
                     if k in st.session_state:
-                        del st.session_state[k]
+                        st.session_state[k] = ""
+                
+                # Advance the uploader version to force a complete visual reset of file input
+                st.session_state.uploader_version += 1
+                
                 st.rerun()
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory!")
@@ -767,7 +781,10 @@ with right_pane:
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     {combined_details_html}
-                                
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 """
                 
                 st.markdown(card_header_html, unsafe_allow_html=True)
