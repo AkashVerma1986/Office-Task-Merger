@@ -167,7 +167,7 @@ if not st.session_state.authenticated:
         """, height=0)
 
         qp = st.query_params
-        if "login_name" in qp heart and "login_role" in qp:
+        if "login_name" in qp and "login_role" in qp:
             st.session_state.user_data = {
                 "name": qp["login_name"].upper(),
                 "role": qp["login_role"].upper()
