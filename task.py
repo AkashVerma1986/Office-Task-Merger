@@ -458,9 +458,7 @@ with left_pane:
                     time.sleep(0.4)
                     st.rerun()
         
-    st.write("") 
-    search = st.text_input("🔍 Search (Finance, Task, or LAN)", key="search_bar", placeholder="Type to filter...").lower()
-    st.divider()
+    
     
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
@@ -673,6 +671,14 @@ with right_pane:
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun(scope="fragment")
                 
+        # --- NEW POSITION: Search filter right below the buttons ---
+        search = st.text_input(
+            "🔍 Search (Finance, Task, or LAN)", 
+            key="search_bar_right", 
+            placeholder="Type to filter...",
+            label_visibility="collapsed"  # Hides label text to keep it tight and compact
+        ).lower()
+        
         st.write("") 
         
         live_tasks = requests.get(TASKS_URL).json() or {}
