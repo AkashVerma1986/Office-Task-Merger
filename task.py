@@ -111,19 +111,11 @@ if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
 # Persistent filters setup
-# --- SECTION 2: OPERATIONS CONTROL PANEL ---
-    st.subheader("🔍 Operations Control Panel")
-    filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
-    
-    # Reads index from our single source of truth, updates via separate widget key
-    view_filter = st.selectbox(
-        "📂 View Filter", 
-        filter_options_left, 
-        index=filter_options_left.index(st.session_state.shared_filter_value),
-        key="left_filter_unique_key",
-        on_change=sync_filters,
-        args=("left_filter_unique_key",)
-    )
+if "shared_filter_value" not in st.session_state:
+    st.session_state.shared_filter_value = "Today's"
+
+def sync_filters(source_key):
+    st.session_state.shared_filter_value = st.session_state[source_key]
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -175,7 +167,7 @@ if not st.session_state.authenticated:
         """, height=0)
 
         qp = st.query_params
-        if "login_name" in qp and "login_role" in qp:
+        if "login_name" in qp heart and "login_role" in qp:
             st.session_state.user_data = {
                 "name": qp["login_name"].upper(),
                 "role": qp["login_role"].upper()
@@ -489,7 +481,6 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            # Clean state values directly before rerun
             st.session_state["main_finance_picker"] = "--- SELECT ---"
             st.session_state["main_cat_picker"] = "---"
             st.session_state["main_applicant_input"] = ""
@@ -523,7 +514,6 @@ with left_pane:
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
         
-        # Initialize an upload version counter to completely clear image cache on submit
         if "uploader_version" not in st.session_state:
             st.session_state.uploader_version = 0
             
@@ -568,7 +558,6 @@ with left_pane:
             });
         </script>
         """
-        # Ensure img_b64 is always a valid safe string before payload processing
         if not isinstance(img_b64, str):
             img_b64 = ""
         
@@ -616,11 +605,12 @@ with left_pane:
         on_change=sync_filters,
         args=("left_filter_unique_key",)
     )
-        
+
+    if st.session_state.my_tasks_only:
+        st.info(f"Viewing tasks by: {user['name']}")
 
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-    # Fast calculation fallback block using session_state data cache if present
     if tasks_dict:
         df_calc = pd.DataFrame.from_dict(tasks_dict, orient='index')
         df_calc['date_dt'] = pd.to_datetime(df_calc['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
@@ -663,7 +653,6 @@ with left_pane:
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True):
-                # Explicitly update fragment-only scope data instead of global page reload
                 st.rerun(scope="fragment")
         with act_col2:
             export_df = filtered_df.copy()
@@ -696,7 +685,6 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (TASK CARDS)
 # ==========================================
 with right_pane:
-    # Use explicit live tracking interval to sync cards without page flashing
     @st.fragment
     def render_task_deck():
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
@@ -715,7 +703,6 @@ with right_pane:
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
-            # Fragment rerun performs a micro-second targeted container sweep
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
@@ -780,7 +767,10 @@ with right_pane:
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
                                     <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     {combined_details_html}
-                                
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 """
                 
                 st.markdown(card_header_html, unsafe_allow_html=True)
@@ -790,7 +780,6 @@ with right_pane:
                 if len(f_line) > 50: 
                     f_line = f_line[:47] + "..."
                 
-                # Strip out any legacy brackets or accidental symbols that could break the HTML parser
                 clean_toggle_label = f"🔍 Details: {f_line}".replace("<", "&lt;").replace(">", "&gt;")
 
                 if st.toggle(clean_toggle_label, key=f"card_exp_state_{tid}"):
