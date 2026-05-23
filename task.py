@@ -623,7 +623,11 @@ with left_pane:
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): st.rerun()
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
+                # Clear the search box state completely on click
+                if "raas_ultimate_search_deck" in st.session_state:
+                    st.session_state["raas_ultimate_search_deck"] = ""
+                st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
             export_df['Category'] = export_df['task'].apply(lambda t: t.split("]")[0].replace("[", "").strip() if isinstance(t, str) and t.startswith("[") else "None")
@@ -666,6 +670,9 @@ with right_pane:
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
+            # Clear the search box state completely on click
+            if "raas_ultimate_search_deck" in st.session_state:
+                st.session_state["raas_ultimate_search_deck"] = ""
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
