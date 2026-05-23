@@ -504,7 +504,7 @@ with left_pane:
             
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
+            applicant_name = st.text_input("Applicant Name", placeholder="Required", key="main_applicant_input")
         with row2_col2:
             lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
             
@@ -595,14 +595,17 @@ with left_pane:
 
     # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
+    def sync_left_to_right():
+        st.session_state.right_filter_state = st.session_state.left_filter_state
+
     filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
     view_filter = st.selectbox(
         "📂 View Filter", 
         filter_options_left, 
         index=filter_options_left.index(st.session_state.left_filter_state),
-        key="view_filter_main"
+        key="left_filter_state",
+        on_change=sync_left_to_right
     )
-    st.session_state.left_filter_state = view_filter
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
@@ -691,15 +694,19 @@ with right_pane:
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
         hdr_title_col.subheader("📋 All Tasks")
         
+        def sync_right_to_left():
+            st.session_state.left_filter_state = st.session_state.right_filter_state
+            st.rerun()
+
         filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
         view_filter_right = hdr_filter_col.selectbox(
             "📂 View Filter Right", 
             filter_options_right, 
             index=filter_options_right.index(st.session_state.right_filter_state),
-            key="view_filter_right_widget", 
-            label_visibility="collapsed"
+            key="right_filter_state", 
+            label_visibility="collapsed",
+            on_change=sync_right_to_left
         )
-        st.session_state.right_filter_state = view_filter_right
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
             # Fragment rerun performs a micro-second targeted container sweep
