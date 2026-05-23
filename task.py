@@ -110,10 +110,6 @@ if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
-# Persistent filters setup
-if "left_filter_state" not in st.session_state: st.session_state.left_filter_state = "Today's"
-if "right_filter_state" not in st.session_state: st.session_state.right_filter_state = "Today's"
-
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
 
@@ -478,15 +474,9 @@ with left_pane:
         """, unsafe_allow_html=True)
         st.write("")
         if st.button("👍 OK", use_container_width=True, type="primary"):
-            # Clean state values directly before rerun
-            st.session_state["main_finance_picker"] = "--- SELECT ---"
-            st.session_state["main_cat_picker"] = "---"
-            st.session_state["main_applicant_input"] = ""
-            st.session_state["main_lan_input"] = ""
-            st.session_state["main_task_details"] = ""
-            st.session_state["main_prio_slider"] = "Normal"
-            if "main_screenshot_uploader" in st.session_state:
-                del st.session_state["main_screenshot_uploader"]
+            for target_key in ["main_finance_picker", "main_cat_picker", "main_applicant_input", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader"]:
+                if target_key in st.session_state:
+                    del st.session_state[target_key]
             st.session_state.show_submit_popup = False
             st.rerun()
 
@@ -504,23 +494,14 @@ with left_pane:
             
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            applicant_name = st.text_input("Applicant Name", placeholder="Required", key="main_applicant_input")
+            applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
         with row2_col2:
             lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
             
         prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
         dtl_main = st.text_area("Task Details", key="main_task_details")
-        
-        # Initialize an upload version counter to completely clear image cache on submit
-        if "uploader_version" not in st.session_state:
-            st.session_state.uploader_version = 0
-            
-        uploaded_file = st.file_uploader(
-            "📸 Attach Guidance Screenshot", 
-            type=["jpg", "jpeg", "png"], 
-            key=f"main_screenshot_uploader_{st.session_state.uploader_version}"
-        )
+        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
         
         img_b64 = ""
         if uploaded_file is not None:
@@ -595,25 +576,16 @@ with left_pane:
 
     # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
-    filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
-    view_filter = st.selectbox(
-        "📂 View Filter", 
-        filter_options_left, 
-        index=filter_options_left.index(st.session_state.left_filter_state),
-        key="view_filter_main"
-    )
-    st.session_state.left_filter_state = view_filter
+    view_filter = st.selectbox("📂 View Filter", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], key="view_filter_main")
 
     if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
 
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
 
-    # Fast calculation fallback block using session_state data cache if present
-    if tasks_dict:
-        df_calc = pd.DataFrame.from_dict(tasks_dict, orient='index')
-        df_calc['date_dt'] = pd.to_datetime(df_calc['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
-        filtered_df = df_calc.copy()
+    if not df_all.empty:
+        df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+        filtered_df = df_all.copy()
         
         if st.session_state.my_tasks_only:
             filtered_df = filtered_df[filtered_df['assigner'] == user['name']]
@@ -651,9 +623,7 @@ with left_pane:
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True):
-                # Explicitly update fragment-only scope data instead of global page reload
-                st.rerun(scope="fragment")
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
             export_df['Category'] = export_df['task'].apply(lambda t: t.split("]")[0].replace("[", "").strip() if isinstance(t, str) and t.startswith("[") else "None")
@@ -685,24 +655,17 @@ with left_pane:
 # RIGHT PANE: SECTION 3 (TASK CARDS)
 # ==========================================
 with right_pane:
-    # Use explicit live tracking interval to sync cards without page flashing
     @st.fragment
     def render_task_deck():
         hdr_title_col, hdr_filter_col, hdr_btn1, hdr_btn2 = st.columns([1.1, 1.2, 0.9, 0.8])
         hdr_title_col.subheader("📋 All Tasks")
         
-        filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
         view_filter_right = hdr_filter_col.selectbox(
-            "📂 View Filter Right", 
-            filter_options_right, 
-            index=filter_options_right.index(st.session_state.right_filter_state),
-            key="view_filter_right_widget", 
-            label_visibility="collapsed"
+            "📂 View Filter Right", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
+            key="view_filter_right", label_visibility="collapsed"
         )
-        st.session_state.right_filter_state = view_filter_right
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
-            # Fragment rerun performs a micro-second targeted container sweep
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
@@ -749,38 +712,29 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             with st.container(border=True):
-                app_name = tsk.get('applicant_name', '').strip()
-                app_string = app_name if app_name else 'N/A'
-                lan_string = tsk.get('lan', 'N/A')
-                
-                combined_details_html = f"""
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-top: 4px; margin-bottom: 2px;">
-                    <span style="font-size: {int(17 * scale_mod)}px; color: #1A1A1A;"><b>Applicant:</b> {app_string}</span>
-                    <span style="font-size: {int(17 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px; color: #1A1A1A;">{lan_string}</code></span>
-                </div>
-                """
-                
-                card_header_html = f"""
+                st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
-                                    <h2 style="margin: 0 0 2px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
-                                    {combined_details_html}
-                                
-                """
-                
-                st.markdown(card_header_html, unsafe_allow_html=True)
+                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;"><b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
+                                </td>
+                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
+                                    <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {tsk.get('assigned_at')}</span><br>
+                                    <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {tsk.get('assigner')}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                """, unsafe_allow_html=True)
 
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
-                if len(f_line) > 50: 
-                    f_line = f_line[:47] + "..."
-                
-                # Strip out any legacy brackets or accidental symbols that could break the HTML parser
-                clean_toggle_label = f"🔍 Details: {f_line}".replace("<", "&lt;").replace(">", "&gt;")
+                if len(f_line) > 65: f_line = f_line[:62] + "..."
 
-                if st.toggle(clean_toggle_label, key=f"card_exp_state_{tid}"):
+                if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
                         <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
