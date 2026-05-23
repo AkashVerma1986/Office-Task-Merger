@@ -607,12 +607,14 @@ with left_pane:
     # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
     filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
+    
     view_filter = st.selectbox(
         "📂 View Filter", 
         filter_options_left, 
-        index=filter_options_left.index(st.session_state.current_global_filter),
-        key="current_global_filter",
-        on_change=sync_left_to_right
+        index=filter_options_left.index(st.session_state.shared_filter_value),
+        key="left_filter_unique_key",
+        on_change=sync_filters,
+        args=("left_filter_unique_key",)
     )
         
 
@@ -702,7 +704,6 @@ with right_pane:
         
         filter_options_right = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
         
-        # Reads from same central source, but uses its own isolated key
         view_filter_right = hdr_filter_col.selectbox(
             "📂 View Filter Right", 
             filter_options_right, 
