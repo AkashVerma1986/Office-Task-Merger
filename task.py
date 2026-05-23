@@ -227,7 +227,7 @@ all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
 # Pulls the right-pane search text globally so the left-pane filters don't crash
-search = st.session_state.get("search_bar_right", "").lower()
+search = st.session_state.get("raas_ultimate_search_deck", "").lower()
 
 @st.dialog("Edit Task Details", width="large")
 def edit_task_dialog(tid, task):
@@ -675,12 +675,12 @@ with right_pane:
         # New Right Pane Search Box position
         search = st.text_input("🔍 Search Tasks...", key="search_bar_right", placeholder="Type to filter...", label_visibility="collapsed").lower()
                 
-        # --- NEW POSITION: Search filter right below the buttons ---
+        # New Position with an entirely unique key to eliminate conflicts
         search = st.text_input(
-            "🔍 Search (Finance, Task, or LAN)", 
-            key="search_bar_right", 
-            placeholder="Type to filter...",
-            label_visibility="collapsed"  # Hides label text to keep it tight and compact
+            "🔍 Search Tasks...", 
+            key="raas_ultimate_search_deck", 
+            placeholder="Type to filter...", 
+            label_visibility="collapsed"
         ).lower()
         
         st.write("") 
