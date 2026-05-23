@@ -597,11 +597,13 @@ with left_pane:
                 st.session_state.show_submit_popup = True
                 st.session_state.pasted_b64_data = ""
                 
-                # Clear standard input states safely
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "js_b64_bridge_input"]:
-                    if k in st.session_state:
-                        st.session_state[k] = ""
-                        
+                # Safe clearing of manual text values by targeting specific keys 
+                # instead of trying to loop over bound widget keys directly
+                st.session_state["main_applicant_input"] = ""
+                st.session_state["main_lan_input"] = ""
+                st.session_state["main_task_details"] = ""
+                
+                # Advance the uploader version counter to completely dump file & input state naturally
                 st.session_state.uploader_version += 1
                 st.rerun()
             elif not lan_no:
