@@ -633,7 +633,7 @@ with left_pane:
             export_df['Category'] = export_df['task'].apply(lambda t: t.split("]")[0].replace("[", "").strip() if isinstance(t, str) and t.startswith("[") else "None")
             export_df['task'] = export_df['task'].apply(lambda t: t.split("]", 1)[1].strip() if isinstance(t, str) and t.startswith("[") else t)
 
-            required_cols = ['assigned_at', 'assigner', 'finance', 'lan', 'Category', 'task', 'priority', 'work_type', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'comment']
+            required_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'comment']
             for col in required_cols:
                 if col not in export_df.columns: export_df[col] = ""
 
