@@ -111,8 +111,16 @@ if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
 
 # Persistent filters setup
-if "left_filter_state" not in st.session_state: st.session_state.left_filter_state = "Today's"
-if "right_filter_state" not in st.session_state: st.session_state.right_filter_state = "Today's"
+# Persistent filters setup
+if "current_global_filter" not in st.session_state: 
+    st.session_state.current_global_filter = "Today's"
+if "previous_filter_holder" not in st.session_state:
+    st.session_state.previous_filter_holder = "Today's"
+
+# If the right fragment updates the value, this snippet catches it and redraws the whole page
+if st.session_state.current_global_filter != st.session_state.previous_filter_holder:
+    st.session_state.previous_filter_holder = st.session_state.current_global_filter
+    st.rerun()
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -595,19 +603,13 @@ with left_pane:
 
     # --- SECTION 2: OPERATIONS CONTROL PANEL ---
     st.subheader("🔍 Operations Control Panel")
-    def sync_left_to_right():
-        st.session_state.right_filter_state = st.session_state.left_filter_state
-
     filter_options_left = ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"]
     view_filter = st.selectbox(
         "📂 View Filter", 
         filter_options_left, 
-        index=filter_options_left.index(st.session_state.left_filter_state),
-        key="left_filter_state",
-        on_change=sync_left_to_right
+        index=filter_options_left.index(st.session_state.current_global_filter),
+        key="current_global_filter"
     )
-
-    if st.session_state.my_tasks_only:
         st.info(f"Viewing tasks by: {user['name']}")
 
     date_range = st.date_input("📅 Filter by Date Range", value=[], help="Select Start and End date")
