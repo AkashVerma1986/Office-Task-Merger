@@ -702,14 +702,14 @@ with right_pane:
             elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
             elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
 
-            # === PASTE THIS BLOCK HERE ===
-            if search:
+            # --- THIS BLOCK FILTERS THE RIGHT DECK CARDS ---
+            if search and search.strip() != "":
                 f_df = f_df[
                     (f_df['finance'].str.contains(search, case=False, na=False)) | 
                     (f_df['task'].str.contains(search, case=False, na=False)) |
                     (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
                 ]
-            # =============================
+            # -----------------------------------------------
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
             f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
