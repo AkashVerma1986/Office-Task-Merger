@@ -582,7 +582,7 @@ with left_pane:
                     "paste_img_b64"              # Wipes the custom drag/drop image cache if active
                 ]:
                     if k in st.session_state:
-                        st.session_state[k] = "" if "input" in k or "details" in k else None
+                        del st.session_state[k]  # Safely deletes without hitting widget assignment rules
                 # Set the flag for your success popup and trigger a fresh render of the UI
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
