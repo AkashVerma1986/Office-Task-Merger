@@ -492,109 +492,73 @@ with left_pane:
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         with st.container(key=f"form_container_v_{st.session_state.form_version}"):
+            # ⬇️ START INDENTING FROM THIS LINE BELOW ⬇️
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
                 f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
                 fin_active = f_sel
             with row1_col2:
                 cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
-            
+                
             row2_col1, row2_col2 = st.columns(2)
-        	with row2_col1:
-            	applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
-        	with row2_col2:
-            	lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+            with row2_col1:
+                applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
+            with row2_col2:
+                lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+                
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+                
+            dtl_main = st.text_area("Task Details", key="main_task_details")
+            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
             
-        	prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            img_b64 = ""
+            if uploaded_file is not None:
+                img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
             
-        	dtl_main = st.text_area("Task Details", key="main_task_details")
-        	uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
-        
-        	img_b64 = ""
-        	if uploaded_file is not None:
-            	img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        
-        	paste_component_html = """
-        	<div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            	<div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
-            	<img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-        	</div>
-        	<script>
-            	const zone = document.getElementById('drop-zone');
-            	const preview = document.getElementById('preview');
-            	const msg = document.getElementById('prompt-msg');
-            	function sendToStreamlit(b64Str) {
-                	window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-            	}
-            	window.addEventListener('paste', (e) => {
-                	const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                	for (let i = 0; i < items.length; i++) {
-                    	if (items[i].type.indexOf('image') !== -1) {
-                        	const file = items[i].getAsFile();
-                        	const reader = new FileReader();
-                        	reader.onload = (event) => {
-                            	const rawB64 = event.target.result.split(',')[1];
-                            	preview.src = event.target.result;
-                            	preview.style.display = 'block';
-                            	msg.innerHTML = "✅ Image pasted successfully!";
-                            	sendToStreamlit(rawB64);
-                        	};
-                        	reader.readAsDataURL(file);
-                    	}
-                	}
-            	});
-        	</script>
-        	"""
-        	# Ensure img_b64 is always a valid safe string before payload processing
-        	if not isinstance(img_b64, str):
-            	img_b64 = ""
-        
-        	if st.button("SUBMIT", use_container_width=True, type="primary"):
-            	if fin_active != "--- SELECT ---" and lan_no and dtl_main:
-                	payload = {
-                    	"finance": fin_active, 
-                    	"lan": lan_no,
-                    	"applicant_name": st.session_state.get("main_applicant_input", "").strip(),
-                    	"task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
-                    	"priority": prio, 
-                    	"assigner": user['name'], 
-                    	"status": "Pending", 
-                    	"assigned_at": get_now_ist(),
-                    	"screenshot": img_b64
-                	}
-                
-                	# Push to Firebase
-                	res = requests.post(TASKS_URL, json=payload)
-                	requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
-                
-                	# SMOOTH UPDATE: Force background refresh of memory storage
-                	st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
-                
-                	st.session_state.last_sub_lan = lan_no
-                	st.session_state.show_submit_popup = True
-                
-                	for k in [
-                    	"main_finance_picker",       # Resets Finance dropdown back to index 0
-                    	"main_cat_picker",           # Resets Category dropdown back to index 0
-                    	"main_applicant_input",      # Clears Applicant text input
-                    	"main_lan_input",            # Clears LAN No. text input
-                    	"main_prio_slider",          # Resets Priority slider
-                    	"main_task_details",         # Clears Task Details text area
-                    	"main_screenshot_uploader",  # Drops the uploaded file pointer
-                    	"paste_img_b64"              # Wipes the custom drag/drop image cache if active
-                	]:
-                    	if k in st.session_state:
-                        	del st.session_state[k]  # Safely deletes without hitting widget assignment rules
-                	# Set the flag for your success popup and trigger a fresh render of the UI
-                	st.session_state.last_sub_lan = lan_no
-                	st.session_state.show_submit_popup = True
-                	st.session_state.form_version += 1
-                	st.rerun()
-            	elif not lan_no:
-                	st.error("🛑 LAN No. is mandatory!")
-            	else:
-                	st.warning("⚠️ Please fill in Finance and Task Details.")
-                
+            paste_component_html = """
+            <div id="drop-zone" style="...">
+                ...
+            </div>
+            ...
+            """
+            if not isinstance(img_b64, str):
+                img_b64 = ""
+            
+            if st.button("SUBMIT", use_container_width=True, type="primary"):
+                if fin_active != "--- SELECT ---" and lan_no and dtl_main:
+                    payload = {
+                        "finance": fin_active, 
+                        "lan": lan_no,
+                        "applicant_name": st.session_state.get("main_applicant_input", "").strip(),
+                        "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
+                        "priority": prio, 
+                        "assigner": user['name'], 
+                        "status": "Pending", 
+                        "assigned_at": get_now_ist(),
+                        "screenshot": img_b64
+                    }
+                    
+                    res = requests.post(TASKS_URL, json=payload)
+                    requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+                    
+                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    
+                    st.session_state.last_sub_lan = lan_no
+                    st.session_state.show_submit_popup = True
+                    
+                    for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                        if k in st.session_state:
+                            del st.session_state[k]
+                    
+                    st.session_state.form_version += 1
+                    st.rerun()
+                elif not lan_no:
+                    st.error("🛑 LAN No. is mandatory!")
+                else:
+                    st.warning("⚠️ Please fill in Finance and Task Details.")
+            # ⬆️ STOP INDENTING HERE ⬆️
+
+    # This next line stays at its original indentation level (outside the container)
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
