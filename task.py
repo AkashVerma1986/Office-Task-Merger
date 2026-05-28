@@ -571,9 +571,21 @@ with left_pane:
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
                 
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                for k in [
+                    "main_finance_picker",       # Resets Finance dropdown back to index 0
+                    "main_cat_picker",           # Resets Category dropdown back to index 0
+                    "main_applicant_input",      # Clears Applicant text input
+                    "main_lan_input",            # Clears LAN No. text input
+                    "main_prio_slider",          # Resets Priority slider
+                    "main_task_details",         # Clears Task Details text area
+                    "main_screenshot_uploader",  # Drops the uploaded file pointer
+                    "paste_img_b64"              # Wipes the custom drag/drop image cache if active
+                ]:
                     if k in st.session_state:
-                        del st.session_state[k]
+                        st.session_state[k] = "" if "input" in k or "details" in k else None
+                # Set the flag for your success popup and trigger a fresh render of the UI
+                st.session_state.last_sub_lan = lan_no
+                st.session_state.show_submit_popup = True
                 st.rerun()
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory!")
