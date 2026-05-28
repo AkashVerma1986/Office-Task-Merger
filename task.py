@@ -546,7 +546,7 @@ with left_pane:
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
                     
-                    for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
+                    for k in ["main_finance_picker", "main_cat_picker", "main_applicant_input", "main_lan_input", "main_prio_slider", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
                         if k in st.session_state:
                             del st.session_state[k]
                     
