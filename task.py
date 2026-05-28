@@ -488,6 +488,7 @@ with left_pane:
     if st.session_state.get("show_submit_popup"):
         show_success_popup(st.session_state.get("last_sub_lan", ""), user['name'])
 
+    # --- UPDATED ENTRY FORM WITH AUTO-CLEAR & INDENTATION ---
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         row1_col1, row1_col2 = st.columns(2)
@@ -499,60 +500,45 @@ with left_pane:
             
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
+            applicant_name = st.text_input(
+                "Applicant Name", 
+                value=st.session_state.get("main_applicant_input", ""), 
+                placeholder="Optional", 
+                key="main_applicant_input"
+            )
         with row2_col2:
-            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+            lan_no = st.text_input(
+                "LAN No.", 
+                value=st.session_state.get("main_lan_input", ""),
+                placeholder="Required", 
+                key="main_lan_input"
+            ).strip()
             
         prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
             
-        dtl_main = st.text_area("Task Details", key="main_task_details")
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+        dtl_main = st.text_area(
+            "Task Details", 
+            value=st.session_state.get("main_task_details", ""),
+            key="main_task_details"
+        )
+        
+        # Incremental key cleanly forces the file list to drop on refresh
+        uploaded_file = st.file_uploader(
+            "📸 Attach Guidance Screenshot", 
+            type=["jpg", "jpeg", "png"], 
+            key=f"main_screenshot_uploader_v_{st.session_state.get('uploader_version', 0)}"
+        )
         
         img_b64 = ""
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        
-        paste_component_html = """
-        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
-            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-        </div>
-        <script>
-            const zone = document.getElementById('drop-zone');
-            const preview = document.getElementById('preview');
-            const msg = document.getElementById('prompt-msg');
-            function sendToStreamlit(b64Str) {
-                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-            }
-            window.addEventListener('paste', (e) => {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const file = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const rawB64 = event.target.result.split(',')[1];
-                            preview.src = event.target.result;
-                            preview.style.display = 'block';
-                            msg.innerHTML = "✅ Image pasted successfully!";
-                            sendToStreamlit(rawB64);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
-            });
-        </script>
-        """
-        # Ensure img_b64 is always a valid safe string before payload processing
-        if not isinstance(img_b64, str):
-            img_b64 = ""
         
         if st.button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                 payload = {
                     "finance": fin_active, 
                     "lan": lan_no,
-                    "applicant_name": st.session_state.get("main_applicant_input", "").strip(),
+                    "applicant_name": applicant_name,
                     "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
                     "priority": prio, 
                     "assigner": user['name'], 
@@ -561,20 +547,24 @@ with left_pane:
                     "screenshot": img_b64
                 }
                 
-                # Push to Firebase
-                res = requests.post(TASKS_URL, json=payload)
+                requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                 
-                # SMOOTH UPDATE: Force background refresh of memory storage
+                # 1. Update the local memory cache silently
                 st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                
+                # 2. Reset the text input records in state memory
+                st.session_state["main_applicant_input"] = ""
+                st.session_state["main_lan_input"] = ""
+                st.session_state["main_task_details"] = ""
+                
+                # 3. Bump uploader version to clear file selection instantly
+                st.session_state.uploader_version = st.session_state.get('uploader_version', 0) + 1
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
-                
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
-                    if k in st.session_state:
-                        del st.session_state[k]
                 st.rerun()
+                
             elif not lan_no:
                 st.error("🛑 LAN No. is mandatory!")
             else:
