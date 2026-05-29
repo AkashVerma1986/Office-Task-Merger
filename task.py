@@ -489,10 +489,12 @@ with left_pane:
     if st.session_state.get("show_submit_popup"):
         show_success_popup(st.session_state.get("last_sub_lan", ""), user['name'])
 
+    # 1. Put the form wrapper right here at the top level of the left pane
+with st.form(key=f"form_container_v_{st.session_state.form_version}"):
+    
     st.subheader("📝 Create New Task")
-with st.expander("Ledger Entry Form", expanded=True):
-    # CHANGED: Changed container to form
-    with st.form(key=f"form_container_v_{st.session_state.form_version}"):
+    
+    with st.expander("Ledger Entry Form", expanded=True):
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
             f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_fin_{st.session_state.form_version}")
@@ -515,7 +517,7 @@ with st.expander("Ledger Entry Form", expanded=True):
         if uploaded_file is not None:
             img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
         
-        # CHANGED: Changed st.button to st.form_submit_button
+        # 2. Keep your submit button right here inside the form block
         if st.form_submit_button("SUBMIT", use_container_width=True, type="primary"):
             if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                 payload = {
@@ -543,7 +545,6 @@ with st.expander("Ledger Entry Form", expanded=True):
                 st.error("🛑 LAN No. is mandatory!")
             else:
                 st.warning("⚠️ Please fill in Finance and Task Details.")
-
     # This next line stays at its original indentation level (outside the container)
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
