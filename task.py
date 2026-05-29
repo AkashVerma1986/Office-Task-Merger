@@ -546,12 +546,17 @@ with left_pane:
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
                     
-                    st.session_state["main_finance_picker"] = "--- SELECT ---"
-                    st.session_state["main_cat_picker"] = "---"
-                    st.session_state["main_applicant_input"] = ""
-                    st.session_state["main_lan_input"] = ""
-                    st.session_state["main_prio_slider"] = "Normal"
-                    st.session_state["main_task_details"] = ""
+                    # Delete the keys instead of re-assigning them to prevent the API Exception
+                    for key_to_clear in [
+                        "main_finance_picker",
+                        "main_cat_picker",
+                        "main_applicant_input",
+                        "main_lan_input",
+                        "main_prio_slider",
+                        "main_task_details"
+                    ]:
+                        if key_to_clear in st.session_state:
+                            del st.session_state[key_to_clear]
 
                     st.session_state.form_version += 1
                     st.rerun()
