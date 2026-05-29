@@ -28,7 +28,7 @@ scale_mod = st.session_state.ui_scale / 100.0
 st.markdown(f"""
     <style>
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
-        font-size: {int(22 * scale_mod)}px !important; 
+        font-size: {int(23 * scale_mod)}px !important; 
         color: #1A1A1A !important;
     }} 
     
@@ -719,14 +719,13 @@ with right_pane:
             with st.container(border=True):
                 # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
                 app_name = tsk.get('applicant_name', '').strip()
-                app_display = f"<b>Applicant:</b> {app_name} | " if app_name else ""
-
+                app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
-                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;">{app_display}<b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
                                 <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
