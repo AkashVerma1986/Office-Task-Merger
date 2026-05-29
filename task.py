@@ -502,7 +502,7 @@ with left_pane:
                 
             row2_col1, row2_col2 = st.columns(2)
             with row2_col1:
-                applicant_name = st.text_input("Applicant Name", placeholder="Optional", key=f"main_app_{st.session_state.form_version}")
+                applicant_name = st.text_input("Applicant Name", placeholder="Required", key=f"main_app_{st.session_state.form_version}")
             with row2_col2:
                 lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_{st.session_state.form_version}").strip()
                 
