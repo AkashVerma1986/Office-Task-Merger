@@ -531,6 +531,7 @@ with left_pane:
                     
                     res = requests.post(TASKS_URL, json=payload)
                     requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                     
                     # Refresh data storage cache mapping
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
