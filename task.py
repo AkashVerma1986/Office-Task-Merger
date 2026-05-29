@@ -541,16 +541,25 @@ with left_pane:
                     res = requests.post(TASKS_URL, json=payload)
                     requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                     
-                    # Update local memory pool without reloading page
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                     
-                    # Set flags to show the dialog popup
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
                     
-                    # DO NOT put del keys or st.rerun here anymore! 
-                    # Let the popup display naturally.
+                    # Delete the keys instead of re-assigning them to prevent the API Exception
+                    for key_to_clear in [
+                        "main_finance_picker",
+                        "main_cat_picker",
+                        "main_applicant_input",
+                        "main_lan_input",
+                        "main_prio_slider",
+                        "main_task_details"
+                    ]:
+                        if key_to_clear in st.session_state:
+                            del st.session_state[key_to_clear]
 
+                    st.session_state.form_version += 1
+                    st.rerun()
                 elif not lan_no:
                     st.error("🛑 LAN No. is mandatory!")
                 else:
