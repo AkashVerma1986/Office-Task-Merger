@@ -491,45 +491,36 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
+        # The key dynamic binding ensures that when form_version increases, all inputs inside are wiped completely clean
         with st.container(key=f"form_container_v_{st.session_state.form_version}"):
-            # ⬇️ START INDENTING FROM THIS LINE BELOW ⬇️
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
-                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
+                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_fin_{st.session_state.form_version}")
                 fin_active = f_sel
             with row1_col2:
-                cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+                cat = st.selectbox("Category", ["---"] + all_cats, key=f"main_cat_{st.session_state.form_version}")
                 
             row2_col1, row2_col2 = st.columns(2)
             with row2_col1:
-                applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
+                applicant_name = st.text_input("Applicant Name", placeholder="Optional", key=f"main_app_{st.session_state.form_version}")
             with row2_col2:
-                lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+                lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_{st.session_state.form_version}").strip()
                 
-            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key=f"main_prio_{st.session_state.form_version}")
                 
-            dtl_main = st.text_area("Task Details", key="main_task_details")
-            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
+            dtl_main = st.text_area("Task Details", key=f"main_dtl_{st.session_state.form_version}")
+            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_img_{st.session_state.form_version}")
             
             img_b64 = ""
             if uploaded_file is not None:
                 img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
             
-            paste_component_html = """
-            <div id="drop-zone" style="...">
-                ...
-            </div>
-            ...
-            """
-            if not isinstance(img_b64, str):
-                img_b64 = ""
-            
-            if st.button("SUBMIT", use_container_width=True, type="primary"):
+            if st.button("SUBMIT", use_container_width=True, type="primary", key=f"main_sub_btn_{st.session_state.form_version}"):
                 if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                     payload = {
                         "finance": fin_active, 
                         "lan": lan_no,
-                        "applicant_name": st.session_state.get("main_applicant_input", "").strip(),
+                        "applicant_name": applicant_name.strip(),
                         "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
                         "priority": prio, 
                         "assigner": user['name'], 
@@ -541,23 +532,13 @@ with left_pane:
                     res = requests.post(TASKS_URL, json=payload)
                     requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                     
+                    # Refresh data storage cache mapping
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                     
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
-                    
-                    # Delete the keys instead of re-assigning them to prevent the API Exception
-                    for key_to_clear in [
-                        "main_finance_picker",
-                        "main_cat_picker",
-                        "main_applicant_input",
-                        "main_lan_input",
-                        "main_prio_slider",
-                        "main_task_details"
-                    ]:
-                        if key_to_clear in st.session_state:
-                            del st.session_state[key_to_clear]
 
+                    # Force incremental layout reset — this instantly clears all input widgets and the file uploader
                     st.session_state.form_version += 1
                     st.rerun()
                 elif not lan_no:
