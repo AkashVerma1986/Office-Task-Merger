@@ -562,6 +562,7 @@ with left_pane:
 
     if not df_all.empty:
         df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+        df_all['task_date'] = df_all['date_dt'].dt.date
         filtered_df = df_all.copy()
         
         if st.session_state.my_tasks_only:
@@ -571,10 +572,9 @@ with left_pane:
         if view_filter == "Pending": filtered_df = filtered_df[filtered_df['status'] == "Pending"]
         elif view_filter == "Hold": filtered_df = filtered_df[filtered_df['status'] == "Hold"]
         elif view_filter == "Completed": filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
+        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt] # Updated
         elif view_filter == "Yesterday":
-            filtered_df = filtered_df[filtered_df['date_dt'].dt.date == (today_dt - pd.Timedelta(days=1))]
-
+            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))] # Updated
         if len(date_range) == 2:
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= date_range[0]) & (filtered_df['date_dt'].dt.date <= date_range[1])]
 
@@ -673,6 +673,7 @@ with right_pane:
         
         if not live_df.empty:
             live_df['date_dt'] = pd.to_datetime(live_df['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+            live_df['task_date'] = live_df['date_dt'].dt.date
             f_df = live_df.copy()
             
             if st.session_state.my_tasks_only:
@@ -682,8 +683,8 @@ with right_pane:
             if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
             elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
-            elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
-            elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
+            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] # Updated
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] # Updated
 
             # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
