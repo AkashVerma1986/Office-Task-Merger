@@ -24,23 +24,32 @@ if "ui_scale" not in st.session_state:
 
 scale_mod = st.session_state.ui_scale / 100.0
 
-# --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
+# --- 2. THE ULTIMATE CSS (White Theme & Enhanced Grid Stability) ---
 st.markdown(f"""
     <style>
+    /* Global Base Font - Optimized for UI Grid stability */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
-        font-size: {int(23 * scale_mod)}px !important; 
+        font-size: {int(16 * scale_mod)}px !important; 
         color: #1A1A1A !important;
     }} 
+    
+    /* Make input fields and labels bold and highly visible */
+    label [data-testid="stMarkdownContainer"] p {{
+        font-size: {int(18 * scale_mod)}px !important;
+        font-weight: 600 !important;
+    }}
     
     div[data-baseweb="select"] * {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
         font-weight: 500 !important;
+        font-size: {int(17 * scale_mod)}px !important;
     }}
     
     ul[role="listbox"] li {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
+        font-size: {int(17 * scale_mod)}px !important;
     }}
     
     .stApp {{ 
@@ -48,22 +57,30 @@ st.markdown(f"""
         overscroll-behavior-y: contain !important; 
     }}
 
+    /* Elastic Column Containers to prevent layout disturbance */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }}
+
     .stAppViewMain .block-container {{
-        padding-top: 1.5rem !important;
-        padding-bottom: 1.5rem !important;
+        padding-top: 1.0rem !important;
+        padding-bottom: 1.0rem !important;
         gap: 0.5rem !important; 
     }}
     
+    /* Fluid Responsive Buttons */
     .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
         border-radius: 8px !important;
-        padding: {int(10 * scale_mod)}px {int(20 * scale_mod)}px !important;
+        padding: {int(6 * scale_mod)}px {int(14 * scale_mod)}px !important;
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-        font-size: {int(18 * scale_mod)}px !important;
+        font-size: {int(15 * scale_mod)}px !important;
+        min-height: 42px;
     }}
 
     .stButton > button:hover {{
@@ -73,7 +90,7 @@ st.markdown(f"""
     }}
 
     hr {{
-        margin: 0.4rem 0 !important;
+        margin: 0.3rem 0 !important;
     }}
 
     .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
@@ -83,23 +100,14 @@ st.markdown(f"""
         width: 100%; 
         padding-bottom: 10px;
     }}
-    .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
+    .card-text {{ padding: 12px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
     
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    .completion-box {{ 
-        background-color: #E9F7EF; 
-        border: 1px solid #28A745; 
-        padding: 10px; 
-        border-radius: 5px; 
-        color: #155724; 
-        margin: 10px;
-    }}
-
-    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetric"] div {{ font-size: {int(22 * scale_mod)}px !important; }}
     div[data-testid="stMetricLabel"] > div {{ font-size: {int(14 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
