@@ -58,8 +58,19 @@ st.markdown(f"""
         overscroll-behavior-y: contain !important; 
     }}
 
-    /* Elastic Column Containers to prevent layout breaking */
-    [data-testid="stHorizontalBlock"] {{
+    /* Prevent Left & Right Layout Panes from stacking vertically */
+    .stApp .stAppViewMain [data-testid="stMainBlockContainer"] > div > div > [data-testid="stHorizontalBlock"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        gap: 1.5rem !important;
+    }}
+
+    /* Allow standard inputs INSIDE forms and panels to adapt gracefully */
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"],
+    .stExpander [data-testid="stHorizontalBlock"],
+    [data-testid="stElementContainer"] [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
         align-items: flex-end !important;
         gap: 0.5rem !important;
