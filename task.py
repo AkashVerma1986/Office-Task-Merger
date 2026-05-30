@@ -24,32 +24,33 @@ if "ui_scale" not in st.session_state:
 
 scale_mod = st.session_state.ui_scale / 100.0
 
-# --- 2. THE ULTIMATE CSS (White Theme & Enhanced Grid Stability) ---
+# --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
 st.markdown(f"""
     <style>
-    /* Global Base Font - Optimized for UI Grid stability */
+    /* Global Base Font System */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
         font-size: {int(16 * scale_mod)}px !important; 
         color: #1A1A1A !important;
     }} 
     
-    /* Make input fields and labels bold and highly visible */
+    /* Dedicated Label Styling */
     label [data-testid="stMarkdownContainer"] p {{
-        font-size: {int(18 * scale_mod)}px !important;
+        font-size: {int(16 * scale_mod)}px !important;
         font-weight: 600 !important;
+        color: #333333 !important;
     }}
     
     div[data-baseweb="select"] * {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
         font-weight: 500 !important;
-        font-size: {int(17 * scale_mod)}px !important;
+        font-size: {int(16 * scale_mod)}px !important;
     }}
     
     ul[role="listbox"] li {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
-        font-size: {int(17 * scale_mod)}px !important;
+        font-size: {int(16 * scale_mod)}px !important;
     }}
     
     .stApp {{ 
@@ -57,9 +58,10 @@ st.markdown(f"""
         overscroll-behavior-y: contain !important; 
     }}
 
-    /* Elastic Column Containers to prevent layout disturbance */
+    /* Elastic Column Containers to prevent layout breaking */
     [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
+        align-items: flex-end !important;
         gap: 0.5rem !important;
     }}
 
@@ -69,7 +71,7 @@ st.markdown(f"""
         gap: 0.5rem !important; 
     }}
     
-    /* Fluid Responsive Buttons */
+    /* Robust Dynamic Buttons */
     .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
@@ -79,8 +81,8 @@ st.markdown(f"""
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-        font-size: {int(15 * scale_mod)}px !important;
-        min-height: 42px;
+        font-size: {int(14 * scale_mod)}px !important;
+        min-height: 40px;
     }}
 
     .stButton > button:hover {{
@@ -93,6 +95,27 @@ st.markdown(f"""
         margin: 0.3rem 0 !important;
     }}
 
+    /* Card Flexbox Structure */
+    .card-header-flex {{
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }}
+    
+    .card-header-left {{
+        flex: 1 1 55% !important;
+        min-width: 250px !important;
+    }}
+    
+    .card-header-right {{
+        flex: 1 1 35% !important;
+        min-width: 180px !important;
+        text-align: right !important;
+    }}
+
     .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
     .card-body {{ 
         flex-grow: 1; 
@@ -100,18 +123,16 @@ st.markdown(f"""
         width: 100%; 
         padding-bottom: 10px;
     }}
-    .card-text {{ padding: 12px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
     
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    div[data-testid="stMetric"] div {{ font-size: {int(22 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(14 * scale_mod)}px !important; }}
+    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
-
 # --- 3. AUTH & DEVICE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
