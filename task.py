@@ -811,7 +811,6 @@ with right_pane:
                             if stat != "Hold" and not note.strip():
                                 st.error("🛑 Hold note is required.")
                             else:
-                                # ⚡ Define the database payload cleanly
                                 if stat != "Hold":
                                     p_load = {
                                         "status": "Hold", 
@@ -819,27 +818,25 @@ with right_pane:
                                         "hold_by": user['name'], 
                                         "hold_at": get_now_ist()
                                     }
-                            else:
-                                p_load = {
-                                    "status": "Pending", 
-                                    "comment": note, 
-                                    "hold_by": "", 
-                                    "hold_at": ""
+                                else:
+                                    p_load = {
+                                        "status": "Pending", 
+                                        "comment": note, 
+                                        "hold_by": "", 
+                                        "hold_at": ""
                                     }
-        
-                            # ⚡ OPTIMISTIC UPDATE: Update local memory cache first
-                            st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                            st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                            st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
-                            st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
-        
-                            # ⚡ Push payload quietly to Firebase
-                            try:
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                            except Exception as e:
-                                pass # Keep UI alive even if network hiccups
-            
-                            st.rerun(scope="fragment")
+                                
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                                st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
+                                
+                                try:
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                except:
+                                    pass
+                                    
+                                st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
