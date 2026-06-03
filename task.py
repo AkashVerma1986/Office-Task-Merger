@@ -810,25 +810,37 @@ with right_pane:
                         if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
                             if stat != "Hold" and not note.strip():
                                 st.error("🛑 Hold note is required.")
+                        else:
+                            # ⚡ OPTIMISTIC UPDATE: Change local state immediately
+                            if stat != "Hold":
+                                st.session_state.cached_tasks[tid].update({
+                                    "status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()
+                                })
+                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                             else:
-                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()} if stat != "Hold" else {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                
-                                # Smoothly update data storage in place
-                                st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
-                                st.rerun(scope="fragment")
+                                st.session_state.cached_tasks[tid].update({
+                                    "status": "Pending", "comment": note, "hold_by": None, "hold_at": None
+                                })
+                            p_load = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+        
+                        # ⚡ Fire network request quietly, no global GET needed
+                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                        st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
                                 st.error("🛑 Closing note is required.")
                             else:
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                p_load = {
                                     "status": "Completed", "completed_by": user['name'], 
                                     "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
-                                })
-                                
-                                # Smoothly update data storage in place
-                                st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                                }
+        
+                                # ⚡ OPTIMISTIC UPDATE: Change local state immediately
+                                st.session_state.cached_tasks[tid].update(p_load)
+        
+                                # ⚡ Fire network request quietly
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
                                 st.rerun(scope="fragment")
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
