@@ -810,22 +810,36 @@ with right_pane:
                         if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
                             if stat != "Hold" and not note.strip():
                                 st.error("🛑 Hold note is required.")
-                        else:
-                            # ⚡ OPTIMISTIC UPDATE: Change local state immediately
-                            if stat != "Hold":
-                                st.session_state.cached_tasks[tid].update({
-                                    "status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()
-                                })
-                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                             else:
-                                st.session_state.cached_tasks[tid].update({
-                                    "status": "Pending", "comment": note, "hold_by": None, "hold_at": None
-                                })
-                            p_load = {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
+                                # ⚡ Define the database payload cleanly
+                                if stat != "Hold":
+                                    p_load = {
+                                        "status": "Hold", 
+                                        "comment": note, 
+                                        "hold_by": user['name'], 
+                                        "hold_at": get_now_ist()
+                                    }
+                            else:
+                                p_load = {
+                                    "status": "Pending", 
+                                    "comment": note, 
+                                    "hold_by": "", 
+                                    "hold_at": ""
+                                    }
         
-                        # ⚡ Fire network request quietly, no global GET needed
-                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                        st.rerun(scope="fragment")
+                            # ⚡ OPTIMISTIC UPDATE: Update local memory cache first
+                            st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                            st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                            st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                            st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
+        
+                            # ⚡ Push payload quietly to Firebase
+                            try:
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                            except Exception as e:
+                                pass # Keep UI alive even if network hiccups
+            
+                            st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
