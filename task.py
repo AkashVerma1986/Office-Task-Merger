@@ -764,13 +764,13 @@ with right_pane:
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
-                        <table style="width: 100%; border-collapse: collapse; border: none;">
-                            <tr>
-                                <td style="vertical-align: top; text-align: left; padding: 0;">
+                        <table style="width: 100%; border-collapse: collapse; border: none !important; background: transparent !important;">
+                            <tr style="border: none !important; background: transparent !important;">
+                                <td style="vertical-align: top; text-align: left; padding: 0; border: none !important; background: transparent !important;">
                                     <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;">{app_display}<b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
-                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
+                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A; border: none !important; background: transparent !important;">
                                     <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
                                     <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {tsk.get('assigned_at')}</span><br>
                                     <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {tsk.get('assigner')}</span>
