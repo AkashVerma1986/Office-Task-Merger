@@ -758,19 +758,28 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
-            with st.container(border=True):
+            with st.container(border=False):
                 # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
                 app_name = tsk.get('applicant_name', '').strip()
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
+                
                 st.markdown(f"""
-                    <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
-                        <table style="width: 100%; border-collapse: collapse; border: none;">
+                    <div style="
+                        border: 1px solid #DDE1E7;
+                        border-left: 10px solid {col_ind}; 
+                        border-radius: 8px;
+                        padding: 16px 20px; 
+                        background-color: #FFFFFF;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                        margin-bottom: 10px;
+                    ">
+                        <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                             <tr>
-                                <td style="vertical-align: top; text-align: left; padding: 0;">
+                                <td style="vertical-align: top; text-align: left; padding: 0; background: transparent;">
                                     <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;">{app_display}<b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
-                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
+                                <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A; background: transparent;">
                                     <b>Status:</b> <span style="text-transform: uppercase; font-weight: bold; color: {col_ind};">{stat}</span><br>
                                     <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">Created: {tsk.get('assigned_at')}</span><br>
                                     <span style="color: #666666; font-size: {int(18 * scale_mod)}px;">By: {tsk.get('assigner')}</span>
