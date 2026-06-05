@@ -824,6 +824,7 @@ with right_pane:
 
                 # Step 4: Render details panel extension contents
                 if show_details:
+                    # OPEN THE GREY BOX WRAPPER AND RENDER DESCRIPTION TEXT ONLY
                     st.markdown(f"""
                         <div style="
                             border: 1px solid #DDE1E7;
@@ -839,7 +840,7 @@ with right_pane:
                             color: #1A1A1A;
                         ">
                             <b>Full Task Description:</b><br>{raw_txt}
-                        </div>
+                            <div style="margin-top: 15px;"></div>
                     """, unsafe_allow_html=True)
                     
                     # Track image view toggles separately via unique session state key
@@ -850,7 +851,7 @@ with right_pane:
                     if stat == "Hold":
                         st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
+                    # --- NATIVE STREAMLIT FIELDS (NOW INSIDE THE HTML CONTAINER SCOPE) ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
@@ -907,13 +908,11 @@ with right_pane:
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.write("")
-                        # Balanced button columns layout inside card limits
                         adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
                         
                         if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                             
-                        # Dedicated image control visibility button
                         btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                         if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                             st.session_state[img_state_key] = not st.session_state[img_state_key]
@@ -926,7 +925,7 @@ with right_pane:
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
 
-                    # --- SCREENSHOT AREA RENDERS LAST (AT THE VERY BOTTOM) ---
+                    # --- SCREENSHOT IMAGE INCLUDED INSIDE CARD FRAMEWORK ---
                     if st.session_state[img_state_key]:
                         st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
@@ -936,5 +935,10 @@ with right_pane:
                                 st.caption("⚠️ Failed to display attachment image.")
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
+
+                    # CLOSE THE GREY CONTAINER DIV FLUSH AT THE VERY END
+                    st.markdown("""
+                        </div>
+                    """, unsafe_allow_html=True)
             st.write("")
     render_task_deck()
