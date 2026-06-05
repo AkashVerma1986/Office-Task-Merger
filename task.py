@@ -819,10 +819,10 @@ with right_pane:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # Step 3: Placing the Expand Button directly on the last line of the header section
+                # Step 3: Expand button at the last line of the header section
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
-                # Step 4: Render everything inside the card box extension when opened
+                # Step 4: Render details panel extension contents
                 if show_details:
                     st.markdown(f"""
                         <div style="
@@ -842,11 +842,20 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                        try:
-                            st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                        except:
-                            st.caption("⚠️ Failed to display attachment image.")
+                    # Track image view toggles separately via unique session state key
+                    img_state_key = f"view_photo_{tid}"
+                    if img_state_key not in st.session_state:
+                        st.session_state[img_state_key] = False
+
+                    # Render attachment photo inside the card framework only if activated
+                    if st.session_state[img_state_key]:
+                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                            try:
+                                st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except:
+                                st.caption("⚠️ Failed to display attachment image.")
+                        else:
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
                     
                     if stat == "Hold":
                         st.markdown(f'<div style="color:#E83E8C; padding:10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
@@ -909,9 +918,18 @@ with right_pane:
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.write("")
-                        adm1, adm2 = st.columns([3, 1])
+                        # Structured into 3 balanced button columns inside card limits
+                        adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
+                        
                         if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
+                            
+                        # Dedicated image control visibility toggle switch button 
+                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                            st.session_state[img_state_key] = not st.session_state[img_state_key]
+                            st.rerun(scope="fragment")
+                            
                         with adm2:
                             st.write("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                             if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
