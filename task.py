@@ -847,21 +847,10 @@ with right_pane:
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
 
-                    # Render attachment photo inside the card framework only if activated
-                    if st.session_state[img_state_key]:
-                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                            try:
-                                st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                            except:
-                                st.caption("⚠️ Failed to display attachment image.")
-                        else:
-                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
-                    
                     if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    st.divider()
-
+                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
@@ -918,13 +907,13 @@ with right_pane:
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.write("")
-                        # Structured into 3 balanced button columns inside card limits
+                        # Balanced button columns layout inside card limits
                         adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
                         
                         if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                             
-                        # Dedicated image control visibility toggle switch button 
+                        # Dedicated image control visibility button
                         btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                         if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                             st.session_state[img_state_key] = not st.session_state[img_state_key]
@@ -936,5 +925,16 @@ with right_pane:
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
+
+                    # --- SCREENSHOT AREA RENDERS LAST (AT THE VERY BOTTOM) ---
+                    if st.session_state[img_state_key]:
+                        st.write("")
+                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                            try:
+                                st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except:
+                                st.caption("⚠️ Failed to display attachment image.")
+                        else:
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
             st.write("")
     render_task_deck()
