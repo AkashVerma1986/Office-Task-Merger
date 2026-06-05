@@ -287,12 +287,14 @@ def edit_task_dialog(tid, task):
     current_c = "---"
     clean_task_text = full_task_text
     
-    if "]" in full_task_text and full_task_text.startswith("["):
+    # Securely strip any existing category brackets so they don't compound
+    if isinstance(full_task_text, str) and full_task_text.startswith("[") and "]" in full_task_text:
         try:
-            current_c = full_task_text.split("]")[0].replace("[", "").strip()
-            clean_task_text = full_task_text.split("]", 1)[1].strip()
-        except:
-            pass
+            parts = full_task_text.split("]", 1)
+            current_c = parts[0].replace("[", "").strip()
+            clean_task_text = parts[1].strip()
+        except Exception:
+            clean_task_text = full_task_text
     
     all_cats_with_default = ["---"] + all_cats
     c_idx = all_cats_with_default.index(current_c) if current_c in all_cats_with_default else 0
