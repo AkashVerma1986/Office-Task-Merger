@@ -782,7 +782,7 @@ with right_pane:
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # --- Main Card Outer Wrapper ---
+                # --- Open Card Container wrapper ---
                 st.markdown(f"""
                     <div style="
                         border: 1px solid #DDE1E7; 
@@ -791,7 +791,7 @@ with right_pane:
                         padding: 16px 20px; 
                         background-color: #FFFFFF; 
                         box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-                        margin-bottom: 4px;
+                        margin-bottom: 12px;
                     ">
                         <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                             <tr style="border: none; background: transparent;">
@@ -806,17 +806,16 @@ with right_pane:
                                 </td>
                             </tr>
                         </table>
-                    </div>
                 """, unsafe_allow_html=True)
 
+                # --- Inner Content Flow Area (Now strictly locked inside the div bounds) ---
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
-                # --- Toggle & Inner Operations Box (Merged into the Card Body Flow) ---
                 if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
-                        <div style="margin-top: -4px; margin-bottom: 10px; padding: 14px 20px; background-color: #F8F9FA; border: 1px solid #DDE1E7; border-top: none; border-radius: 0 0 8px 8px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="margin-top: 10px; margin-bottom: 10px; padding: 14px; background-color: #F8F9FA; border: 1px solid #DDE1E7; border-radius: 6px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
@@ -828,7 +827,7 @@ with right_pane:
                             st.caption("⚠️ Failed to display attachment image.")
                     
                     if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:10px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="color:#E83E8C; padding:10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
                     st.divider()
 
@@ -888,14 +887,19 @@ with right_pane:
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.write("")
-                        adm1, adm2 = st.columns(2)
+                        adm1, adm2 = st.columns([3, 1])
                         if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                         with adm2:
+                            st.write("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                             if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
-            st.write("")
 
+                # --- Close Card Container wrapper ---
+                st.markdown("""
+                    </div>
+                """, unsafe_allow_html=True)
+            st.write("")
     render_task_deck()
