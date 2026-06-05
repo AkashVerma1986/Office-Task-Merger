@@ -24,23 +24,33 @@ if "ui_scale" not in st.session_state:
 
 scale_mod = st.session_state.ui_scale / 100.0
 
-# --- 2. THE ULTIMATE CSS (White Theme & Dynamic Tight Spacing Layout) ---
+# --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
 st.markdown(f"""
     <style>
+    /* Global Base Font System */
     html, body, [class*="st-"], .stMarkdown p, .stTextInput input, .stSelectbox div {{ 
-        font-size: {int(22 * scale_mod)}px !important; 
+        font-size: {int(16 * scale_mod)}px !important; 
         color: #1A1A1A !important;
     }} 
+    
+    /* Dedicated Label Styling */
+    label [data-testid="stMarkdownContainer"] p {{
+        font-size: {int(16 * scale_mod)}px !important;
+        font-weight: 600 !important;
+        color: #333333 !important;
+    }}
     
     div[data-baseweb="select"] * {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
         font-weight: 500 !important;
+        font-size: {int(16 * scale_mod)}px !important;
     }}
     
     ul[role="listbox"] li {{
         color: #1A1A1A !important;
         opacity: 1.0 !important;
+        font-size: {int(16 * scale_mod)}px !important;
     }}
     
     .stApp {{ 
@@ -48,22 +58,42 @@ st.markdown(f"""
         overscroll-behavior-y: contain !important; 
     }}
 
+    /* Prevent Left & Right Layout Panes from stacking vertically */
+    .stApp .stAppViewMain [data-testid="stMainBlockContainer"] > div > div > [data-testid="stHorizontalBlock"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        gap: 1.5rem !important;
+    }}
+
+    /* Allow standard inputs INSIDE forms and panels to adapt gracefully */
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"],
+    .stExpander [data-testid="stHorizontalBlock"],
+    [data-testid="stElementContainer"] [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+        align-items: flex-end !important;
+        gap: 0.5rem !important;
+    }}
+
     .stAppViewMain .block-container {{
-        padding-top: 1.5rem !important;
-        padding-bottom: 1.5rem !important;
+        padding-top: 1.0rem !important;
+        padding-bottom: 1.0rem !important;
         gap: 0.5rem !important; 
     }}
     
+    /* Robust Dynamic Buttons */
     .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
         border-radius: 8px !important;
-        padding: {int(10 * scale_mod)}px {int(20 * scale_mod)}px !important;
+        padding: {int(6 * scale_mod)}px {int(14 * scale_mod)}px !important;
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-        font-size: {int(18 * scale_mod)}px !important;
+        font-size: {int(14 * scale_mod)}px !important;
+        min-height: 40px;
     }}
 
     .stButton > button:hover {{
@@ -73,7 +103,28 @@ st.markdown(f"""
     }}
 
     hr {{
-        margin: 0.4rem 0 !important;
+        margin: 0.3rem 0 !important;
+    }}
+
+    /* Card Flexbox Structure */
+    .card-header-flex {{
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }}
+    
+    .card-header-left {{
+        flex: 1 1 55% !important;
+        min-width: 250px !important;
+    }}
+    
+    .card-header-right {{
+        flex: 1 1 35% !important;
+        min-width: 180px !important;
+        text-align: right !important;
     }}
 
     .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
@@ -83,32 +134,22 @@ st.markdown(f"""
         width: 100%; 
         padding-bottom: 10px;
     }}
-    .card-text {{ padding: 15px; border-bottom: 1px solid #F0F0F0; color: #1A1A1A; }}
     
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    .completion-box {{ 
-        background-color: #E9F7EF; 
-        border: 1px solid #28A745; 
-        padding: 10px; 
-        border-radius: 5px; 
-        color: #155724; 
-        margin: 10px;
-    }}
-
     div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(14 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
-
 # --- 3. AUTH & DEVICE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
 if "edit_tid" not in st.session_state: st.session_state.edit_tid = None
 if "my_tasks_only" not in st.session_state: st.session_state.my_tasks_only = True
+if "form_version" not in st.session_state: st.session_state.form_version = 0
 
 def get_now_ist(): 
     return datetime.now(IST).strftime("%d/%b/%Y %H:%M:%S")
@@ -217,9 +258,14 @@ if not st.session_state.authenticated:
                         st.rerun()
     st.stop()
 
-# --- 4. DATA FETCH ---
+# --- 4. DATA FETCH (OPTIMIZED FOR SMOOTH REFRESH) ---
 user = st.session_state.user_data
-tasks_dict = requests.get(TASKS_URL).json() or {}
+
+# Initialize memory storage if not present
+if "cached_tasks" not in st.session_state:
+    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+
+tasks_dict = st.session_state.cached_tasks
 master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
 master_cat_data = requests.get(CATEGORIES_URL).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
@@ -485,92 +531,64 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
-        row1_col1, row1_col2 = st.columns(2)
-        with row1_col1:
-            f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_finance_picker")
-            fin_active = f_sel
-        with row1_col2:
-            cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_picker")
+        # The key dynamic binding ensures that when form_version increases, all inputs inside are wiped completely clean
+        with st.container(key=f"form_container_v_{st.session_state.form_version}"):
+            row1_col1, row1_col2 = st.columns(2)
+            with row1_col1:
+                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_fin_{st.session_state.form_version}")
+                fin_active = f_sel
+            with row1_col2:
+                cat = st.selectbox("Category", ["---"] + all_cats, key=f"main_cat_{st.session_state.form_version}")
+                
+            row2_col1, row2_col2 = st.columns(2)
+            with row2_col1:
+                applicant_name = st.text_input("Applicant Name", placeholder="Required", key=f"main_app_{st.session_state.form_version}")
+            with row2_col2:
+                lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_{st.session_state.form_version}").strip()
+                
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key=f"main_prio_{st.session_state.form_version}")
+                
+            dtl_main = st.text_area("Task Details", key=f"main_dtl_{st.session_state.form_version}")
+            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_img_{st.session_state.form_version}")
             
-        row2_col1, row2_col2 = st.columns(2)
-        with row2_col1:
-            applicant_name = st.text_input("Applicant Name", placeholder="Optional", key="main_applicant_input")
-        with row2_col2:
-            lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
-            
-        prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
-            
-        dtl_main = st.text_area("Task Details", key="main_task_details")
-        uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_screenshot_uploader")
-        
-        img_b64 = ""
-        if uploaded_file is not None:
-            img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-        
-        paste_component_html = """
-        <div id="drop-zone" style="border: 2px dashed #B0B7C3; border-radius: 8px; padding: 18px; text-align: center; background: #F8F9FA; cursor: pointer; color: #4A4A4A; font-family: sans-serif; font-size: 14px;">
-            <div id="prompt-msg">Click here & press <b>Ctrl + V</b> to Paste, or drag & drop image file</div>
-            <img id="preview" style="max-height: 100px; display: none; margin: 8px auto 0 auto; border-radius: 4px;" />
-        </div>
-        <script>
-            const zone = document.getElementById('drop-zone');
-            const preview = document.getElementById('preview');
-            const msg = document.getElementById('prompt-msg');
-            function sendToStreamlit(b64Str) {
-                window.parent.postMessage({type: 'streamlit:set_component_value', value: b64Str}, '*');
-            }
-            window.addEventListener('paste', (e) => {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const file = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const rawB64 = event.target.result.split(',')[1];
-                            preview.src = event.target.result;
-                            preview.style.display = 'block';
-                            msg.innerHTML = "✅ Image pasted successfully!";
-                            sendToStreamlit(rawB64);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
-            });
-        </script>
-        """
-        # Ensure img_b64 is always a valid safe string before payload processing
-        if not isinstance(img_b64, str):
             img_b64 = ""
-        
-        if st.button("SUBMIT", use_container_width=True, type="primary"):
-            if fin_active != "--- SELECT ---" and lan_no and dtl_main:
-                payload = {
-                    "finance": fin_active, 
-                    "lan": lan_no,
-                    "applicant_name": st.session_state.get("main_applicant_input", "").strip(),
-                    "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
-                    "priority": prio, 
-                    "assigner": user['name'], 
-                    "status": "Pending", 
-                    "assigned_at": get_now_ist(),
-                    "screenshot": img_b64
-                }
-                
-                requests.post(TASKS_URL, json=payload)
-                requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
-                
-                st.session_state.last_sub_lan = lan_no
-                st.session_state.show_submit_popup = True
-                
-                for k in ["main_applicant_input", "main_lan_input", "main_task_details", "main_screenshot_uploader", "paste_img_b64"]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                st.rerun()
-            elif not lan_no:
-                st.error("🛑 LAN No. is mandatory!")
-            else:
-                st.warning("⚠️ Please fill in Finance and Task Details.")
-                
+            if uploaded_file is not None:
+                img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+            
+            if st.button("SUBMIT", use_container_width=True, type="primary", key=f"main_sub_btn_{st.session_state.form_version}"):
+                if fin_active != "--- SELECT ---" and lan_no and dtl_main:
+                    payload = {
+                        "finance": fin_active, 
+                        "lan": lan_no,
+                        "applicant_name": applicant_name.strip(),
+                        "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
+                        "priority": prio, 
+                        "assigner": user['name'], 
+                        "status": "Pending", 
+                        "assigned_at": get_now_ist(),
+                        "screenshot": img_b64
+                    }
+                    
+                    res = requests.post(TASKS_URL, json=payload)
+                    requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
+                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    
+                    # Refresh data storage cache mapping
+                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    
+                    st.session_state.last_sub_lan = lan_no
+                    st.session_state.show_submit_popup = True
+
+                    # Force incremental layout reset — this instantly clears all input widgets and the file uploader
+                    st.session_state.form_version += 1
+                    st.rerun()
+                elif not lan_no:
+                    st.error("🛑 LAN No. is mandatory!")
+                else:
+                    st.warning("⚠️ Please fill in Finance and Task Details.")
+            # ⬆️ STOP INDENTING HERE ⬆️
+
+    # This next line stays at its original indentation level (outside the container)
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
@@ -585,6 +603,7 @@ with left_pane:
 
     if not df_all.empty:
         df_all['date_dt'] = pd.to_datetime(df_all['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+        df_all['task_date'] = df_all['date_dt'].dt.date
         filtered_df = df_all.copy()
         
         if st.session_state.my_tasks_only:
@@ -594,10 +613,9 @@ with left_pane:
         if view_filter == "Pending": filtered_df = filtered_df[filtered_df['status'] == "Pending"]
         elif view_filter == "Hold": filtered_df = filtered_df[filtered_df['status'] == "Hold"]
         elif view_filter == "Completed": filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['date_dt'].dt.date == today_dt]
+        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt] # Updated
         elif view_filter == "Yesterday":
-            filtered_df = filtered_df[filtered_df['date_dt'].dt.date == (today_dt - pd.Timedelta(days=1))]
-
+            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))] # Updated
         if len(date_range) == 2:
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= date_range[0]) & (filtered_df['date_dt'].dt.date <= date_range[1])]
 
@@ -696,6 +714,7 @@ with right_pane:
         
         if not live_df.empty:
             live_df['date_dt'] = pd.to_datetime(live_df['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
+            live_df['task_date'] = live_df['date_dt'].dt.date
             f_df = live_df.copy()
             
             if st.session_state.my_tasks_only:
@@ -705,8 +724,8 @@ with right_pane:
             if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
             elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
-            elif view_filter_right == "Today's": f_df = f_df[f_df['date_dt'].dt.date == t_dt]
-            elif view_filter_right == "Yesterday": f_df = f_df[f_df['date_dt'].dt.date == (t_dt - pd.Timedelta(days=1))]
+            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] # Updated
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] # Updated
 
             # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
@@ -740,14 +759,13 @@ with right_pane:
             with st.container(border=True):
                 # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
                 app_name = tsk.get('applicant_name', '').strip()
-                app_display = f"<b>Applicant:</b> {app_name} | " if app_name else ""
-
+                app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
                 st.markdown(f"""
                     <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="vertical-align: top; text-align: left; padding: 0;">
-                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(30 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
+                                    <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
                                     <span style="font-size: {int(16 * scale_mod)}px; color: #4A4A4A;">{app_display}<b>LAN:</b> <code style="background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;">{tsk.get('lan', 'N/A')}</code></span>
                                 </td>
                                 <td style="vertical-align: top; text-align: right; padding: 0; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;">
@@ -793,18 +811,47 @@ with right_pane:
                             if stat != "Hold" and not note.strip():
                                 st.error("🛑 Hold note is required.")
                             else:
-                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()} if stat != "Hold" else {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                if stat != "Hold":
+                                    p_load = {
+                                        "status": "Hold", 
+                                        "comment": note, 
+                                        "hold_by": user['name'], 
+                                        "hold_at": get_now_ist()
+                                    }
+                                else:
+                                    p_load = {
+                                        "status": "Pending", 
+                                        "comment": note, 
+                                        "hold_by": "", 
+                                        "hold_at": ""
+                                    }
+                                
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                                st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
+                                
+                                try:
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                except:
+                                    pass
+                                    
                                 st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
                                 st.error("🛑 Closing note is required.")
                             else:
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json={
+                                p_load = {
                                     "status": "Completed", "completed_by": user['name'], 
                                     "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
-                                })
+                                }
+        
+                                # ⚡ OPTIMISTIC UPDATE: Change local state immediately
+                                st.session_state.cached_tasks[tid].update(p_load)
+        
+                                # ⚡ Fire network request quietly
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
                                 st.rerun(scope="fragment")
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
