@@ -824,13 +824,7 @@ with right_pane:
 
                 # Step 4: Render details panel extension contents
                 if show_details:
-                    # Injecting target container rules to cleanly pull elements inside the borders
                     st.markdown(f"""
-                        <style>
-                        div[data-testid="stVerticalBlockBorderWrapper"] {{
-                            margin-bottom: 0px !important;
-                        }}
-                        </style>
                         <div style="
                             border: 1px solid #DDE1E7;
                             border-left: 10px solid {col_ind};
@@ -854,107 +848,93 @@ with right_pane:
                         st.session_state[img_state_key] = False
 
                     if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 10px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    # --- NATIVE STREAMLIT FIELDS INSIDE AN INNER EMBEDDED CONTAINER ---
-                    with st.container(border=True):
-                        # Force inner background wrapper style to match description layout flawlessly
-                        st.markdown("""
-                            <style>
-                            div[data-testid="stSubheader"]+div div[data-testid="stContainer"] {
-                                background-color: #F8F9FA !important;
-                                border: 1px solid #DDE1E7 !important;
-                                border-top: none !important;
-                                margin-top: -26px !important;
-                                margin-bottom: 12px !important;
-                                padding: 0px 20px 16px 20px !important;
-                                border-radius: 0px 0px 8px 8px !important;
-                            }
-                            </style>
-                        """, unsafe_allow_html=True)
-
-                        if stat == "Completed":
-                            st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
-                        else:
-                            c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                            note = c_note.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
-                            w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                            
-                            if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
-                                if stat != "Hold" and not note.strip():
-                                    st.error("🛑 Hold note is required.")
-                                else:
-                                    if stat != "Hold":
-                                        p_load = {
-                                            "status": "Hold", 
-                                            "comment": note, 
-                                            "hold_by": user['name'], 
-                                            "hold_at": get_now_ist()
-                                        }
-                                    else:
-                                        p_load = {
-                                            "status": "Pending", 
-                                            "comment": note, 
-                                            "hold_by": "", 
-                                            "hold_at": ""
-                                        }
-                                    
-                                    st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                                    st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                                    st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
-                                    st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
-                                    
-                                    try:
-                                        requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                    except:
-                                        pass
-                                        
-                                    st.rerun(scope="fragment")
-                                    
-                            if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                                if not note.strip():
-                                    st.error("🛑 Closing note is required.")
+                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
+                    if stat == "Completed":
+                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                    else:
+                        c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
+                        note = c_note.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                        w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                        
+                        if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                            if stat != "Hold" and not note.strip():
+                                st.error("🛑 Hold note is required.")
+                            else:
+                                if stat != "Hold":
+                                    p_load = {
+                                        "status": "Hold", 
+                                        "comment": note, 
+                                        "hold_by": user['name'], 
+                                        "hold_at": get_now_ist()
+                                    }
                                 else:
                                     p_load = {
-                                        "status": "Completed", "completed_by": user['name'], 
-                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
+                                        "status": "Pending", 
+                                        "comment": note, 
+                                        "hold_by": "", 
+                                        "hold_at": ""
                                     }
-            
-                                    # ⚡ OPTIMISTIC UPDATE: Change local state immediately
-                                    st.session_state.cached_tasks[tid].update(p_load)
-            
-                                    # ⚡ Fire network request quietly
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                    st.rerun(scope="fragment")
-
-                        if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                            st.write("")
-                            adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
-                            
-                            if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                                edit_task_dialog(tid, tsk)
                                 
-                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                            if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                                st.session_state[img_state_key] = not st.session_state[img_state_key]
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                                st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
+                                
+                                try:
+                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                except:
+                                    pass
+                                    
                                 st.rerun(scope="fragment")
                                 
-                            with adm2:
-                                st.write("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                                if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
-                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                                        st.rerun(scope="fragment")
-
-                        # --- SCREENSHOT IMAGE INCLUDED INSIDE THE LOWER CONTAINER ---
-                        if st.session_state[img_state_key]:
-                            st.write("")
-                            if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                                try:
-                                    st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                                except:
-                                    st.caption("⚠️ Failed to display attachment image.")
+                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            if not note.strip():
+                                st.error("🛑 Closing note is required.")
                             else:
-                                st.info("ℹ️ No Guidance Screenshot attached to this task.")
+                                p_load = {
+                                    "status": "Completed", "completed_by": user['name'], 
+                                    "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
+                                }
+        
+                                # ⚡ OPTIMISTIC UPDATE: Change local state immediately
+                                st.session_state.cached_tasks[tid].update(p_load)
+        
+                                # ⚡ Fire network request quietly
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                st.rerun(scope="fragment")
+
+                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
+                        st.write("")
+                        # Balanced button columns layout inside card limits
+                        adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
+                        
+                        if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, tsk)
+                            
+                        # Dedicated image control visibility button
+                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                            st.session_state[img_state_key] = not st.session_state[img_state_key]
+                            st.rerun(scope="fragment")
+                            
+                        with adm2:
+                            st.write("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                            if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                    st.rerun(scope="fragment")
+
+                    # --- SCREENSHOT AREA RENDERS LAST (AT THE VERY BOTTOM) ---
+                    if st.session_state[img_state_key]:
+                        st.write("")
+                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                            try:
+                                st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except:
+                                st.caption("⚠️ Failed to display attachment image.")
+                        else:
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
             st.write("")
     render_task_deck()
