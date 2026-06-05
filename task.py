@@ -217,14 +217,9 @@ if not st.session_state.authenticated:
                         st.rerun()
     st.stop()
 
-# --- 4. DATA FETCH (OPTIMIZED FOR SMOOTH REFRESH) ---
+# --- 4. DATA FETCH ---
 user = st.session_state.user_data
-
-# Initialize memory storage if not present
-if "cached_tasks" not in st.session_state:
-    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
-
-tasks_dict = st.session_state.cached_tasks
+tasks_dict = requests.get(TASKS_URL).json() or {}
 master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
 master_cat_data = requests.get(CATEGORIES_URL).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
@@ -561,12 +556,8 @@ with left_pane:
                     "screenshot": img_b64
                 }
                 
-                # Push to Firebase
-                res = requests.post(TASKS_URL, json=payload)
+                requests.post(TASKS_URL, json=payload)
                 requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
-                
-                # SMOOTH UPDATE: Force background refresh of memory storage
-                st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                 
                 st.session_state.last_sub_lan = lan_no
                 st.session_state.show_submit_popup = True
@@ -804,9 +795,6 @@ with right_pane:
                             else:
                                 p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()} if stat != "Hold" else {"status": "Pending", "comment": note, "hold_by": None, "hold_at": None}
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                
-                                # Smoothly update data storage in place
-                                st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                                 st.rerun(scope="fragment")
                                 
                         if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
@@ -817,9 +805,6 @@ with right_pane:
                                     "status": "Completed", "completed_by": user['name'], 
                                     "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
                                 })
-                                
-                                # Smoothly update data storage in place
-                                st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                                 st.rerun(scope="fragment")
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
