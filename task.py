@@ -781,7 +781,7 @@ with right_pane:
                 """, unsafe_allow_html=True)
 
                 raw_txt = str(tsk.get('task', ''))
-                f_line = raw_txt.split('\n')[0]
+                f_line = raw_txt.split('\n')[1]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
                 if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
