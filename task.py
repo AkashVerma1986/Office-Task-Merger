@@ -770,6 +770,19 @@ with right_pane:
                 app_name = tsk.get('applicant_name', '').strip()
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
                 
+                # --- Global Reset to Kill Streamlit's Forced Table Borders ---
+                st.markdown("""
+                    <style>
+                    .stMarkdown table, .stMarkdown tr, .stMarkdown td {
+                        border: none !important;
+                        border-collapse: collapse !important;
+                        background: transparent !important;
+                        background-color: transparent !important;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                # --- Main Card Outer Wrapper ---
                 st.markdown(f"""
                     <div style="
                         border: 1px solid #DDE1E7; 
@@ -778,7 +791,7 @@ with right_pane:
                         padding: 16px 20px; 
                         background-color: #FFFFFF; 
                         box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-                        margin-bottom: 12px;
+                        margin-bottom: 4px;
                     ">
                         <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                             <tr style="border: none; background: transparent;">
@@ -800,9 +813,10 @@ with right_pane:
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
+                # --- Toggle & Inner Operations Box (Merged into the Card Body Flow) ---
                 if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
-                        <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="margin-top: -4px; margin-bottom: 10px; padding: 14px 20px; background-color: #F8F9FA; border: 1px solid #DDE1E7; border-top: none; border-radius: 0 0 8px 8px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
@@ -814,7 +828,7 @@ with right_pane:
                             st.caption("⚠️ Failed to display attachment image.")
                     
                     if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:10px;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="color:#E83E8C; padding:10px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
                     st.divider()
 
