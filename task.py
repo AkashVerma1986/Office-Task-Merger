@@ -781,16 +781,18 @@ with right_pane:
                 """, unsafe_allow_html=True)
 
                 raw_txt = str(tsk.get('task', ''))
-                f_line = raw_txt.split('\n')[1]
+                f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
                 if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
+                    # Native text rendering with zero background wrapper configurations
+                    st.write("") 
                     st.markdown(f"""
-                        <div style="padding: 5px 0px; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <p style="margin: 5px 0; font-size: {int(18 * scale_mod)}px; color: #1A1A1A; line-height: 1.4;">
                             <b>Full Task Description:</b><br>{raw_txt}
-                        </div>
+                        </p>
                     """, unsafe_allow_html=True)
-                    
+    
                     if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                         try:
                             st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
