@@ -786,7 +786,7 @@ with right_pane:
 
                 if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
                     st.markdown(f"""
-                        <div style="margin-top: 10px; padding: 14px; background-color: #F8F9FA; border-radius: 8px; border: 1px solid #DDE1E7; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="padding: 5px 0px; white-space: pre-wrap; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
