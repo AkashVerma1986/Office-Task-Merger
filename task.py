@@ -763,20 +763,9 @@ with right_pane:
                 app_name = tsk.get('applicant_name', '').strip()
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
                 
-                # Wrapped everything inside a single HTML block so Streamlit renders it perfectly
                 st.markdown(f"""
-                    <div style="
-                        border: 1px solid #DDE1E7;
-                        border-radius: 8px;
-                        padding: 0px; 
-                        background-color: #FFFFFF;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                        margin-bottom: 12px;
-                        overflow: hidden;
-                        display: flex;
-                    ">
+                    <div style="border: 1px solid #DDE1E7; border-radius: 8px; padding: 0px; background-color: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 12px; overflow: hidden; display: flex;">
                         <div style="background-color: {col_ind}; width: 10px; min-height: 100%; flex-shrink: 0;"></div>
-                        
                         <div style="padding: 16px 20px; flex-grow: 1; background-color: #FFFFFF;">
                             <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                                 <tr>
