@@ -758,12 +758,13 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
-            with st.container(border=True):
-                # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
+            with st.container(border=False):
                 app_name = tsk.get('applicant_name', '').strip()
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
+                
+                # Pure Dynamic CSS Flexbox setup layout configuration without raw HTML tables
                 st.markdown(f"""
-                    <div style="border-left: 10px solid {col_ind}; margin: -12px -16px 12px -16px; padding: 16px 20px; background-color: #FFFFFF; display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 15px !important; flex-wrap: wrap !important;">
+                    <div style="border-left: 10px solid {col_ind}; margin: 0px 0px 12px 0px; padding: 16px 20px; background-color: #FFFFFF; display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 15px !important; flex-wrap: wrap !important;">
                         
                         <div style="flex: 1 1 50% !important; text-align: left !important; min-width: 250px !important;">
                             <h2 style="margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;">{tsk.get('finance')}</h2>
