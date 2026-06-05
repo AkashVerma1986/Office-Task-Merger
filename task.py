@@ -782,16 +782,28 @@ with right_pane:
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # --- Open Card Container wrapper ---
+                raw_txt = str(tsk.get('task', ''))
+                f_line = raw_txt.split('\n')[0]
+                if len(f_line) > 65: f_line = f_line[:62] + "..."
+
+                # Step 1: Put the toggle at the top of the card logic
+                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                
+                # Dynamic bottom borders: flat bottom if open, rounded bottom if closed
+                card_radius = "8px 8px 0px 0px" if show_details else "8px"
+                card_margin = "0px" if show_details else "12px"
+                
+                # Step 2: Render the top main header of the card
                 st.markdown(f"""
                     <div style="
                         border: 1px solid #DDE1E7; 
                         border-left: 10px solid {col_ind}; 
-                        border-radius: 8px; 
+                        border-radius: {card_radius}; 
                         padding: 16px 20px; 
                         background-color: #FFFFFF; 
                         box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-                        margin-bottom: 12px;
+                        margin-top: 4px;
+                        margin-bottom: {card_margin};
                     ">
                         <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                             <tr style="border: none; background: transparent;">
@@ -806,16 +818,24 @@ with right_pane:
                                 </td>
                             </tr>
                         </table>
+                    </div>
                 """, unsafe_allow_html=True)
 
-                # --- Inner Content Flow Area (Now strictly locked inside the div bounds) ---
-                raw_txt = str(tsk.get('task', ''))
-                f_line = raw_txt.split('\n')[0]
-                if len(f_line) > 65: f_line = f_line[:62] + "..."
-
-                if st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}"):
+                # Step 3: Render the details section directly below the header matching its exact style
+                if show_details:
                     st.markdown(f"""
-                        <div style="margin-top: 10px; margin-bottom: 10px; padding: 14px; background-color: #F8F9FA; border: 1px solid #DDE1E7; border-radius: 6px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="
+                            border: 1px solid #DDE1E7;
+                            border-left: 10px solid {col_ind};
+                            border-top: none;
+                            border-radius: 0px 0px 8px 8px;
+                            padding: 16px 20px;
+                            background-color: #F8F9FA;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                            margin-bottom: 12px;
+                            font-size: {int(18 * scale_mod)}px;
+                            color: #1A1A1A;
+                        ">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
@@ -896,10 +916,5 @@ with right_pane:
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
-
-                # --- Close Card Container wrapper ---
-                st.markdown("""
-                    </div>
-                """, unsafe_allow_html=True)
             st.write("")
     render_task_deck()
