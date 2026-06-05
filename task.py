@@ -786,20 +786,18 @@ with right_pane:
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
-                # Step 1: Put the toggle at the top of the card logic
-                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                # Step 1: Check session state first to handle dynamic box boundaries
+                is_open = st.session_state.get(f"card_exp_state_{tid}", False)
+                card_radius = "8px 8px 0px 0px" if is_open else "8px"
+                card_margin = "0px" if is_open else "12px"
                 
-                # Dynamic bottom borders: flat bottom if open, rounded bottom if closed
-                card_radius = "8px 8px 0px 0px" if show_details else "8px"
-                card_margin = "0px" if show_details else "12px"
-                
-                # Step 2: Render the top main header of the card
+                # Step 2: Render Top Card Content Header Block
                 st.markdown(f"""
                     <div style="
                         border: 1px solid #DDE1E7; 
                         border-left: 10px solid {col_ind}; 
                         border-radius: {card_radius}; 
-                        padding: 16px 20px; 
+                        padding: 16px 20px 10px 20px; 
                         background-color: #FFFFFF; 
                         box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
                         margin-top: 4px;
@@ -821,7 +819,10 @@ with right_pane:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # Step 3: Render the details section directly below the header matching its exact style
+                # Step 3: Placing the Expand Button directly on the last line of the header section
+                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+
+                # Step 4: Render everything inside the card box extension when opened
                 if show_details:
                     st.markdown(f"""
                         <div style="
@@ -832,6 +833,7 @@ with right_pane:
                             padding: 16px 20px;
                             background-color: #F8F9FA;
                             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                            margin-top: -14px;
                             margin-bottom: 12px;
                             font-size: {int(18 * scale_mod)}px;
                             color: #1A1A1A;
