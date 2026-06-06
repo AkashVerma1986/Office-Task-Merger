@@ -178,7 +178,7 @@ st.markdown(f"""
 
     div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
     div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
-    /* --- Paste this right before the closing </style> tag --- */
+    /* --- Paste this right before the closing </style> 
     
     
     </style>
@@ -810,7 +810,7 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
-            with st.container(border=True):
+            with st.container():
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
