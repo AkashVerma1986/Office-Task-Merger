@@ -775,8 +775,23 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # --- 1. CARD HEADER BLOCK (NATIVE COLUMNS) ---
-                hdr_left, hdr_right = st.columns([1.6, 1.1])
+                # --- NEW VERTICAL STATUS COLOR BAR INJECTOR ---
+                st.markdown(f"""
+                    <div style="
+                        position: absolute;
+                        left: 0px;
+                        top: 0px;
+                        bottom: 0px;
+                        width: 10px;
+                        background-color: {col_ind};
+                        border-top-left-radius: 8px;
+                        border-bottom-left-radius: 8px;
+                    "></div>
+                """, unsafe_allow_html=True)
+
+                # --- 1. CARD HEADER BLOCK (NATIVE COLUMNS WITH LEFT PADDING FOR THE BAR) ---
+                # Added an empty small column on the far left to act as padding so text doesn't hit the color bar
+                _, hdr_left, hdr_right = st.columns([0.05, 1.55, 1.1])
                 
                 with hdr_left:
                     st.markdown(f"""
@@ -807,11 +822,14 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                st.divider()
+                # Offset the remaining content inside the card slightly rightward so it looks clean
+                _, main_content_col = st.columns([0.05, 2.65])
+                with main_content_col:
+                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                    st.divider()
 
-                # --- 2. DETAILS ACCORDION BLOCK ---
-                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                    # --- 2. DETAILS ACCORDION BLOCK ---
+                    show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 # EVERYTHING below this line is now locked inside this conditional block!
                 if show_details:
