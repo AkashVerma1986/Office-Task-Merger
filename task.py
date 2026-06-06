@@ -879,7 +879,7 @@ with right_pane:
                                     p_load = {
                                         "status": "Hold", 
                                         "comment": note, 
-                                        "hold_reason": note,  # <-- Permanent tracking field
+                                        "hold_reason": note,  
                                         "hold_by": user['name'], 
                                         "hold_at": get_now_ist()
                                     }
@@ -890,7 +890,6 @@ with right_pane:
                                         "comment": note, 
                                         "hold_by": "", 
                                         "hold_at": ""
-                                        # "hold_reason" is intentionally omitted here so it remains in Firebase
                                     }
                                 
                                 st.session_state.cached_tasks[tid]["status"] = p_load["status"]
