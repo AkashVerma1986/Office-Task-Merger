@@ -665,10 +665,23 @@ with left_pane:
             for col in required_cols:
                 if col not in export_df.columns: export_df[col] = ""
 
-            export_df['rt Done Comment'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Completed' else "", axis=1)
-            export_df['Hold Reason'] = export_df['hold_reason'].fillna("")
+            # --- Safely look up fields even if they don't exist in older database entries ---
+            export_df['rt Done Comment'] = export_df.apply(lambda r: r.get('comment', "") if r.get('status') == 'Completed' else "", axis=1)
+            
+            # Checks if any case has a hold_reason column; if not, initializes it as blank
+            if 'hold_reason' in export_df.columns:
+                export_df['Hold Reason'] = export_df['hold_reason'].fillna("")
+            else:
+                export_df['Hold Reason'] = ""
 
+            # Ensure all required final columns are mapped perfectly without crashing
             final_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
+            
+            # Create any missing columns dynamically so export_df[final_cols] doesn't trip a KeyError
+            for col in final_cols:
+                if col not in export_df.columns:
+                    export_df[col] = ""
+
             export_df = export_df[final_cols]
 
             buf = io.BytesIO()
