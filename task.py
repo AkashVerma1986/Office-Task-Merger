@@ -797,7 +797,7 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Opens the structural unified card layout
+                # REMOVED the early closing </div></div> here so everything stays inside
                 st.markdown(f"""
                     <div class="full-card-wrapper">
                         <div class="left-accent-strip" style="background-color: {col_ind};"></div>
@@ -822,7 +822,7 @@ with right_pane:
                             </div>
                 """, unsafe_allow_html=True)
 
-                # --- OPERATIONAL WIDGETS PLACED DIRECTLY INSIDE CARD BODY AREA ---
+                # --- OPERATIONAL WIDGETS ARE NOW NATURALLY INSIDE THE CARD FRAME ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
@@ -937,7 +937,7 @@ with right_pane:
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
 
-                # Finishes and seals the custom white-background card boundary enclosing everything inside
+                # Cleanly close out the card container box AFTER all widgets are executed
                 st.markdown('</div></div>', unsafe_allow_html=True)
 
             st.write("")
