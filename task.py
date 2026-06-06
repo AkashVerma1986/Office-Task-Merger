@@ -922,7 +922,7 @@ with right_pane:
                                     "work_type": w_type, 
                                     "comment": note, 
                                     "finished_at": get_now_ist(), 
-                                    "screenshot": None
+                                    
                                 }
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
