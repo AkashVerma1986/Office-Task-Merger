@@ -149,30 +149,33 @@ st.markdown(f"""
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
-
-    /* --- ULTRA-COMPACT SPACE SAVER RULES --- */
-    .compact-card {{
-        margin-bottom: 2px !important;
-        padding: 4px 10px !important;
-    }}
-    .compact-card h2 {{
-        font-size: 18px !important;
+    div[data-testid="stMetric"] div { font-size: {int(20 * scale_mod)}px !important; }
+    div[data-testid="stMetricLabel"] > div { font-size: {int(13 * scale_mod)}px !important; }
+    
+    /* --- ULTIMATE FORCE-COMPACT OVERRIDES --- */
+    div[data-testid="stVerticalBlock"]:has(> div > div > .compact-card) {
+        gap: 0px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) > div {
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .compact-card h2 {
+        font-size: 20px !important;
         margin: 0 !important;
         line-height: 1.0 !important;
-    }}
-    .compact-card span, .compact-card div, .compact-card code {{
+    }
+    .compact-card span, .compact-card div, .compact-card code, .compact-card p {
         font-size: 13px !important;
-    }}
-    .compact-card .stElementContainer hr {{
-        display: none !important;
-        margin: 0 !important;
-    }}
-    .compact-card div[data-testid="stHorizontalBlock"] {{
-        gap: 0.2rem !important;
-    }}
-
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) div[data-testid="stHorizontalBlock"] {
+        gap: 0.1rem !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) hr {
+        margin: 2px 0 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 # --- 3. AUTH & DEVICE LOCK ---
@@ -807,6 +810,9 @@ with right_pane:
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
             with st.container(border=True):
+                # Dynamically apply compact formatting style string if enabled
+                card_style_class = "compact-card" if st.session_state.compact_view else "normal-card"
+
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
@@ -818,7 +824,7 @@ with right_pane:
                 card_style_class = "full-card-wrapper compact-card" if st.session_state.compact_view else "full-card-wrapper"
 
                 # Opens the full-width edge wrapper with dynamic stretching/shrinking class properties
-                st.markdown(f'<div class="{card_style_class}"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
+                st.markdown(f'<div class="{card_style_class}"><div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
                 # --- CARD HEADER BLOCK ---
                 hdr_left, hdr_right = st.columns([1.6, 1.1])
                 
