@@ -150,31 +150,34 @@ st.markdown(f"""
     .status-high {{ background-color: #DC3545 !important; }}
 
     div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div { font-size: {int(13 * scale_mod)}px !important; }
     
-    /* --- ULTIMATE FORCE-COMPACT OVERRIDES --- */
-    div[data-testid="stVerticalBlock"]:has(> div > div > .compact-card) {{
-        gap: 0px !important;
+    /* --- SYSTEM-LEVEL COMPACT FORCE ENGINE --- */
+    .compact-card-frame {{
+        background: #FFFFFF !important;
+        border: 1px solid #DDE1E7 !important;
+        border-radius: 8px !important;
+        padding: 4px 12px !important;
+        margin-bottom: 6px !important;
+        width: 100% !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }}
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) > div {{
-        padding-top: 4px !important;
-        padding-bottom: 4px !important;
-        padding-left: 12px !important;
-        padding-right: 12px !important;
-    }}
-    .compact-card h2 {{
+    
+    .compact-card-frame h2 {{
         font-size: 20px !important;
         margin: 0 !important;
-        line-height: 1.0 !important;
+        line-height: 1.1 !important;
     }}
-    .compact-card span, .compact-card div, .compact-card code, .compact-card p {{
+    
+    .compact-card-frame span, 
+    .compact-card-frame div, 
+    .compact-card-frame code, 
+    .compact-card-frame p {{
         font-size: 13px !important;
     }}
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) div[data-testid="stHorizontalBlock"] {{
-        gap: 0.1rem !important;
-    }}
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) hr {{
-        margin: 2px 0 !important;
+    
+    .compact-card-frame hr {{
+        margin: 4px 0 !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -808,24 +811,26 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
-            # --- SINGLE UNIFIED TASK CARD CONTAINER ---
-            with st.container(border=True):
-                # Dynamically apply compact formatting style string if enabled
-                card_style_class = "compact-card" if st.session_state.compact_view else "normal-card"
+            # --- CUSTOM DYNAMIC HEIGHT CONTROLLER CONTAINER ---
+            if st.session_state.compact_view:
+                # Bypass Streamlit's heavy native padding by using a basic layout slot with our custom frame class
+                card_zone = st.container(border=False)
+                card_class_string = "compact-card-frame"
+            else:
+                # Fallback directly to your original style structure
+                card_zone = st.container(border=True)
+                card_class_string = "normal-card"
 
+            with card_zone:
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
-                # Dynamically apply compact formatting classes if enabled
-                card_style_class = "full-card-wrapper compact-card" if st.session_state.compact_view else "full-card-wrapper"
+                # Opens the structural layout container with our selected class name
+                st.markdown(f'<div class="{card_class_string}"><div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
 
-                # Opens the full-width edge wrapper with dynamic stretching/shrinking class properties
-                st.markdown(f'<div class="{card_style_class}"><div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
-                # --- CARD HEADER BLOCK ---
                 hdr_left, hdr_right = st.columns([1.6, 1.1])
                 
                 with hdr_left:
