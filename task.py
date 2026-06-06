@@ -8,6 +8,8 @@ import os
 import time
 import base64
 import streamlit.components.v1 as components
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- 1. CONFIGURATION ---
 DB_BASE_URL = "https://office-task-ledger-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -221,7 +223,7 @@ if not st.session_state.authenticated:
             if not name_in or not pwd_in:
                 st.warning("⚠️ Please fill in both Name and Password fields.")
             else:
-                users_db = requests.get(USERS_URL).json() or {}
+                users_db = requests.get(USERS_URL, verify=False).json() or {}
                 is_admin = (pwd_in == "1586")
                 dev_id = get_device_id()
 
@@ -270,11 +272,10 @@ user = st.session_state.user_data
 
 # Initialize memory storage if not present
 if "cached_tasks" not in st.session_state:
-    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
-
+    st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {}
 tasks_dict = st.session_state.cached_tasks
-master_fin_data = requests.get(FINANCE_MASTER_URL).json() or {}
-master_cat_data = requests.get(CATEGORIES_URL).json() or {}
+master_fin_data = requests.get(FINANCE_MASTER_URL, verify=False).json() or {}
+master_cat_data = requests.get(CATEGORIES_URL, verify=False).json() or {}
 all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
@@ -718,7 +719,7 @@ with right_pane:
         
         st.write("") 
         
-        live_tasks = requests.get(TASKS_URL).json() or {}
+        live_tasks = requests.get(TASKS_URL, verify=False).json() or {}
         live_df = pd.DataFrame.from_dict(live_tasks, orient='index')
         
         if not live_df.empty:
