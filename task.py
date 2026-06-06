@@ -823,8 +823,35 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
                 # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
-                st.markdown(f'<div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div class="full-card-wrapper">
+                        <div class="left-accent-strip" style="background-color: {col_ind};"></div>
+                        
+                        <div class="right-card-content" style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start; gap: 16px;">
+                            
+                            <div style="flex: 1;">
+                                <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
+                                    {tsk.get('finance')}
+                               </h2>
+                                {"<span style='font-size: " + str(int(22 * scale_mod)) + "px; color: #000000; display: block; margin-bottom: 4px;'><b>Applicant:</b> " + app_name + "</span>" if app_name else ""}
+                                <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
+                                    <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
+                                </span>
+                            </div>
+                            
+                            <div style="text-align: right; min-width: 180px;">
+                                <div style='font-size: {int(20 * scale_mod)}px; color: #1A1A1A; line-height: 1.3;'>
+                                    <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
+                                    <span style='color: #666666; font-size: {int(16 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
+                                    <span style='color: #666666; font-size: {int(16 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
+                                </div>
+                            </div>
 
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                st.divider()
                 # --- CARD HEADER BLOCK ---
                 hdr_left, hdr_right = st.columns([1.6, 1.1])
                 
