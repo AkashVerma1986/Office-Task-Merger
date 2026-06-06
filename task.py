@@ -150,7 +150,7 @@ st.markdown(f"""
     .status-high {{ background-color: #DC3545 !important; }}
 
     div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div { font-size: {int(13 * scale_mod)}px !important; }
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     
     /* --- SYSTEM-LEVEL COMPACT FORCE ENGINE --- */
     .compact-card-frame {{
