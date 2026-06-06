@@ -801,13 +801,12 @@ with right_pane:
                 # Inject style to paint the left bar directly onto the background gradient layer
                 st.markdown(f"""
                     <style>
-                        /* Paint a seamless color bar on the background canvas and handle standard inner alignment padding */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
                             background: linear-gradient(to right, {col_ind} 12px, #FFFFFF 12px) !important;
-                            padding-left: 28px !important; /* Retains clean internal breathing room away from the strip */
+                            padding-left: 32px !important; 
                             padding-top: 16px !important;
                             padding-bottom: 16px !important;
-                            border-left: 1px solid #DDE1E7 !important; /* Restores subtle gray framework boundary line */
+                            border-left: 1px solid #DDE1E7 !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
@@ -847,23 +846,35 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
                     
+                    # --- 1. HISTORICAL / CURRENT HOLD LOG DETAILS ---
                     if tsk.get("hold_reason"):
+                        h_by = tsk.get('hold_by', 'UNKNOWN')
+                        h_at = tsk.get('hold_at', 'N/A')
                         st.markdown(f"""
-                            <div style="background-color: #FFF0F5; border-left: 5px solid #E83E8C; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;">
-                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
-                                <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
+                            <div style="
+                                background-color: #FFF0F5; 
+                                border-left: 5px solid #E83E8C; 
+                                padding: 8px 12px; 
+                                border-radius: 4px; 
+                                margin-bottom: 12px;
+                                font-size: {int(14 * scale_mod)}px;
+                            ">
+                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HOLD LOG ENTRY:</span><br>
+                                <b>Reason:</b> {tsk.get("hold_reason")}<br>
+                                <span style="color: #555555; font-size: 12px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
                             </div>
                         """, unsafe_allow_html=True)
 
                     img_state_key = f"view_photo_{tid}"
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
-
-                    if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
+                    # --- 2. CLOSED / COMPLETED LOG DETAILS ---
                     if stat == "Completed":
-                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                        c_by = tsk.get('completed_by', 'UNKNOWN')
+                        c_at = tsk.get('finished_at', 'N/A')
+                        c_note = tsk.get('comment', 'N/A')
+                        st.success(f"✅ Closed by {c_by} on {c_at} | Note: {c_note}")
                     else:
                         r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
                         note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
@@ -893,6 +904,8 @@ with right_pane:
                                 st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
                                 if "hold_reason" in p_load:
                                     st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
+                                    st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                                    st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
                                     
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
