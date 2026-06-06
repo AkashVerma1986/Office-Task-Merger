@@ -153,30 +153,30 @@ st.markdown(f"""
     div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     /* --- Paste this right before the closing </style> tag --- */
     
-    /* Remove Streamlit's internal container padding so the color bar hits the edge */
-    div[data-testid="stContainer"] {{
-        padding: 0px !important;
-        overflow: hidden !important;
+    /* Remove Streamlit's internal container padding so the color bar hits the edge */ 
+    div[data-testid="stContainer"] {{ 
+        padding: 0px !important; 
+        overflow: hidden !important; 
     }}
 
-    /* Flex system to place color bar and text side-by-side */
-    .full-card-wrapper {{
-        display: flex !important;
-        flex-direction: row !important;
-        width: 100% !important;
+    /* Flex system to place color bar and text side-by-side */ 
+    .full-card-wrapper {{ 
+        display: flex !important; 
+        flex-direction: row !important; 
+        width: 100% !important; 
     }}
 
-    /* Vertical color bar layout */
-    .left-accent-strip {{
-        width: 10px !important;
-        flex-shrink: 0 !important;
-        align-self: stretch !important;
+    /* Vertical color bar layout */ 
+    .left-accent-strip {{ 
+        width: 10px !important; 
+        flex-shrink: 0 !important; 
+        align-self: stretch !important; 
     }}
 
-    /* Content space adjustment padding */
-    .right-card-content {{
-        flex-grow: 1 !important;
-        padding: 14px 16px !important;
+    /* Content space adjustment padding */ 
+    .right-card-content {{ 
+        flex-grow: 1 !important; 
+        padding: 14px 16px !important; 
     }}
     </style>
 """, unsafe_allow_html=True)
