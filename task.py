@@ -798,27 +798,18 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Inject the Left Accent Strip Flushed perfectly with the Outer Border
+                # Inject style to dynamically force a full-height solid color left border on the active container box
                 st.markdown(f"""
-                    <div style="
-                        position: absolute;
-                        left: -17px;
-                        top: -17px;
-                        bottom: -17px;
-                        width: 10px;
-                        background-color: {col_ind};
-                        border-top-left-radius: 6px;
-                        border-bottom-left-radius: 6px;
-                        z-index: 10;
-                    "></div>
                     <style>
-                        /* Target this container block specifically to handle layout stacking */
-                        div[data-testid="stVerticalBlockBorderContainer"] {{
-                            position: relative !important;
-                            padding-left: 24px !important; /* Extra padding so text clears the color bar */
-                            overflow: hidden !important;   /* Ensures negative margins don't bleed out */
+                        /* Target the parent border container to wipe out left border and replace it with a flush accent bar */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
+                            border-left: 12px solid {col_ind} !important;
+                            border-top-left-radius: 8px !important;
+                            border-bottom-left-radius: 8px !important;
+                            padding-left: 20px !important; /* Retains clean internal breathing room for the text */
                         }}
                     </style>
+                    <div data-card-id="{tid}" style="display:none;"></div>
                 """, unsafe_allow_html=True)
 
                 # Layout Header items cleanly inside columns 
