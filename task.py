@@ -830,10 +830,10 @@ with right_pane:
                     st.divider()
 
                     # --- DETAILS ACCORDION BLOCK ---
-                    show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                    # --- DETAILS ACCORDION BLOCK ---
+                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
-                    # Everything else stays nested cleanly inside the content column if toggled
-                    if show_details:
+                if show_details:
                     st.markdown(f"""
                         <div style="padding: 10px 0px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
@@ -841,7 +841,6 @@ with right_pane:
                     """, unsafe_allow_html=True)
                     
                     # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
-                    # If this specific task has ever been held in the past, display it here forever
                     if tsk.get("hold_reason"):
                         st.markdown(f"""
                             <div style="
@@ -855,10 +854,10 @@ with right_pane:
                                 <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
                             </div>
                         """, unsafe_allow_html=True)
-                        
-                        img_state_key = f"view_photo_{tid}"
-                        if img_state_key not in st.session_state:
-                            st.session_state[img_state_key] = False
+
+                    img_state_key = f"view_photo_{tid}"
+                    if img_state_key not in st.session_state:
+                        st.session_state[img_state_key] = False
 
                         if stat == "Hold":
                             st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
