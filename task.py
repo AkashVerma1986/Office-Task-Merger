@@ -153,29 +153,29 @@ st.markdown(f"""
     div[data-testid="stMetricLabel"] > div { font-size: {int(13 * scale_mod)}px !important; }
     
     /* --- ULTIMATE FORCE-COMPACT OVERRIDES --- */
-    div[data-testid="stVerticalBlock"]:has(> div > div > .compact-card) {
+    div[data-testid="stVerticalBlock"]:has(> div > div > .compact-card) {{
         gap: 0px !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) > div {
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) > div {{
         padding-top: 4px !important;
         padding-bottom: 4px !important;
         padding-left: 12px !important;
         padding-right: 12px !important;
-    }
-    .compact-card h2 {
+    }}
+    .compact-card h2 {{
         font-size: 20px !important;
         margin: 0 !important;
         line-height: 1.0 !important;
-    }
-    .compact-card span, .compact-card div, .compact-card code, .compact-card p {
+    }}
+    .compact-card span, .compact-card div, .compact-card code, .compact-card p {{
         font-size: 13px !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) div[data-testid="stHorizontalBlock"] {
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) div[data-testid="stHorizontalBlock"] {{
         gap: 0.1rem !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) hr {
+    }}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.compact-card) hr {{
         margin: 2px 0 !important;
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 # --- 3. AUTH & DEVICE LOCK ---
