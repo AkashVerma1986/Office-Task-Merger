@@ -799,15 +799,19 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Inject style to paint the left bar directly onto the background gradient layer
+                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
+                bg_tint = col_ind + "12" 
+
+                # Inject style to paint both the left strip and a soft color wash across the entire card background
                 st.markdown(f"""
                     <style>
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                            background: linear-gradient(to right, {col_ind} 12px, #FFFFFF 12px) !important;
+                            background: linear-gradient(to right, {col_ind} 12px, {bg_tint} 12px) !important;
                             padding-left: 32px !important; 
                             padding-top: 16px !important;
                             padding-bottom: 16px !important;
-                            border-left: 1px solid #DDE1E7 !important;
+                            border: 1px solid {col_ind}44 !important;
+                            border-radius: 8px !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
