@@ -798,15 +798,19 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Inject style to dynamically force a full-height solid color left border on the active container box
+                # Inject style to pull the left border bar edge-to-edge flawlessly
                 st.markdown(f"""
                     <style>
-                        /* Target the parent border container to wipe out left border and replace it with a flush accent bar */
+                        /* Eliminate top, bottom, and left container gaps by updating the parent wrapper */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
                             border-left: 12px solid {col_ind} !important;
                             border-top-left-radius: 8px !important;
                             border-bottom-left-radius: 8px !important;
-                            padding-left: 20px !important; /* Retains clean internal breathing room for the text */
+                            padding-left: 20px !important;
+                            padding-top: 14px !important;
+                            padding-bottom: 14px !important;
+                            margin-top: 0px !important;
+                            margin-bottom: 0px !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
