@@ -798,19 +798,16 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Inject style to pull the left border bar edge-to-edge flawlessly
+                # Inject style to paint the left bar directly onto the background gradient layer
                 st.markdown(f"""
                     <style>
-                        /* Eliminate top, bottom, and left container gaps by updating the parent wrapper */
+                        /* Paint a seamless color bar on the background canvas and handle standard inner alignment padding */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                            border-left: 12px solid {col_ind} !important;
-                            border-top-left-radius: 8px !important;
-                            border-bottom-left-radius: 8px !important;
-                            padding-left: 20px !important;
-                            padding-top: 14px !important;
-                            padding-bottom: 14px !important;
-                            margin-top: 0px !important;
-                            margin-bottom: 0px !important;
+                            background: linear-gradient(to right, {col_ind} 12px, #FFFFFF 12px) !important;
+                            padding-left: 28px !important; /* Retains clean internal breathing room away from the strip */
+                            padding-top: 16px !important;
+                            padding-bottom: 16px !important;
+                            border-left: 1px solid #DDE1E7 !important; /* Restores subtle gray framework boundary line */
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
