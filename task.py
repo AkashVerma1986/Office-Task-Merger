@@ -666,14 +666,14 @@ with left_pane:
         
         st.divider()
 
-        filtered_df['prio_num'] = filtered_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
-        filtered_df = filtered_df.sort_values(by='date_dt' if view_filter == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter == "All Tasks" else [True, False])
+        filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True):
                 if "raas_ultimate_search_deck" in st.session_state:
                     st.session_state["raas_ultimate_search_deck"] = ""
+                st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
                 st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
@@ -728,6 +728,7 @@ with right_pane:
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
             if "raas_ultimate_search_deck" in st.session_state:
                 st.session_state["raas_ultimate_search_deck"] = ""
+            st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
@@ -744,7 +745,7 @@ with right_pane:
         
         st.write("") 
         
-        live_tasks = requests.get(TASKS_URL, verify=False).json() or {}
+        live_tasks = st.session_state.cached_tasks
         live_df = pd.DataFrame.from_dict(live_tasks, orient='index')
         
         if not live_df.empty:
@@ -771,7 +772,7 @@ with right_pane:
                 ]
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
-            f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
+            f_df = f_df.sort_values(by='date_dt', ascending=False)
             keys = list(f_df.index)
         else:
             keys = []
