@@ -813,59 +813,59 @@ with right_pane:
 
             # --- CUSTOM DYNAMIC HEIGHT CONTROLLER CONTAINER ---
             if st.session_state.compact_view:
-                # Bypass Streamlit's heavy native padding by using a basic layout slot with our custom frame class
-                card_zone = st.container(border=False)
-                card_class_string = "compact-card-frame"
-            else:
-                # Fallback directly to your original style structure
-                card_zone = st.container(border=True)
-                card_class_string = "normal-card"
-
-            with card_zone:
-                app_name = tsk.get('applicant_name', '').strip()
-                raw_txt = str(tsk.get('task', ''))
-                f_line = raw_txt.split('\n')[0]
-                if len(f_line) > 65: 
-                    f_line = f_line[:62] + "..."
-
-                # Opens the structural layout container with our selected class name
-                st.markdown(f'<div class="{card_class_string}"><div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
-
-                hdr_left, hdr_right = st.columns([1.6, 1.1])
+                # 1. ULTRA-COMPACT VIEW: Pure, razor-thin HTML execution
+                card_html = f"""
+                <div style="
+                    background: #FFFFFF;
+                    border: 1px solid #DDE1E7;
+                    border-left: 6px solid {col_ind};
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    margin-bottom: 4px;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+                ">
+                    <table style="width:100%; border:none; margin:0; padding:0; border-collapse:collapse;">
+                        <tr style="border:none; background:transparent;">
+                            <td style="padding:0; margin:0; border:none; vertical-align:top;">
+                                <h3 style="margin:0 0 2px 0; padding:0; font-size:16px; font-weight:700; color:#1A1A1A;">
+                                    {tsk.get('finance')} 
+                                    <span style="font-size:13px; font-weight:normal; color:#4A4A4A; margin-left:10px;">
+                                        <b>LAN:</b> <code style="background:#F0F2F6; padding:1px 4px; border-radius:3px;">{tsk.get('lan', 'N/A')}</code>
+                                    </span>
+                                </h3>
+                                {f'<span style="font-size:13px; color:#333333; display:block;"><b>Applicant:</b> {app_name}</span>' if app_name else ''}
+                            </td>
+                            <td style="padding:0; margin:0; border:none; text-align:right; vertical-align:top; white-space:nowrap;">
+                                <span style="font-size:12px; font-weight:bold; color:{col_ind}; text-transform:uppercase;">{stat}</span><br>
+                                <span style="font-size:11px; color:#666666;">By: {tsk.get('assigner')} | {tsk.get('assigned_at')}</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                """
+                st.markdown(card_html, unsafe_allow_html=True)
                 
-                with hdr_left:
-                    st.markdown(f"""
-                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
-                            {tsk.get('finance')}
-                        </h2>
-                    """, unsafe_allow_html=True)
-                    
-                    if app_name:
-                        st.markdown(f"""
-                            <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
-                                <b>Applicant:</b> {app_name}
-                            </span>
-                        """, unsafe_allow_html=True)
-                        
-                    st.markdown(f"""
-                        <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
-                            <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
-                        </span>
-                    """, unsafe_allow_html=True)
-                    
-                with hdr_right:
-                    st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
-                            <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                # Render operations natively only inside an incredibly tight expander block
+                card_zone = st.container()
+            else:
+                # 2. NORMAL VIEW: Standard spacious card system
+                card_zone = st.container(border=True)
+                with card_zone:
+                    st.markdown(f'<div style="border-left: 6px solid {col_ind}; padding-left: 12px; margin-left: -4px;">', unsafe_allow_html=True)
+                    hdr_left, hdr_right = st.columns([1.6, 1.1])
+                    with hdr_left:
+                        st.markdown(f"<h2 style='margin:0 0 4px 0; line-height:1.1; font-size:{int(34 * scale_mod)}px; font-weight:500; color:#1A1A1A;'>{tsk.get('finance')}</h2>", unsafe_allow_html=True)
+                        if app_name:
+                            st.markdown(f"<span style='font-size:{int(22 * scale_mod)}px; color:#000000; display:block; margin-bottom:4px;'><b>Applicant:</b> {app_name}</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='font-size:{int(16 * scale_mod)}px; color:#4A4A4A;'><b>LAN:</b> <code style='background-color:#F0F2F6; padding:2px 6px; border-radius:4px;'>{tsk.get('lan', 'N/A')}</code></span>", unsafe_allow_html=True)
+                    with hdr_right:
+                        st.markdown(f"<div style='text-align:right; font-size:{int(20 * scale_mod)}px; color:#1A1A1A;'><b>Status:</b> <span style='text-transform:uppercase; font-weight:bold; color:{col_ind};'>{stat}</span><br><span style='color:#666666; font-size:{int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br><span style='color:#666666; font-size:{int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span></div>", unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                    st.divider()
 
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                st.divider()
-
-                # --- DETAILS ACCORDION BLOCK ---
+            # --- DETAILS ACCORDION BLOCK (Common to both modes) ---
+            with card_zone:
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
@@ -875,16 +875,9 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
                     if tsk.get("hold_reason"):
                         st.markdown(f"""
-                            <div style="
-                                background-color: #FFF0F5; 
-                                border-left: 5px solid #E83E8C; 
-                                padding: 8px 12px; 
-                                border-radius: 4px; 
-                                margin-bottom: 12px;
-                            ">
+                            <div style="background-color: #FFF0F5; border-left: 5px solid #E83E8C; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;">
                                 <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
                                 <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
                             </div>
@@ -897,7 +890,6 @@ with right_pane:
                     if stat == "Hold":
                         st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    # --- ROW 1: OPERATIONS ACTION BUTTONS ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
@@ -910,20 +902,9 @@ with right_pane:
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    p_load = {
-                                        "status": "Hold", 
-                                        "comment": note, 
-                                        "hold_reason": note,  
-                                        "hold_by": user['name'], 
-                                        "hold_at": get_now_ist()
-                                    }
+                                    p_load = {"status": "Hold", "comment": note, "hold_reason": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                                 else:
-                                    p_load = {
-                                        "status": "Pending", 
-                                        "comment": note, 
-                                        "hold_by": "", 
-                                        "hold_at": ""
-                                    }
+                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": ""}
                                 
                                 st.session_state.cached_tasks[tid]["status"] = p_load["status"]
                                 st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
@@ -931,27 +912,19 @@ with right_pane:
                                     st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
                                     
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                except: pass
+                                catch: pass
                                 st.rerun(scope="fragment")
                                 
                         if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
                                 r1_col1.error("🛑 Closing note is required.")
                             else:
-                                p_load = {
-                                    "status": "Completed", 
-                                    "completed_by": user['name'], 
-                                    "work_type": w_type, 
-                                    "comment": note, 
-                                    "finished_at": get_now_ist(), 
-                                    "screenshot": None
-                                }
+                                p_load = {"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                except: pass
+                                catch: pass
                                 st.rerun(scope="fragment")
 
-                    # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                         r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
@@ -972,19 +945,15 @@ with right_pane:
                             if del_checked:
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                    except: pass
+                                    catch: pass
                                     st.rerun(scope="fragment")
 
-                    # --- SCREENSHOT ENGINE ---
                     if st.session_state[img_state_key]:
                         st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                            except: st.caption("⚠️ Failed to display attachment image.")
+                            catch: st.caption("⚠️ Failed to display attachment image.")
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
-
-                # Closes HTML wrapper containers cleanly
-                st.markdown('</div></div>', unsafe_allow_html=True)
             st.write("")
     render_task_deck()
