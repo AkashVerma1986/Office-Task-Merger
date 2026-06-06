@@ -185,7 +185,6 @@ st.markdown(f"""
     div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
-
 # --- 3. AUTH & DEVICE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
@@ -300,9 +299,10 @@ if not st.session_state.authenticated:
                         st.rerun()
     st.stop()
 
-# --- 4. DATA FETCH ---
+# --- 4. DATA FETCH (OPTIMIZED FOR SMOOTH REFRESH) ---
 user = st.session_state.user_data
 
+# Initialize memory storage if not present
 if "cached_tasks" not in st.session_state:
     st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {}
 tasks_dict = st.session_state.cached_tasks
@@ -312,6 +312,7 @@ all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
+# Pulls the right-pane search text globally so the left-pane filters don't crash
 search = st.session_state.get("raas_ultimate_search_deck", "").lower()
 
 @st.dialog("Edit Task Details", width="large")
@@ -326,6 +327,7 @@ def edit_task_dialog(tid, task):
     current_c = "---"
     clean_task_text = full_task_text
     
+    # Securely strip any existing category brackets so they don't compound
     if isinstance(full_task_text, str) and full_task_text.startswith("[") and "]" in full_task_text:
         try:
             parts = full_task_text.split("]", 1)
@@ -546,6 +548,8 @@ with left_pane:
                     time.sleep(0.4)
                     st.rerun()
         
+    
+    
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
         st.write("") 
@@ -569,6 +573,7 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
+        # The key dynamic binding ensures that when form_version increases, all inputs inside are wiped completely clean
         with st.container(key=f"form_container_v_{st.session_state.form_version}"):
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
@@ -610,15 +615,22 @@ with left_pane:
                     requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                     
+                    # Refresh data storage cache mapping
+                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
+
+                    # Force incremental layout reset — this instantly clears all input widgets and the file uploader
                     st.session_state.form_version += 1
                     st.rerun()
                 elif not lan_no:
                     st.error("🛑 LAN No. is mandatory!")
                 else:
                     st.warning("⚠️ Please fill in Finance and Task Details.")
+            # ⬆️ STOP INDENTING HERE ⬆️
 
+    # This next line stays at its original indentation level (outside the container)
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
@@ -643,9 +655,9 @@ with left_pane:
         if view_filter == "Pending": filtered_df = filtered_df[filtered_df['status'] == "Pending"]
         elif view_filter == "Hold": filtered_df = filtered_df[filtered_df['status'] == "Hold"]
         elif view_filter == "Completed": filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt]
+        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt] # Updated
         elif view_filter == "Yesterday":
-            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))]
+            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))] # Updated
         if len(date_range) == 2:
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= date_range[0]) & (filtered_df['date_dt'].dt.date <= date_range[1])]
 
@@ -672,6 +684,7 @@ with left_pane:
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
+                # Clear the search box state completely on click
                 if "raas_ultimate_search_deck" in st.session_state:
                     st.session_state["raas_ultimate_search_deck"] = ""
                 st.rerun()
@@ -684,15 +697,19 @@ with left_pane:
             for col in required_cols:
                 if col not in export_df.columns: export_df[col] = ""
 
+            # --- Safely look up fields even if they don't exist in older database entries ---
             export_df['rt Done Comment'] = export_df.apply(lambda r: r.get('comment', "") if r.get('status') == 'Completed' else "", axis=1)
             
+            # Checks if any case has a hold_reason column; if not, initializes it as blank
             if 'hold_reason' in export_df.columns:
                 export_df['Hold Reason'] = export_df['hold_reason'].fillna("")
             else:
                 export_df['Hold Reason'] = ""
 
+            # Ensure all required final columns are mapped perfectly without crashing
             final_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
             
+            # Create any missing columns dynamically so export_df[final_cols] doesn't trip a KeyError
             for col in final_cols:
                 if col not in export_df.columns:
                     export_df[col] = ""
@@ -726,6 +743,7 @@ with right_pane:
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
+            # Clear the search box state completely on click
             if "raas_ultimate_search_deck" in st.session_state:
                 st.session_state["raas_ultimate_search_deck"] = ""
             st.rerun(scope="fragment")
@@ -735,6 +753,8 @@ with right_pane:
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun(scope="fragment")
         
+                
+        # New Position with an entirely unique key to eliminate conflicts
         search = st.text_input(
             "🔍 Search Tasks...", 
             key="raas_ultimate_search_deck", 
@@ -759,9 +779,10 @@ with right_pane:
             if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
             elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
-            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt]
-            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))]
+            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] # Updated
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] # Updated
 
+            # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
                 f_df = f_df[
                     (f_df['finance'].str.contains(search, case=False, na=False)) | 
@@ -769,6 +790,7 @@ with right_pane:
                     (f_df['applicant_name'].str.contains(search, case=False, na=False)) | 
                     (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
                 ]
+            # -----------------------------------------------
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
             f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
@@ -789,51 +811,100 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
-            app_name = tsk.get('applicant_name', '').strip()
-            raw_txt = str(tsk.get('task', ''))
-            f_line = raw_txt.split('\n')[0]
-            if len(f_line) > 65: 
-                f_line = f_line[:62] + "..."
-
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
-            with st.container():
+            with st.container(): # 👈 Confirm 'border=True' remains removed here
+                app_name = tsk.get('applicant_name', '').strip()
+                raw_txt = str(tsk.get('task', ''))
+                f_line = raw_txt.split('\n')[0]
+                if len(f_line) > 65: 
+                    f_line = f_line[:62] + "..."
+
+                with hdr_left:
+                    st.markdown(f"""
+                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
+                            {tsk.get('finance')}
+                        </h2>
+                    """, unsafe_allow_html=True)
+                    
+                    if app_name:
+                        st.markdown(f"""
+                            <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
+                                <b>Applicant:</b> {app_name}
+                            </span>
+                        """, unsafe_allow_html=True)
+                        
+                    st.markdown(f"""
+                        <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
+                            <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
+                        </span>
+                    """, unsafe_allow_html=True)
+                    
+                with hdr_right:
+                    st.markdown(f"""
+                        <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
+                            <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
+                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
+                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
                 st.markdown(f"""
                     <div class="full-card-wrapper">
                         <div class="left-accent-strip" style="background-color: {col_ind};"></div>
+                        
                         <div class="right-card-content" style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start; gap: 16px;">
+                            
                             <div style="flex: 1;">
-                                <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(26 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
+                                <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
                                     {tsk.get('finance')}
-                                </h2>
-                                {"<span style='font-size: " + str(int(18 * scale_mod)) + "px; color: #000000; display: block; margin-bottom: 4px;'><b>Applicant:</b> " + app_name + "</span>" if app_name else ""}
-                                <span style='font-size: {int(14 * scale_mod)}px; color: #4A4A4A;'>
+                               </h2>
+                                {"<span style='font-size: " + str(int(22 * scale_mod)) + "px; color: #000000; display: block; margin-bottom: 4px;'><b>Applicant:</b> " + app_name + "</span>" if app_name else ""}
+                                <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
                                     <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
                                 </span>
                             </div>
+                            
                             <div style="text-align: right; min-width: 180px;">
-                                <div style='font-size: {int(15 * scale_mod)}px; color: #1A1A1A; line-height: 1.3;'>
+                                <div style='font-size: {int(20 * scale_mod)}px; color: #1A1A1A; line-height: 1.3;'>
                                     <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
-                                    <span style='color: #666666; font-size: {int(13 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
-                                    <span style='color: #666666; font-size: {int(13 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
+                                    <span style='color: #666666; font-size: {int(16 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
+                                    <span style='color: #666666; font-size: {int(16 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
+
+                st.divider()
+                # --- CARD HEADER BLOCK ---
+                hdr_left, hdr_right = st.columns([1.6, 1.1])
+                
+                
+                st.divider()
 
                 # --- DETAILS ACCORDION BLOCK ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
                     st.markdown(f"""
-                        <div style="padding: 10px 12px; font-size: {int(16 * scale_mod)}px; color: #1A1A1A; background-color: #FAFAFA; border-radius: 4px; border: 1px solid #EFEFEF; margin-bottom: 8px;">
+                        <div style="padding: 10px 0px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
                     
+                    # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
                     if tsk.get("hold_reason"):
                         st.markdown(f"""
-                            <div style="background-color: #FFF0F5; border-left: 5px solid #E83E8C; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;">
+                            <div style="
+                                background-color: #FFF0F5; 
+                                border-left: 5px solid #E83E8C; 
+                                padding: 8px 12px; 
+                                border-radius: 4px; 
+                                margin-bottom: 12px;
+                            ">
                                 <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
                                 <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
                             </div>
@@ -846,6 +917,7 @@ with right_pane:
                     if stat == "Hold":
                         st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
+                    # --- ROW 1: OPERATIONS ACTION BUTTONS ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
@@ -899,6 +971,7 @@ with right_pane:
                                 except: pass
                                 st.rerun(scope="fragment")
 
+                    # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                         r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
@@ -930,5 +1003,8 @@ with right_pane:
                             except: st.caption("⚠️ Failed to display attachment image.")
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
-            st.divider()
+
+                # Closes HTML wrapper containers cleanly
+                st.markdown('</div></div>', unsafe_allow_html=True)
+            st.write("")
     render_task_deck()
