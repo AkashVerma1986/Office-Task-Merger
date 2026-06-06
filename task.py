@@ -797,7 +797,7 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # REMOVED the early closing </div></div> here so everything stays inside
+                # Open custom frame layout
                 st.markdown(f"""
                     <div class="full-card-wrapper">
                         <div class="left-accent-strip" style="background-color: {col_ind};"></div>
@@ -822,7 +822,7 @@ with right_pane:
                             </div>
                 """, unsafe_allow_html=True)
 
-                # --- OPERATIONAL WIDGETS ARE NOW NATURALLY INSIDE THE CARD FRAME ---
+                # --- OPERATIONAL WIDGETS ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
@@ -937,7 +937,7 @@ with right_pane:
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
 
-                # Cleanly close out the card container box AFTER all widgets are executed
+                # GUARANTEED CLOSING: Runs outside the details toggle block to keep layout secure
                 st.markdown('</div></div>', unsafe_allow_html=True)
 
             st.write("")
