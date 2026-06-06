@@ -797,12 +797,12 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Open custom frame layout
+                # Pure HTML component rendering header AND text details inside a single block
                 st.markdown(f"""
                     <div class="full-card-wrapper">
                         <div class="left-accent-strip" style="background-color: {col_ind};"></div>
                         <div class="right-card-content">
-                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start; gap: 16px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start; gap: 16px; margin-bottom: 4px;">
                                 <div style="flex: 1;">
                                     <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(26 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
                                         {tsk.get('finance')}
@@ -820,125 +820,116 @@ with right_pane:
                                     </div>
                                 </div>
                             </div>
+                            <hr style="border: 0; border-top: 1px solid #E0E4EB; margin: 8px 0 !important;">
+                            <div style="padding: 4px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A;">
+                                <b>🔍 Details:</b> {f_line}
+                                <div style="margin-top: 6px; padding: 8px; background-color: #F8F9FA; border-radius: 4px; font-size: {int(14 * scale_mod)}px; color: #333333;">
+                                    <b>Full Task Description:</b><br>{raw_txt}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 """, unsafe_allow_html=True)
 
-                # --- OPERATIONAL WIDGETS ---
-                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                # --- RENDER OPERATIONAL BUTTON INTERFACES SAFELY OUTSIDE PREVENTING GRID BREAKS ---
+                img_state_key = f"view_photo_{tid}"
+                if img_state_key not in st.session_state:
+                    st.session_state[img_state_key] = False
 
-                if show_details:
+                if tsk.get("hold_reason"):
                     st.markdown(f"""
-                        <div style="padding: 5px 0px 10px 0px; font-size: {int(16 * scale_mod)}px; color: #1A1A1A;">
-                            <b>Full Task Description:</b><br>{raw_txt}
+                        <div style="background-color: #FFF0F5; border-left: 5px solid #E83E8C; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;">
+                            <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
+                            <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
                         </div>
                     """, unsafe_allow_html=True)
-                    
-                    if tsk.get("hold_reason"):
-                        st.markdown(f"""
-                            <div style="
-                                background-color: #FFF0F5; 
-                                border-left: 5px solid #E83E8C; 
-                                padding: 8px 12px; 
-                                border-radius: 4px; 
-                                margin-bottom: 12px;
-                            ">
-                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
-                                <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
-                            </div>
-                        """, unsafe_allow_html=True)
 
-                    img_state_key = f"view_photo_{tid}"
-                    if img_state_key not in st.session_state:
-                        st.session_state[img_state_key] = False
-
-                    if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                if stat == "Hold":
+                    st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                
+                if stat == "Completed":
+                    st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                else:
+                    r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
+                    note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                    w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                     
-                    if stat == "Completed":
-                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
-                    else:
-                        r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
-                        note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
-                        w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                        
-                        if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
-                            if stat != "Hold" and not note.strip():
-                                r1_col1.error("🛑 Hold note is required.")
-                            else:
-                                if stat != "Hold":
-                                    p_load = {
-                                        "status": "Hold", 
-                                        "comment": note, 
-                                        "hold_reason": note,  
-                                        "hold_by": user['name'], 
-                                        "hold_at": get_now_ist()
-                                    }
-                                else:
-                                    p_load = {
-                                        "status": "Pending", 
-                                        "comment": note, 
-                                        "hold_by": "", 
-                                        "hold_at": ""
-                                    }
-                                
-                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                                if "hold_reason" in p_load:
-                                    st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
-                                    
-                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                except: pass
-                                st.rerun(scope="fragment")
-                                
-                        if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                            if not note.strip():
-                                r1_col1.error("🛑 Closing note is required.")
+                    if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                        if stat != "Hold" and not note.strip():
+                            r1_col1.error("🛑 Hold note is required.")
+                        else:
+                            if stat != "Hold":
+                                p_load = {
+                                    "status": "Hold", 
+                                    "comment": note, 
+                                    "hold_reason": note,  
+                                    "hold_by": user['name'], 
+                                    "hold_at": get_now_ist()
+                                }
                             else:
                                 p_load = {
-                                    "status": "Completed", 
-                                    "completed_by": user['name'], 
-                                    "work_type": w_type, 
+                                    "status": "Pending", 
                                     "comment": note, 
-                                    "finished_at": get_now_ist(), 
-                                    "screenshot": None
+                                    "hold_by": "", 
+                                    "hold_at": ""
                                 }
-                                st.session_state.cached_tasks[tid].update(p_load)
-                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                            
+                            st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                            st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                            if "hold_reason" in p_load:
+                                st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
+                                
+                            try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                            except: pass
+                            st.rerun(scope="fragment")
+                            
+                    if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                        if not note.strip():
+                            r1_col1.error("🛑 Closing note is required.")
+                        else:
+                            p_load = {
+                                "status": "Completed", 
+                                "completed_by": user['name'], 
+                                "work_type": w_type, 
+                                "comment": note, 
+                                "finished_at": get_now_ist(), 
+                                "screenshot": None
+                            }
+                            st.session_state.cached_tasks[tid].update(p_load)
+                            try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                            except: pass
+                            st.rerun(scope="fragment")
+
+                if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
+                    st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                    
+                    if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                        edit_task_dialog(tid, tsk)
+                        
+                    btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                    if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                        st.session_state[img_state_key] = not st.session_state[img_state_key]
+                        st.rerun(scope="fragment")
+                        
+                    with r2_col3:
+                        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                        del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                        
+                    with r2_col4:
+                        if del_checked:
+                            if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
 
-                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                        
-                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                            edit_task_dialog(tid, tsk)
-                            
-                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                            st.session_state[img_state_key] = not st.session_state[img_state_key]
-                            st.rerun(scope="fragment")
-                            
-                        with r2_col3:
-                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                            
-                        with r2_col4:
-                            if del_checked:
-                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                    try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                    except: pass
-                                    st.rerun(scope="fragment")
-
-                    if st.session_state[img_state_key]:
-                        st.write("")
-                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                            try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                            except: st.caption("⚠️ Failed to display attachment image.")
-                        else:
-                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
-
-                # GUARANTEED CLOSING: Runs outside the details toggle block to keep layout secure
-                st.markdown('</div></div>', unsafe_allow_html=True)
+                if st.session_state[img_state_key]:
+                    st.write("")
+                    if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                        try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                        except: st.caption("⚠️ Failed to display attachment image.")
+                    else:
+                        st.info("ℹ️ No Guidance Screenshot attached to this task.")
 
             st.write("")
     render_task_deck()
