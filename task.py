@@ -855,36 +855,7 @@ with right_pane:
                 # --- CARD HEADER BLOCK ---
                 hdr_left, hdr_right = st.columns([1.6, 1.1])
                 
-                with hdr_left:
-                    st.markdown(f"""
-                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
-                            {tsk.get('finance')}
-                        </h2>
-                    """, unsafe_allow_html=True)
-                    
-                    if app_name:
-                        st.markdown(f"""
-                            <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
-                                <b>Applicant:</b> {app_name}
-                            </span>
-                        """, unsafe_allow_html=True)
-                        
-                    st.markdown(f"""
-                        <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
-                            <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
-                        </span>
-                    """, unsafe_allow_html=True)
-                    
-                with hdr_right:
-                    st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
-                            <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                
                 st.divider()
 
                 # --- DETAILS ACCORDION BLOCK ---
