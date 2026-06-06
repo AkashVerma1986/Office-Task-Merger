@@ -853,14 +853,18 @@ with right_pane:
                     # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
+                    if stat == "Completed":
+                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
-                        c_note, c_type, c_hold, c_done = st.columns([1.3, 0.7, 0.8, 0.8])
-                        note = c_note.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
-                        w_type = c_type.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                        # --- ROW 1: STATUS ACTIONS ---
+                        r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
+                        note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                        w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                         
-                        if c_hold.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                        if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
                             if stat != "Hold" and not note.strip():
-                                st.error("🛑 Hold note is required.")
+                                r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
                                     p_load = {
@@ -889,43 +893,45 @@ with right_pane:
                                     
                                 st.rerun(scope="fragment")
                                 
-                        if c_done.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                        if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
-                                st.error("🛑 Closing note is required.")
+                                r1_col1.error("🛑 Closing note is required.")
                             else:
                                 p_load = {
                                     "status": "Completed", "completed_by": user['name'], 
                                     "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
                                 }
-        
-                                # ⚡ OPTIMISTIC UPDATE: Change local state immediately
                                 st.session_state.cached_tasks[tid].update(p_load)
-        
-                                # ⚡ Fire network request quietly
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
                                 st.rerun(scope="fragment")
 
+                    # --- ROW 2: MANAGEMENT ACTIONS (ADMIN / ASSIGNER VIEW) ---
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                        st.write("")
-                        # Balanced button columns layout inside card limits
-                        adm1, adm_img, adm2 = st.columns([1.5, 1.5, 1.0])
+                        st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
                         
-                        if adm1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                        # Creating 4 columns to perfectly align Modify, View Photo, Delete Checkbox, and Confirm Button
+                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                        
+                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                             
-                        # Dedicated image control visibility button
                         btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                        if adm_img.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                             st.session_state[img_state_key] = not st.session_state[img_state_key]
                             st.rerun(scope="fragment")
                             
-                        with adm2:
-                            st.write("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                            if st.checkbox("🗑️ Delete", key=f"del_chk_{tid}"):
+                        with r2_col3:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                            
+                        with r2_col4:
+                            if del_checked:
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
-
+                            else:
+                                # Keeps layout stable by filling the empty space if checkbox is unchecked
+                                st.write("")
                     # --- SCREENSHOT AREA RENDERS LAST (AT THE VERY BOTTOM) ---
                     if st.session_state[img_state_key]:
                         st.write("")
