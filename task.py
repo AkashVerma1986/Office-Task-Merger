@@ -666,7 +666,7 @@ with left_pane:
                 if col not in export_df.columns: export_df[col] = ""
 
             export_df['rt Done Comment'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Completed' else "", axis=1)
-            export_df['Hold Reason'] = export_df.apply(lambda r: r['comment'] if r['status'] == 'Hold' else "", axis=1)
+            export_df['Hold Reason'] = export_df['hold_reason'].fillna("")
 
             final_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
             export_df = export_df[final_cols]
@@ -834,13 +834,25 @@ with right_pane:
 
                     # Everything else stays nested cleanly inside the content column if toggled
                     if show_details:
+                    st.markdown(f"""
+                        <div style="padding: 10px 0px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                            <b>Full Task Description:</b><br>{raw_txt}
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
+                    # If this specific task has ever been held in the past, display it here forever
+                    if tsk.get("hold_reason"):
                         st.markdown(f"""
                             <div style="
-                                padding: 10px 0px;
-                                font-size: {int(18 * scale_mod)}px;
-                                color: #1A1A1A;
+                                background-color: #FFF0F5; 
+                                border-left: 5px solid #E83E8C; 
+                                padding: 8px 12px; 
+                                border-radius: 4px; 
+                                margin-bottom: 12px;
                             ">
-                                <b>Full Task Description:</b><br>{raw_txt}
+                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
+                                <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
                             </div>
                         """, unsafe_allow_html=True)
                         
@@ -860,32 +872,53 @@ with right_pane:
                             w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                             
                             if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
-                                if stat != "Hold" and not note.strip():
-                                    r1_col1.error("🛑 Hold note is required.")
+                            if stat != "Hold" and not note.strip():
+                                r1_col1.error("🛑 Hold note is required.")
+                            else:
+                                if stat != "Hold":
+                                    # Case is being placed ON HOLD -> Lock in the reason permanently
+                                    p_load = {
+                                        "status": "Hold", 
+                                        "comment": note, 
+                                        "hold_reason": note,  # <-- Permanent tracking field
+                                        "hold_by": user['name'], 
+                                        "hold_at": get_now_ist()
+                                    }
                                 else:
-                                    if stat != "Hold":
-                                        p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
-                                    else:
-                                        p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": ""}
+                                    # Case is being UNHELD -> Set status back to Pending, but KEEP hold_reason intact
+                                    p_load = {
+                                        "status": "Pending", 
+                                        "comment": note, 
+                                        "hold_by": "", 
+                                        "hold_at": ""
+                                        # "hold_reason" is intentionally omitted here so it remains in Firebase
+                                    }
+                                
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                if "hold_reason" in p_load:
+                                    st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
                                     
-                                    st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                                    st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                                    try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                    except: pass
-                                    st.rerun(scope="fragment")
+                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                                except: pass
+                                st.rerun(scope="fragment")
                                     
                             if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                                if not note.strip():
-                                    r1_col1.error("🛑 Closing note is required.")
-                                else:
-                                    p_load = {
-                                        "status": "Completed", "completed_by": user['name'], 
-                                        "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
-                                    }
-                                    st.session_state.cached_tasks[tid].update(p_load)
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                    st.rerun(scope="fragment")
-
+                            if not note.strip():
+                                r1_col1.error("🛑 Closing note is required.")
+                            else:
+                                p_load = {
+                                    "status": "Completed", 
+                                    "completed_by": user['name'], 
+                                    "work_type": w_type, 
+                                    "comment": note, 
+                                    "finished_at": get_now_ist(), 
+                                    "screenshot": None
+                                    # We don't send "hold_reason" here, preserving whatever history was stored
+                                }
+                                st.session_state.cached_tasks[tid].update(p_load)
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                                st.rerun(scope="fragment")
                         # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
                         if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                             st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
