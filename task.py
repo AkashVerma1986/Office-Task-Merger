@@ -768,69 +768,51 @@ with right_pane:
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
             with st.container(border=True):
-                # Extract and format the applicant string natively
                 app_name = tsk.get('applicant_name', '').strip()
-                
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # --- NATIVE STABLE GRID: LEFT COLOR BAR & RIGHT CONTENT ---
-                # 0.1 ratio creates a crisp vertical strip on the left edge
-                bar_side, content_side = st.columns([0.1, 2.9], gap="small")
+                # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
+                st.markdown(f'<div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
 
-                with bar_side:
-                    # Injects a stable, full-height vertical block matching the status color
+                # --- CARD HEADER BLOCK ---
+                hdr_left, hdr_right = st.columns([1.6, 1.1])
+                
+                with hdr_left:
                     st.markdown(f"""
-                        <div style="
-                            background-color: {col_ind};
-                            width: 8px;
-                            height: 100%;
-                            min-height: 85px;
-                            border-radius: 4px;
-                            margin-top: 4px;
-                        "></div>
+                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
+                            {tsk.get('finance')}
+                        </h2>
                     """, unsafe_allow_html=True)
-
-                with content_side:
-                    # --- CARD HEADER BLOCK ---
-                    hdr_left, hdr_right = st.columns([1.6, 1.1])
                     
-                    with hdr_left:
+                    if app_name:
                         st.markdown(f"""
-                            <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
-                                {tsk.get('finance')}
-                            </h2>
-                        """, unsafe_allow_html=True)
-                        
-                        if app_name:
-                            st.markdown(f"""
-                                <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
-                                    <b>Applicant:</b> {app_name}
-                                </span>
-                            """, unsafe_allow_html=True)
-                            
-                        st.markdown(f"""
-                            <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
-                                <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
+                            <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
+                                <b>Applicant:</b> {app_name}
                             </span>
                         """, unsafe_allow_html=True)
                         
-                    with hdr_right:
-                        st.markdown(f"""
-                            <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
-                                <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
-                                <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
-                                <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
-                            </div>
-                        """, unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
+                            <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
+                        </span>
+                    """, unsafe_allow_html=True)
+                    
+                with hdr_right:
+                    st.markdown(f"""
+                        <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
+                            <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
+                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
+                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
 
-                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                    st.divider()
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                st.divider()
 
-                    # --- DETAILS ACCORDION BLOCK ---
-                    # --- DETAILS ACCORDION BLOCK ---
+                # --- DETAILS ACCORDION BLOCK ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
@@ -859,23 +841,22 @@ with right_pane:
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
 
-                        if stat == "Hold":
-                            st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                    if stat == "Hold":
+                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
+                    
+                    # --- ROW 1: OPERATIONS ACTION BUTTONS ---
+                    if stat == "Completed":
+                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                    else:
+                        r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
+                        note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                        w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                         
-                        # --- ROW 1: OPERATIONS ACTION BUTTONS ---
-                        if stat == "Completed":
-                            st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
-                        else:
-                            r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
-                            note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
-                            w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
-                            
-                            if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                        if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
                             if stat != "Hold" and not note.strip():
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    # Case is being placed ON HOLD -> Lock in the reason permanently
                                     p_load = {
                                         "status": "Hold", 
                                         "comment": note, 
@@ -884,7 +865,6 @@ with right_pane:
                                         "hold_at": get_now_ist()
                                     }
                                 else:
-                                    # Case is being UNHELD -> Set status back to Pending, but KEEP hold_reason intact
                                     p_load = {
                                         "status": "Pending", 
                                         "comment": note, 
@@ -900,8 +880,8 @@ with right_pane:
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
-                                    
-                            if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                                
+                        if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
                                 r1_col1.error("🛑 Closing note is required.")
                             else:
@@ -912,41 +892,46 @@ with right_pane:
                                     "comment": note, 
                                     "finished_at": get_now_ist(), 
                                     "screenshot": None
-                                    # We don't send "hold_reason" here, preserving whatever history was stored
                                 }
                                 st.session_state.cached_tasks[tid].update(p_load)
-                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
+                                except: pass
                                 st.rerun(scope="fragment")
-                        # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
-                        if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                            st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                            r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                            
-                            if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                                edit_task_dialog(tid, tsk)
-                                
-                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                            if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                                st.session_state[img_state_key] = not st.session_state[img_state_key]
-                                st.rerun(scope="fragment")
-                                
-                            with r2_col3:
-                                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                                del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                                
-                            with r2_col4:
-                                if del_checked:
-                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
-                                        st.rerun(scope="fragment")
 
-                        # --- SCREENSHOT ENGINE ---
-                        if st.session_state[img_state_key]:
-                            st.write("")
-                            if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                                try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                                except: st.caption("⚠️ Failed to display attachment image.")
-                            else:
-                                st.info("ℹ️ No Guidance Screenshot attached to this task.")
+                    # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
+                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
+                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                        
+                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, tsk)
+                            
+                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                            st.session_state[img_state_key] = not st.session_state[img_state_key]
+                            st.rerun(scope="fragment")
+                            
+                        with r2_col3:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                            
+                        with r2_col4:
+                            if del_checked:
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
+                                    except: pass
+                                    st.rerun(scope="fragment")
+
+                    # --- SCREENSHOT ENGINE ---
+                    if st.session_state[img_state_key]:
+                        st.write("")
+                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                            try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except: st.caption("⚠️ Failed to display attachment image.")
+                        else:
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
+
+                # Closes HTML wrapper containers cleanly
+                st.markdown('</div></div>', unsafe_allow_html=True)
             st.write("")
     render_task_deck()
