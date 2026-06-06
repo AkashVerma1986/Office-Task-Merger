@@ -805,18 +805,27 @@ with right_pane:
                 # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
                 bg_tint = col_ind + "12" 
 
-                # Inject style to paint both the left strip and a soft color wash across the entire card background
+                # Heavy-duty CSS injection to break past Streamlit's structural theme containers
                 st.markdown(f"""
                     <style>
+                        /* 1. Target the main structural outer container border card */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
                             background: linear-gradient(to right, {col_ind} 12px, {bg_tint} 12px) !important;
+                            background-color: {bg_tint} !important;
                             padding-left: 32px !important; 
                             padding-top: 16px !important;
                             padding-bottom: 16px !important;
                             border: 1px solid {col_ind}44 !important;
                             border-radius: 8px !important;
                         }}
-                        /* FIX: Force child containers to respect the parent's background color */
+                        
+                        /* 2. Wipe out the forced white/default background layer on Streamlit's inner vertical block layout */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
+                            background: transparent !important;
+                            background-color: transparent !important;
+                        }}
+
+                        /* 3. Force all nested child elements to let the gradient shine through */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
                             background-color: transparent !important;
                             background: transparent !important;
