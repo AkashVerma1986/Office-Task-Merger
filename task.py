@@ -149,8 +149,8 @@ st.markdown(f"""
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    div[data-testid="stMetric"] div { font-size: {int(20 * scale_mod)}px !important; }
-    div[data-testid="stMetricLabel"] > div { font-size: {int(13 * scale_mod)}px !important; }
+    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     
     /* --- ULTIMATE FORCE-COMPACT OVERRIDES --- */
     div[data-testid="stVerticalBlock"]:has(> div > div > .compact-card) {{
