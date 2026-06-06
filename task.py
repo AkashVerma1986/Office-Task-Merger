@@ -798,24 +798,25 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Inject the Left Accent Strip Flushed with the Outer Border
+                # Inject the Left Accent Strip Flushed perfectly with the Outer Border
                 st.markdown(f"""
                     <div style="
                         position: absolute;
-                        left: 0;
-                        top: 0;
-                        bottom: 0;
-                        width: 8px;
+                        left: -17px;
+                        top: -17px;
+                        bottom: -17px;
+                        width: 10px;
                         background-color: {col_ind};
                         border-top-left-radius: 6px;
                         border-bottom-left-radius: 6px;
                         z-index: 10;
                     "></div>
                     <style>
-                        /* Target this container block specifically to handle absolute elements correctly */
+                        /* Target this container block specifically to handle layout stacking */
                         div[data-testid="stVerticalBlockBorderContainer"] {{
                             position: relative !important;
                             padding-left: 24px !important; /* Extra padding so text clears the color bar */
+                            overflow: hidden !important;   /* Ensures negative margins don't bleed out */
                         }}
                     </style>
                 """, unsafe_allow_html=True)
@@ -920,7 +921,6 @@ with right_pane:
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
-                                w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
                                 st.rerun(scope="fragment")
 
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
