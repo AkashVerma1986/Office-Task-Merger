@@ -813,6 +813,7 @@ with right_pane:
                 # --- 2. DETAILS ACCORDION BLOCK ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
+                # EVERYTHING below this line is now locked inside this conditional block!
                 if show_details:
                     st.markdown(f"""
                         <div style="
@@ -824,78 +825,78 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
                     
-                img_state_key = f"view_photo_{tid}"
-                if img_state_key not in st.session_state:
-                    st.session_state[img_state_key] = False
+                    img_state_key = f"view_photo_{tid}"
+                    if img_state_key not in st.session_state:
+                        st.session_state[img_state_key] = False
 
-                if stat == "Hold":
-                    st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
-                
-                # --- 3. ROW 1: OPERATIONS ACTION BUTTONS ---
-                if stat == "Completed":
-                    st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
-                else:
-                    r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
-                    note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
-                    w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                    if stat == "Hold":
+                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
-                        if stat != "Hold" and not note.strip():
-                            r1_col1.error("🛑 Hold note is required.")
-                        else:
-                            if stat != "Hold":
-                                p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                    # --- 3. ROW 1: OPERATIONS ACTION BUTTONS ---
+                    if stat == "Completed":
+                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                    else:
+                        r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
+                        note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
+                        w_type = r1_col2.selectbox("Type", ["Regular", "Major"], key=f"t_{tid}", label_visibility="collapsed")
+                        
+                        if r1_col3.button("Unhold" if stat == "Hold" else "⏸️ Hold", key=f"h_{tid}", use_container_width=True):
+                            if stat != "Hold" and not note.strip():
+                                r1_col1.error("🛑 Hold note is required.")
                             else:
-                                p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": ""}
-                            
-                            st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                            st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                            try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                            except: pass
-                            st.rerun(scope="fragment")
-                            
-                    if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
-                        if not note.strip():
-                            r1_col1.error("🛑 Closing note is required.")
-                        else:
-                            p_load = {
-                                "status": "Completed", "completed_by": user['name'], 
-                                "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
-                            }
-                            st.session_state.cached_tasks[tid].update(p_load)
-                            requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                            st.rerun(scope="fragment")
-
-                # --- 4. ROW 2: MANAGEMENT ACTION BUTTONS ---
-                if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                    st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                    
-                    if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                        edit_task_dialog(tid, tsk)
-                        
-                    btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                    if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                        st.session_state[img_state_key] = not st.session_state[img_state_key]
-                        st.rerun(scope="fragment")
-                        
-                    with r2_col3:
-                        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                        del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                        
-                    with r2_col4:
-                        if del_checked:
-                            if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                if stat != "Hold":
+                                    p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                                else:
+                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": ""}
+                                
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                except: pass
+                                st.rerun(scope="fragment")
+                                
+                        if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
+                            if not note.strip():
+                                r1_col1.error("🛑 Closing note is required.")
+                            else:
+                                p_load = {
+                                    "status": "Completed", "completed_by": user['name'], 
+                                    "work_type": w_type, "comment": note, "finished_at": get_now_ist(), "screenshot": None
+                                }
+                                st.session_state.cached_tasks[tid].update(p_load)
+                                requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
                                 st.rerun(scope="fragment")
 
-                # --- 5. SCREENSHOT ENGINE ---
-                if st.session_state[img_state_key]:
-                    st.write("")
-                    if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                        try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                        except: st.caption("⚠️ Failed to display attachment image.")
-                    else:
-                        st.info("ℹ️ No Guidance Screenshot attached to this task.")
+                    # --- 4. ROW 2: MANAGEMENT ACTION BUTTONS ---
+                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
+                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                        
+                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, tsk)
+                            
+                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                            st.session_state[img_state_key] = not st.session_state[img_state_key]
+                            st.rerun(scope="fragment")
+                            
+                        with r2_col3:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                            
+                        with r2_col4:
+                            if del_checked:
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
+                                    st.rerun(scope="fragment")
+
+                    # --- 5. SCREENSHOT ENGINE ---
+                    if st.session_state[img_state_key]:
+                        st.write("")
+                        if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
+                            try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except: st.caption("⚠️ Failed to display attachment image.")
+                        else:
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
             st.write("")
     render_task_deck()
