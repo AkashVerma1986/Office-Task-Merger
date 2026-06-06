@@ -802,6 +802,9 @@ with right_pane:
                 # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
                 bg_tint = col_ind + "12" 
 
+                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
+                bg_tint = col_ind + "12" 
+
                 # Inject style to paint both the left strip and a soft color wash across the entire card background
                 st.markdown(f"""
                     <style>
@@ -812,6 +815,11 @@ with right_pane:
                             padding-bottom: 16px !important;
                             border: 1px solid {col_ind}44 !important;
                             border-radius: 8px !important;
+                        }}
+                        /* FIX: Force child containers to respect the parent's background color */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
+                            background-color: transparent !important;
+                            background: transparent !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
