@@ -98,16 +98,22 @@ st.markdown(f"""
         overflow: hidden !important; 
     }}
 
-    /* Flex system to place color bar and text side-by-side */ 
+    /* Flex system to place color bar and text side-by-side with a clean border */ 
     .full-card-wrapper {{ 
         display: flex !important; 
         flex-direction: row !important; 
         width: 100% !important; 
+        background-color: #FFFFFF !important;
+        border: 1px solid #DDE1E7 !important; /* 🌟 This brings back your card outline */
+        border-radius: 8px !important;        /* Smoothly rounds the card corners */
+        overflow: hidden !important;         /* Clips the color bar cleanly to the corner roundings */
+        margin-bottom: 12px !important;     /* Spacing between individual cards */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     }}
 
     /* Vertical color bar layout */ 
     .left-accent-strip {{ 
-        width: 10px !important; 
+        width: 12px !important; /* Slightly thickened for a bold accent look */
         flex-shrink: 0 !important; 
         align-self: stretch !important; 
     }}
@@ -115,7 +121,7 @@ st.markdown(f"""
     /* Content space adjustment padding */ 
     .right-card-content {{ 
         flex-grow: 1 !important; 
-        padding: 14px 16px !important; 
+        padding: 16px 20px !important; 
     }}
 
     /* Robust Dynamic Buttons */
@@ -810,13 +816,12 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
-            with st.container():
+            with st.container(): # 👈 Confirm 'border=True' remains removed here
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
-
                 # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
                 st.markdown(f'<div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
 
