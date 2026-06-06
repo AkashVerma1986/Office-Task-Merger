@@ -761,29 +761,29 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
+            # Injecting a dynamic CSS style snippet scoped precisely to this unique container ID
+            st.markdown(f"""
+                <style>
+                div[data-testid="stVerticalBlockBorderWrapper"]:has(div[key="card_box_{tid}"]) > div {{
+                    border-left: 10px solid {col_ind} !important;
+                    padding-left: 15px !important;
+                }}
+                </style>
+            """, unsafe_allow_html=True)
+
             with st.container(border=True):
+                # Using an empty item markdown block with a key to anchor our CSS rule above
+                st.markdown(f"<div key='card_box_{tid}' style='display: none;'></div>", unsafe_allow_html=True)
+                
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # NEW VERTICAL STATUS COLOR BAR INJECTOR
-                st.markdown(f"""
-                    <div style="
-                        position: absolute;
-                        left: 0px;
-                        top: 0px;
-                        bottom: 0px;
-                        width: 10px;
-                        background-color: {col_ind};
-                        border-top-left-radius: 8px;
-                        border-bottom-left-radius: 8px;
-                    "></div>
-                """, unsafe_allow_html=True)
-
-                # CARD HEADER BLOCK (NATIVE COLUMNS WITH LEFT PADDING FOR BAR SAFETY)
-                _, hdr_left, hdr_right = st.columns([0.05, 1.55, 1.1])
+                # --- 1. CARD HEADER BLOCK (NATIVE COLUMNS) ---
+                # Changed column ratio back to normal since we don't need the blank spacer column anymore!
+                hdr_left, hdr_right = st.columns([1.6, 1.1])
                 
                 with hdr_left:
                     st.markdown(f"<h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>{tsk.get('finance')}</h2>", unsafe_allow_html=True)
@@ -800,14 +800,11 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
 
-                # Offset everything else to the right so details don't crash into left indicator color bar
-                _, main_content_col = st.columns([0.05, 2.65])
-                with main_content_col:
-                    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                    st.divider()
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+                st.divider()
 
-                    # 2. DETAILS ACCORDION BLOCK
-                    show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                # --- 2. DETAILS ACCORDION BLOCK ---
+                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                     # --- INDENTATION POOL BLOCK WRAPPED INSIDE TOGGLE CONTROLLER ---
                     if show_details:
