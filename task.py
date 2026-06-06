@@ -766,32 +766,19 @@ with right_pane:
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
 
             with st.container(border=False):
-                # === ADD THESE TWO LINES TO EXTRACT THE APPLICANT NAME ===
+                # === EXTRACT THE APPLICANT NAME ===
                 app_name = tsk.get('applicant_name', '').strip()
                 app_display = f"<span style='font-size: {int(24 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</span> | " if app_name else ""
-                
-                # --- Global Reset to Kill Streamlit's Forced Table Borders ---
-                st.markdown("""
-                    <style>
-                    .stMarkdown table, .stMarkdown tr, .stMarkdown td {
-                        border: none !important;
-                        border-collapse: collapse !important;
-                        background: transparent !important;
-                        background-color: transparent !important;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
                 
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: f_line = f_line[:62] + "..."
 
-                # Step 1: Check session state first to handle dynamic box boundaries
                 is_open = st.session_state.get(f"card_exp_state_{tid}", False)
                 card_radius = "8px 8px 0px 0px" if is_open else "8px"
-                card_margin = "0px" if is_open else "12px"
+                card_margin = "0px"
                 
-                # Step 2: Render Top Card Content Header Block
+                # 1. Render Top Card Content Header Block
                 st.markdown(f"""
                     <div style="
                         border: 1px solid #DDE1E7; 
@@ -819,30 +806,21 @@ with right_pane:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # Step 3: Expand button at the last line of the header section
-                show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
+                # 2. Open a Styled Container Extension to wrap everything inside the visual card frame
+                with st.container(border=True):
+                    show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
-                # Step 4: Render details panel extension contents
-                if show_details:
-                    st.markdown(f"""
-                        <div style="
-                            border: 1px solid #DDE1E7;
-                            border-left: 10px solid {col_ind};
-                            border-top: none;
-                            border-radius: 0px 0px 8px 8px;
-                            padding: 16px 20px;
-                            background-color: #F8F9FA;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                            margin-top: -14px;
-                            margin-bottom: 12px;
-                            font-size: {int(18 * scale_mod)}px;
-                            color: #1A1A1A;
-                        ">
-                            <b>Full Task Description:</b><br>{raw_txt}
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Track image view toggles separately via unique session state key
+                    if show_details:
+                        st.markdown(f"""
+                            <div style="
+                                padding: 10px 0px;
+                                font-size: {int(18 * scale_mod)}px;
+                                color: #1A1A1A;
+                            ">
+                                <b>Full Task Description:</b><br>{raw_txt}
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
                     img_state_key = f"view_photo_{tid}"
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
@@ -850,10 +828,7 @@ with right_pane:
                     if stat == "Hold":
                         st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
                     
-                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
-                    if stat == "Completed":
-                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
-                    # --- ACTION BUTTONS & ENTRY FIELDS JUST BELOW DESCRIPTION ---
+                    # --- ACTION BUTTONS & ENTRY FIELDS LOCKED INSIDE THE FRAME ---
                     if stat == "Completed":
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
@@ -867,30 +842,14 @@ with right_pane:
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    p_load = {
-                                        "status": "Hold", 
-                                        "comment": note, 
-                                        "hold_by": user['name'], 
-                                        "hold_at": get_now_ist()
-                                    }
+                                    p_load = {"status": "Hold", "comment": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                                 else:
-                                    p_load = {
-                                        "status": "Pending", 
-                                        "comment": note, 
-                                        "hold_by": "", 
-                                        "hold_at": ""
-                                    }
+                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": ""}
                                 
                                 st.session_state.cached_tasks[tid]["status"] = p_load["status"]
                                 st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                                st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
-                                st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
-                                
-                                try:
-                                    requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
-                                except:
-                                    pass
-                                    
+                                try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
+                                except: pass
                                 st.rerun(scope="fragment")
                                 
                         if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
@@ -905,11 +864,9 @@ with right_pane:
                                 requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load)
                                 st.rerun(scope="fragment")
 
-                    # --- ROW 2: MANAGEMENT ACTIONS (ADMIN / ASSIGNER VIEW) ---
+                    # --- ROW 2: MANAGEMENT ACTIONS ---
                     if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                        st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
-                        
-                        # Creating 4 columns to perfectly align Modify, View Photo, Delete Checkbox, and Confirm Button
+                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                         r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
                         
                         if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
@@ -929,17 +886,13 @@ with right_pane:
                                 if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
                                     requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json")
                                     st.rerun(scope="fragment")
-                            else:
-                                # Keeps layout stable by filling the empty space if checkbox is unchecked
-                                st.write("")
-                    # --- SCREENSHOT AREA RENDERS LAST (AT THE VERY BOTTOM) ---
+
+                    # --- SCREENSHOT AREA ---
                     if st.session_state[img_state_key]:
                         st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
-                            try:
-                                st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
-                            except:
-                                st.caption("⚠️ Failed to display attachment image.")
+                            try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
+                            except: st.caption("⚠️ Failed to display attachment image.")
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached to this task.")
             st.write("")
