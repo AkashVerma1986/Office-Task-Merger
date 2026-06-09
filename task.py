@@ -799,36 +799,15 @@ with right_pane:
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
-                bg_tint = col_ind + "12" 
-
-                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
-                bg_tint = col_ind + "12" 
-
-                # Heavy-duty CSS injection to break past Streamlit's structural theme containers
+                # Inject style to paint the left bar directly onto the background gradient layer
                 st.markdown(f"""
                     <style>
-                        /* 1. Target the main structural outer container border card */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                            background: linear-gradient(to right, {col_ind} 12px, {bg_tint} 12px) !important;
-                            background-color: {bg_tint} !important;
+                            background: linear-gradient(to right, {col_ind} 12px, #FFFFFF 12px) !important;
                             padding-left: 32px !important; 
                             padding-top: 16px !important;
                             padding-bottom: 16px !important;
-                            border: 1px solid {col_ind}44 !important;
-                            border-radius: 8px !important;
-                        }}
-                        
-                        /* 2. Wipe out the forced white/default background layer on Streamlit's inner vertical block layout */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
-                            background: transparent !important;
-                            background-color: transparent !important;
-                        }}
-
-                        /* 3. Force all nested child elements to let the gradient shine through */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
-                            background-color: transparent !important;
-                            background: transparent !important;
+                            border-left: 1px solid #DDE1E7 !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
@@ -859,15 +838,9 @@ with right_pane:
                 st.markdown('<hr style="border:0; border-top:1px solid #E0E4EB; margin:10px 0!important;">', unsafe_allow_html=True)
 
                 # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
-                # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
-                    # FIX: Initialize the image toggle state immediately so it's available for ALL tasks
-                    img_state_key = f"view_photo_{tid}"
-                    if img_state_key not in st.session_state:
-                        st.session_state[img_state_key] = False
-
                     st.markdown(f"""
                         <div style="padding: 5px 0px 10px 0px; font-size: {int(16 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
@@ -893,6 +866,11 @@ with right_pane:
                             </div>
                         """, unsafe_allow_html=True)
 
+                    img_state_key = f"view_photo_{tid}"
+                    if img_state_key not in st.session_state:
+                        st.session_state[img_state_key] = False
+                    
+                    # --- 2. CLOSED / COMPLETED LOG DETAILS ---
                     if stat == "Completed":
                         c_by = tsk.get('completed_by', 'UNKNOWN')
                         c_at = tsk.get('finished_at', 'N/A')
@@ -920,11 +898,16 @@ with right_pane:
                                         "status": "Pending", 
                                         "comment": note, 
                                         "hold_by": "", 
-                                        "hold_at": "",
-                                        "hold_reason": ""
+                                        "hold_at": ""
                                     }
                                 
-                                st.session_state.cached_tasks[tid].update(p_load)
+                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
+                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
+                                if "hold_reason" in p_load:
+                                    st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
+                                    st.session_state.cached_tasks[tid]["hold_by"] = p_load["hold_by"]
+                                    st.session_state.cached_tasks[tid]["hold_at"] = p_load["hold_at"]
+                                    
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
@@ -938,47 +921,36 @@ with right_pane:
                                     "completed_by": user['name'], 
                                     "work_type": w_type, 
                                     "comment": note, 
-                                    "finished_at": get_now_ist()
+                                    "finished_at": get_now_ist(), 
+                                    "screenshot": None
                                 }
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
 
-                    # Action row for ADMIN or Assigner (Works for both active and completed tasks now)
-                    if user['role'] == "ADMIN" or tsk.get('assigner') == user['name']:
+                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
                         st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
                         
-                        if stat == "Completed":
-                            r2_col1, r2_col2 = st.columns([1.3, 1.3])
-                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                            if r2_col1.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                                st.session_state[img_state_key] = not st.session_state[img_state_key]
-                                st.rerun(scope="fragment")
-                        else:
-                            r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                            edit_task_dialog(tid, tsk)
                             
-                            if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                                edit_task_dialog(tid, tsk)
-                                
-                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                            if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                                st.session_state[img_state_key] = not st.session_state[img_state_key]
-                                st.rerun(scope="fragment")
-                                
-                            with r2_col3:
-                                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                                del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                                
-                            with r2_col4:
-                                if del_checked:
-                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                        try: 
-                                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                            if tid in st.session_state.cached_tasks:
-                                                del st.session_state.cached_tasks[tid]
-                                        except: pass
-                                        st.rerun(scope="fragment")
+                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                            st.session_state[img_state_key] = not st.session_state[img_state_key]
+                            st.rerun(scope="fragment")
+                            
+                        with r2_col3:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                            
+                        with r2_col4:
+                            if del_checked:
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
+                                    except: pass
+                                    st.rerun(scope="fragment")
 
                     if st.session_state[img_state_key]:
                         st.write("")
