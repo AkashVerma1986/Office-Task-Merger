@@ -749,83 +749,73 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"  # Pink/Magenta
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"  # Red
 
-            # --- SINGLE UNIFIED TASK CARD CONTAINER ---
-            with st.container(border=True):
+            bg_tint = col_ind + "12"  # 12% Opacity Tint for full card background
+
+            # --- FORCE CELL SPACE COLLAPSE & INNER TINT via clean raw CSS overrules ---
+            st.markdown(f"""
+                <style>
+                    /* Kill Streamlit's forced container margins and outer box gaps */
+                    div[data-testid="stVerticalBlockBorderContainer"] {{
+                        margin-bottom: -14px !important;  /* Forces cards to snap tightly into each other */
+                        padding: 0px !important;
+                        border: none !important;
+                    }}
+                    div[data-testid="stVerticalBlockBorderContainer"] > div[data-testid="stVerticalBlock"] {{
+                        gap: 0px !important; /* Completely removes gap between nested elements */
+                        padding: 0px !important;
+                    }}
+                    /* Tighten up the container block itself */
+                    div[data-testid="stElementContainer"] {{
+                        margin: 0px !important;
+                        padding: 0px !important;
+                    }}
+                </style>
+            """, unsafe_allow_html=True)
+
+            # --- SINGLE UNIFIED TASK CARD CONTAINER WITH ZERO WHITE SPACE ---
+            with st.container():
+                # We inject an absolute HTML wrapper that handles padding and backgrounds perfectly
+                st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
+                        border: 1px solid #DDE1E7;
+                        border-radius: 6px;
+                        padding: 6px 14px 6px 24px; /* Tiny top/bottom padding to crush space */
+                        margin-bottom: 0px;
+                        width: 100%;
+                    ">
+                """, unsafe_allow_html=True)
+                
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
-                bg_tint = col_ind + "12" 
-
-                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
-                bg_tint = col_ind + "12" 
-
-                # Heavy-duty CSS injection to break past Streamlit's structural theme containers
-                st.markdown(f"""
-                    <style>
-                        /* 1. Target the main structural outer container border card */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                            background: linear-gradient(to right, {col_ind} 8px, {bg_tint} 8px) !important; /* Shrunk indicator line slightly */
-                            background-color: {bg_tint} !important;
-                            padding-left: 16px !important; /* Shrunk from 32px to capture edge space */
-                            padding-right: 12px !important;
-                            padding-top: 6px !important;  /* Shrunk from 16px - pulls elements tight to top border */
-                            padding-bottom: 6px !important; /* Shrunk from 16px - pulls elements tight to bottom border */
-                            border: 1px solid {col_ind}33 !important;
-                            border-radius: 6px !important;
-                            margin-bottom: -6px !important; /* Forces adjacent cards to stack compactly close together */
-                        }}
-                        
-                        /* 2. Wipe out the forced white/default background layer on Streamlit's inner vertical block layout */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
-                            background: transparent !important;
-                            background-color: transparent !important;
-                            gap: 0.1rem !important; /* Collapses the massive gaps between rows INSIDE the card */
-                        }}
-
-                        /* 3. Force all nested child elements to let the gradient shine through */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
-                            background-color: transparent !important;
-                            background: transparent !important;
-                        }}
-
-                        /* 4. Kill the extra spacing added by the toggle switch alignment */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) .stCheckbox {{
-                            margin-bottom: 0px !important;
-                            padding-bottom: 0px !important;
-                        }}
-                    </style>
-                    <div data-card-id="{tid}" style="display:none;"></div>
-                """, unsafe_allow_html=True)
-
                 # Layout Header items cleanly inside columns 
                 c_left, c_right = st.columns([1.6, 1.1])
                 
                 with c_left:
                     st.markdown(f"""
-                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(26 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
+                        <h2 style='margin: 0px 0px 2px 0px; padding: 0px; line-height: 1.1; font-size:{int(22 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
                     if app_name:
-                        st.markdown(f"<span style='font-size: {int(16 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'><b>Applicant:</b> {app_name}</span>", unsafe_allow_html=True)
-                    st.markdown(f"<span style='font-size: {int(14 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code></span>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='margin: 0px 0px 2px 0px; padding: 0px; font-size: {int(14 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='margin: 0px; padding: 0px; font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
                 
                 with c_right:
                     st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(14 * scale_mod)}px; color: #1A1A1A; line-height: 1.4;'>
+                        <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2; margin: 0px; padding: 0px;'>
                             <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
                             <span style='color: #666666;'>Created: {tsk.get('assigned_at')}</span><br>
                             <span style='color: #666666;'>By: {tsk.get('assigner')}</span>
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown('<hr style="border:0; border-top:1px solid #E0E4EB; margin:10px 0!important;">', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True) # Closes the HTML card layout box
 
-                # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
