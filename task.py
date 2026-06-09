@@ -749,113 +749,121 @@ with right_pane:
             elif stat == "Hold": col_ind = "#E83E8C"  # Pink/Magenta
             elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"  # Red
 
-            bg_tint = col_ind + "12"  # 12% Opacity Tint for full card background
-
-            # --- HEAVY-DUTY CSS DIRECT OVERWRITE TARGETING THE STREAMLIT CONTAINER ---
-            st.markdown(f"""
-                <style>
-                    /* Target Streamlit's vertical border container block specifically for this task item */
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                        background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
-                        background-color: {bg_tint} !important;
-                        border: 1px solid #DDE1E7 !important;
-                        border-radius: 6px !important;
-                        padding-left: 24px !important; /* Leaves precise breathing space for the accent strip */
-                        padding-right: 14px !important;
-                        padding-top: 8px !important;  /* Collapses vertical dead zones */
-                        padding-bottom: 8px !important;
-                        margin-bottom: 6px !important; /* Snaps adjacent cards closely together */
-                    }}
-                    
-                    /* Wipe out spacing and default colors on inner layout blocks */
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
-                        background: transparent !important;
-                        background-color: transparent !important;
-                        gap: 0px !important; /* Drops space between header, toggle, and buttons to zero */
-                    }}
-
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
-                        background-color: transparent !important;
-                        background: transparent !important;
-                    }}
-                    
-                    /* Compress margin layouts on individual text strings */
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) p,
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) h2 {{
-                        margin: 0px !important;
-                        padding: 0px !important;
-                    }}
-                </style>
-            """, unsafe_allow_html=True)
-
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
             with st.container(border=True):
-                # This invisible tag hooks our heavy-duty CSS block straight onto this container frame
-                st.markdown(f'<div data-card-id="{tid}" style="display:none;"></div>', unsafe_allow_html=True)
-                
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
+                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
+                bg_tint = col_ind + "12" 
+
+                # Map hexadecimal values for a soft faded background tint (adding 12 opacity in HEX)
+                bg_tint = col_ind + "12" 
+
+                # Heavy-duty CSS injection to break past Streamlit's structural theme containers
+                st.markdown(f"""
+                    <style>
+                        /* 1. Target the main structural outer container border card */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
+                            background: linear-gradient(to right, {col_ind} 8px, {bg_tint} 8px) !important; /* Shrunk indicator line slightly */
+                            background-color: {bg_tint} !important;
+                            padding-left: 16px !important; /* Shrunk from 32px to capture edge space */
+                            padding-right: 12px !important;
+                            padding-top: 6px !important;  /* Shrunk from 16px - pulls elements tight to top border */
+                            padding-bottom: 6px !important; /* Shrunk from 16px - pulls elements tight to bottom border */
+                            border: 1px solid {col_ind}33 !important;
+                            border-radius: 6px !important;
+                            margin-bottom: -6px !important; /* Forces adjacent cards to stack compactly close together */
+                        }}
+                        
+                        /* 2. Wipe out the forced white/default background layer on Streamlit's inner vertical block layout */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
+                            background: transparent !important;
+                            background-color: transparent !important;
+                            gap: 0.1rem !important; /* Collapses the massive gaps between rows INSIDE the card */
+                        }}
+
+                        /* 3. Force all nested child elements to let the gradient shine through */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
+                            background-color: transparent !important;
+                            background: transparent !important;
+                        }}
+
+                        /* 4. Kill the extra spacing added by the toggle switch alignment */
+                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) .stCheckbox {{
+                            margin-bottom: 0px !important;
+                            padding-bottom: 0px !important;
+                        }}
+                    </style>
+                    <div data-card-id="{tid}" style="display:none;"></div>
+                """, unsafe_allow_html=True)
+
                 # Layout Header items cleanly inside columns 
                 c_left, c_right = st.columns([1.6, 1.1])
                 
                 with c_left:
                     st.markdown(f"""
-                        <h2 style='line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A; margin-bottom: 2px !important;'>
+                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(26 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
                     if app_name:
-                        st.markdown(f"<p style='font-size: {int(14 * scale_mod)}px; color: #000000; margin-bottom: 2px !important;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='font-size: {int(16 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'><b>Applicant:</b> {app_name}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='font-size: {int(14 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code></span>", unsafe_allow_html=True)
                 
                 with c_right:
-
-
-
-
-
                     st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2;'>
+                        <div style='text-align: right; font-size: {int(14 * scale_mod)}px; color: #1A1A1A; line-height: 1.4;'>
                             <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
                             <span style='color: #666666;'>Created: {tsk.get('assigned_at')}</span><br>
                             <span style='color: #666666;'>By: {tsk.get('assigner')}</span>
                         </div>
                     """, unsafe_allow_html=True)
 
+                st.markdown('<hr style="border:0; border-top:1px solid #E0E4EB; margin:10px 0!important;">', unsafe_allow_html=True)
+
+                # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
-                
-                # --- RENDER EXPANDABLE DATA BLOCK INSIDE FRAME ---
+
                 if show_details:
+                    # FIX: Initialize the image toggle state immediately so it's available for ALL tasks
                     img_state_key = f"view_photo_{tid}"
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
 
                     st.markdown(f"""
-                        <div style="padding: 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 4px !important;">
+                        <div style="padding: 5px 0px 10px 0px; font-size: {int(16 * scale_mod)}px; color: #1A1A1A;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
                     
+                    # --- 1. HISTORICAL / CURRENT HOLD LOG DETAILS ---
                     if tsk.get("hold_reason"):
                         h_by = tsk.get('hold_by', 'UNKNOWN')
                         h_at = tsk.get('hold_at', 'N/A')
                         st.markdown(f"""
-                            <div style="background-color: #FFF0F5; border-left: 4px solid #E83E8C; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: {int(13 * scale_mod)}px;">
+                            <div style="
+                                background-color: #FFF0F5; 
+                                border-left: 5px solid #E83E8C; 
+                                padding: 8px 12px; 
+                                border-radius: 4px; 
+                                margin-bottom: 12px;
+                                font-size: {int(14 * scale_mod)}px;
+                            ">
                                 <span style="color: #E83E8C; font-weight: bold;">⏸️ HOLD LOG ENTRY:</span><br>
                                 <b>Reason:</b> {tsk.get("hold_reason")}<br>
-                                <span style="color: #555555; font-size: 11px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
+                                <span style="color: #555555; font-size: 12px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
                             </div>
                         """, unsafe_allow_html=True)
 
                     if stat == "Completed":
                         c_by = tsk.get('completed_by', 'UNKNOWN')
                         c_at = tsk.get('finished_at', 'N/A')
-                        c_note = tsk.get('comment', 'N/A')                        
+                        c_note = tsk.get('comment', 'N/A')
                         st.success(f"✅ Closed by {c_by} on {c_at} | Note: {c_note}")
                     else:
                         r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
@@ -867,9 +875,22 @@ with right_pane:
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    p_load = {"status": "Hold", "comment": note, "hold_reason": note, "hold_by": user['name'], "hold_at": get_now_ist()}
+                                    p_load = {
+                                        "status": "Hold", 
+                                        "comment": note, 
+                                        "hold_reason": note,  
+                                        "hold_by": user['name'], 
+                                        "hold_at": get_now_ist()
+                                    }
                                 else:
-                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": "", "hold_reason": ""}
+                                    p_load = {
+                                        "status": "Pending", 
+                                        "comment": note, 
+                                        "hold_by": "", 
+                                        "hold_at": "",
+                                        "hold_reason": ""
+                                    }
+                                
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
@@ -879,45 +900,60 @@ with right_pane:
                             if not note.strip():
                                 r1_col1.error("🛑 Closing note is required.")
                             else:
-                                p_load = {"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()}
+                                p_load = {
+                                    "status": "Completed", 
+                                    "completed_by": user['name'], 
+                                    "work_type": w_type, 
+                                    "comment": note, 
+                                    "finished_at": get_now_ist()
+                                }
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
 
-                    # Administrative Context Actions
+                    # Action row for ADMIN or Assigner (Works for both active and completed tasks now)
                     if user['role'] == "ADMIN" or tsk.get('assigner') == user['name']:
+                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+                        
                         if stat == "Completed":
                             r2_col1, r2_col2 = st.columns([1.3, 1.3])
-                            
-
-                            
                             btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                             if r2_col1.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                                 st.session_state[img_state_key] = not st.session_state[img_state_key]
                                 st.rerun(scope="fragment")
                         else:
                             r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
+                            
                             if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                                 edit_task_dialog(tid, tsk)
+                                
                             btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                             if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                                 st.session_state[img_state_key] = not st.session_state[img_state_key]
                                 st.rerun(scope="fragment")
+                                
                             with r2_col3:
+                                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
                                 del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                                
                             with r2_col4:
-                                if del_checked and st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                    try: 
-                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                        if tid in st.session_state.cached_tasks: del st.session_state.cached_tasks[tid]
-                                    except: pass
-                                    st.rerun(scope="fragment")
+                                if del_checked:
+                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                        try: 
+                                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
+                                            if tid in st.session_state.cached_tasks:
+                                                del st.session_state.cached_tasks[tid]
+                                        except: pass
+                                        st.rerun(scope="fragment")
+
                     if st.session_state[img_state_key]:
+                        st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
                             except: st.caption("⚠️ Failed to display attachment image.")
                         else:
-                            st.info("ℹ️ No Guidance Screenshot attached.")
+                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
+
             st.write("")
-    render_task_deck()            
+    render_task_deck()
