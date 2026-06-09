@@ -27,7 +27,6 @@ if "ui_scale" not in st.session_state:
 scale_mod = st.session_state.ui_scale / 100.0
 
 # --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
-# --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
 st.markdown(f"""
     <style>
     /* Complete wipeout of Streamlit's forced table frame and border rules */
@@ -74,7 +73,7 @@ st.markdown(f"""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         width: 100% !important;
-        gap: 1.0rem !important; /* Shrunk from 1.5rem */
+        gap: 1.5rem !important;
     }}
 
     /* Allow standard inputs INSIDE forms and panels to adapt gracefully */
@@ -83,27 +82,45 @@ st.markdown(f"""
     [data-testid="stElementContainer"] [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
         align-items: flex-end !important;
-        gap: 0.3rem !important; /* Shrunk from 0.5rem */
+        gap: 0.5rem !important;
     }}
 
     .stAppViewMain .block-container {{
-        padding-top: 0.5rem !important; /* Shrunk from 1.0rem */
-        padding-bottom: 0.5rem !important; /* Shrunk from 1.0rem */
-        gap: 0.2rem !important; /* Shrunk from 0.5rem for tight vertical flow */
+        padding-top: 1.0rem !important;
+        padding-bottom: 1.0rem !important;
+        gap: 0.5rem !important; 
     }}
     
     /* Remove Streamlit's internal container padding so the color bar hits the edge */ 
     div[data-testid="stContainer"] {{ 
         padding: 0px !important; 
-        margin: 0px !important;
         overflow: hidden !important; 
     }}
 
-    /* Force global element block spacing to collapse */
-    div[data-testid="stElementContainer"] {{
-        margin-top: 0px !important;
-        margin-bottom: 2px !important; /* Drops dead space between layout rows */
-        padding-bottom: 0px !important;
+    /* Flex system to place color bar and text side-by-side with a clean border */ 
+    .full-card-wrapper {{ 
+        display: flex !important; 
+        flex-direction: row !important; 
+        width: 100% !important; 
+        background-color: #FFFFFF !important;
+        border: 1px solid #DDE1E7 !important; 
+        border-radius: 8px !important;        
+        overflow: hidden !important;          
+        margin-bottom: 12px !important;     
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+    }}
+
+    /* Vertical color bar layout */ 
+    .left-accent-strip {{ 
+        width: 12px !important; 
+        flex-shrink: 0 !important; 
+        align-self: stretch !important; 
+    }}
+
+    /* Content space adjustment padding */ 
+    .right-card-content {{ 
+        flex-grow: 1 !important; 
+        padding: 16px 20px !important; 
     }}
 
     /* Robust Dynamic Buttons */
@@ -111,13 +128,13 @@ st.markdown(f"""
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
-        border-radius: 6px !important;
-        padding: {int(4 * scale_mod)}px {int(10 * scale_mod)}px !important; /* Shrunk padding */
+        border-radius: 8px !important;
+        padding: {int(6 * scale_mod)}px {int(14 * scale_mod)}px !important;
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-        font-size: {int(13 * scale_mod)}px !important;
-        min-height: 32px; /* Shrunk from 40px */
+        font-size: {int(14 * scale_mod)}px !important;
+        min-height: 40px;
     }}
 
     .stButton > button:hover {{
@@ -127,16 +144,45 @@ st.markdown(f"""
     }}
 
     hr {{
-        margin: 0.2rem 0 !important; /* Tightened from 0.3rem */
+        margin: 0.3rem 0 !important;
     }}
 
+    /* Card Flexbox Structure */
+    .card-header-flex {{
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }}
+    
+    .card-header-left {{
+        flex: 1 1 55% !important;
+        min-width: 250px !important;
+    }}
+    
+    .card-header-right {{
+        flex: 1 1 35% !important;
+        min-width: 180px !important;
+        text-align: right !important;
+    }}
+
+    .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
+    .card-body {{ 
+        flex-grow: 1; 
+        display: block; 
+        width: 100%; 
+        padding-bottom: 10px;
+    }}
+    
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    div[data-testid="stMetric"] div {{ font-size: {int(18 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(12 * scale_mod)}px !important; }}
+    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -523,37 +569,33 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
-        # Using st.form stops all intermediate refreshes on selections
-        with st.form("ledger_entry_form"):
+        with st.container(key=f"form_container_v_{st.session_state.form_version}"):
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
-                # Selections here are now instant and localized
-                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_fin_select")
+                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_fin_{st.session_state.form_version}")
+                fin_active = f_sel
             with row1_col2:
-                cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_select")
+                cat = st.selectbox("Category", ["---"] + all_cats, key=f"main_cat_{st.session_state.form_version}")
                 
             row2_col1, row2_col2 = st.columns(2)
             with row2_col1:
-                applicant_name = st.text_input("Applicant Name", placeholder="Required", key="main_app_input")
+                applicant_name = st.text_input("Applicant Name", placeholder="Required", key=f"main_app_{st.session_state.form_version}")
             with row2_col2:
-                lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
+                lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_{st.session_state.form_version}").strip()
                 
-            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key=f"main_prio_{st.session_state.form_version}")
                 
-            dtl_main = st.text_area("Task Details", key="main_dtl_textarea")
-            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_img_uploader")
+            dtl_main = st.text_area("Task Details", key=f"main_dtl_{st.session_state.form_version}")
+            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_img_{st.session_state.form_version}")
             
-            # This specific button type controls the unified execution pipeline
-            submit_pressed = st.form_submit_button("SUBMIT", use_container_width=True, type="primary")
+            img_b64 = ""
+            if uploaded_file is not None:
+                img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
             
-            if submit_pressed:
-                if f_sel != "--- SELECT ---" and lan_no and dtl_main:
-                    img_b64 = ""
-                    if uploaded_file is not None:
-                        img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-
+            if st.button("SUBMIT", use_container_width=True, type="primary", key=f"main_sub_btn_{st.session_state.form_version}"):
+                if fin_active != "--- SELECT ---" and lan_no and dtl_main:
                     payload = {
-                        "finance": f_sel, 
+                        "finance": fin_active, 
                         "lan": lan_no,
                         "applicant_name": applicant_name.strip(),
                         "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
@@ -564,13 +606,13 @@ with left_pane:
                         "screenshot": img_b64
                     }
                     
-                    # Unified Single Execution: Network hit + Cache Update + Rerun
                     res = requests.post(TASKS_URL, json=payload)
-                    requests.patch(FINANCE_MASTER_URL, json={f_sel: True})
-                    
+                    requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
+                    st.session_state.form_version += 1
                     st.rerun()
                 elif not lan_no:
                     st.error("🛑 LAN No. is mandatory!")
@@ -768,34 +810,25 @@ with right_pane:
                     <style>
                         /* 1. Target the main structural outer container border card */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
-                            background: linear-gradient(to right, {col_ind} 8px, {bg_tint} 8px) !important; /* Shrunk indicator line slightly */
+                            background: linear-gradient(to right, {col_ind} 12px, {bg_tint} 12px) !important;
                             background-color: {bg_tint} !important;
-                            padding-left: 16px !important; /* Shrunk from 32px to capture edge space */
-                            padding-right: 12px !important;
-                            padding-top: 6px !important;  /* Shrunk from 16px - pulls elements tight to top border */
-                            padding-bottom: 6px !important; /* Shrunk from 16px - pulls elements tight to bottom border */
-                            border: 1px solid {col_ind}33 !important;
-                            border-radius: 6px !important;
-                            margin-bottom: -6px !important; /* Forces adjacent cards to stack compactly close together */
+                            padding-left: 32px !important; 
+                            padding-top: 16px !important;
+                            padding-bottom: 16px !important;
+                            border: 1px solid {col_ind}44 !important;
+                            border-radius: 8px !important;
                         }}
                         
                         /* 2. Wipe out the forced white/default background layer on Streamlit's inner vertical block layout */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
                             background: transparent !important;
                             background-color: transparent !important;
-                            gap: 0.1rem !important; /* Collapses the massive gaps between rows INSIDE the card */
                         }}
 
                         /* 3. Force all nested child elements to let the gradient shine through */
                         div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
                             background-color: transparent !important;
                             background: transparent !important;
-                        }}
-
-                        /* 4. Kill the extra spacing added by the toggle switch alignment */
-                        div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) .stCheckbox {{
-                            margin-bottom: 0px !important;
-                            padding-bottom: 0px !important;
                         }}
                     </style>
                     <div data-card-id="{tid}" style="display:none;"></div>
