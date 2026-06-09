@@ -73,7 +73,7 @@ st.markdown(f"""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         width: 100% !important;
-        gap: 1.5rem !important;
+        gap: 1.0rem !important;
     }}
 
     /* Allow standard inputs INSIDE forms and panels to adapt gracefully */
@@ -82,13 +82,13 @@ st.markdown(f"""
     [data-testid="stElementContainer"] [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
         align-items: flex-end !important;
-        gap: 0.5rem !important;
+        gap: 0.3rem !important;
     }}
 
     .stAppViewMain .block-container {{
-        padding-top: 1.0rem !important;
-        padding-bottom: 1.0rem !important;
-        gap: 0.5rem !important; 
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        gap: 0.2rem !important; 
     }}
     
     /* Robust Dynamic Buttons */
@@ -96,8 +96,8 @@ st.markdown(f"""
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
-        border-radius: 8px !important;
-        padding: {int(6 * scale_mod)}px {int(14 * scale_mod)}px !important;
+        border-radius: 6px !important;
+        padding: {int(4 * scale_mod)}px {int(10 * scale_mod)}px !important;
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
@@ -149,8 +149,8 @@ st.markdown(f"""
     .status-hold {{ background-color: #E83E8C !important; }}
     .status-high {{ background-color: #DC3545 !important; }}
 
-    div[data-testid="stMetric"] div {{ font-size: {int(20 * scale_mod)}px !important; }}
-    div[data-testid="stMetricLabel"] > div {{ font-size: {int(13 * scale_mod)}px !important; }}
+    div[data-testid="stMetric"] div {{ font-size: {int(18 * scale_mod)}px !important; }}
+    div[data-testid="stMetricLabel"] > div {{ font-size: {int(12 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
 # --- 3. AUTH & DEVICE LOCK ---
@@ -542,33 +542,37 @@ with left_pane:
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
         # The key dynamic binding ensures that when form_version increases, all inputs inside are wiped completely clean
-        with st.container(key=f"form_container_v_{st.session_state.form_version}"):
+        with st.form("ledger_entry_form"):
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
-                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key=f"main_fin_{st.session_state.form_version}")
-                fin_active = f_sel
+                # Selections here are now instant and localized
+                f_sel = st.selectbox("Finance", ["--- SELECT ---"] + all_fins, key="main_fin_select")
             with row1_col2:
-                cat = st.selectbox("Category", ["---"] + all_cats, key=f"main_cat_{st.session_state.form_version}")
+                cat = st.selectbox("Category", ["---"] + all_cats, key="main_cat_select")
                 
             row2_col1, row2_col2 = st.columns(2)
             with row2_col1:
-                applicant_name = st.text_input("Applicant Name", placeholder="Required", key=f"main_app_{st.session_state.form_version}")
+                applicant_name = st.text_input("Applicant Name", placeholder="Required", key="main_app_input")
             with row2_col2:
-                lan_no = st.text_input("LAN No.", placeholder="Required", key=f"main_lan_{st.session_state.form_version}").strip()
+                lan_no = st.text_input("LAN No.", placeholder="Required", key="main_lan_input").strip()
                 
-            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key=f"main_prio_{st.session_state.form_version}")
+            prio = st.select_slider("Priority", ["Normal", "Medium", "High"], key="main_prio_slider")
                 
-            dtl_main = st.text_area("Task Details", key=f"main_dtl_{st.session_state.form_version}")
-            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key=f"main_img_{st.session_state.form_version}")
+            dtl_main = st.text_area("Task Details", key="main_dtl_textarea")
+            uploaded_file = st.file_uploader("📸 Attach Guidance Screenshot", type=["jpg", "jpeg", "png"], key="main_img_uploader")
             
-            img_b64 = ""
-            if uploaded_file is not None:
-                img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+            # This specific button type controls the unified execution pipeline
+            submit_pressed = st.form_submit_button("SUBMIT", use_container_width=True, type="primary")
+                
             
-            if st.button("SUBMIT", use_container_width=True, type="primary", key=f"main_sub_btn_{st.session_state.form_version}"):
-                if fin_active != "--- SELECT ---" and lan_no and dtl_main:
+            if submit_pressed:
+                if f_sel != "--- SELECT ---" and lan_no and dtl_main:
+                    img_b64 = ""
+                    if uploaded_file is not None:
+                        img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
+                    
                     payload = {
-                        "finance": fin_active, 
+                        "finance": f_sel, 
                         "lan": lan_no,
                         "applicant_name": applicant_name.strip(),
                         "task": f"[{cat}] {dtl_main}" if cat != "---" else dtl_main, 
@@ -579,26 +583,27 @@ with left_pane:
                         "screenshot": img_b64
                     }
                     
+                    # Unified Single Execution: Network hit + Cache Update + Rerun
                     res = requests.post(TASKS_URL, json=payload)
-                    requests.patch(FINANCE_MASTER_URL, json={fin_active: True})
-                    st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
+                    requests.patch(FINANCE_MASTER_URL, json={f_sel: True})
                     
-                    # Refresh data storage cache mapping
+                    
+                    
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
                     
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
 
-                    # Force incremental layout reset — this instantly clears all input widgets and the file uploader
-                    st.session_state.form_version += 1
+                   
+                    
                     st.rerun()
                 elif not lan_no:
                     st.error("🛑 LAN No. is mandatory!")
                 else:
                     st.warning("⚠️ Please fill in Finance and Task Details.")
-            # ⬆️ STOP INDENTING HERE ⬆️
+            
 
-    # This next line stays at its original indentation level (outside the container)
+    
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
@@ -655,6 +660,7 @@ with left_pane:
                 # Clear the search box state completely on click
                 if "raas_ultimate_search_deck" in st.session_state:
                     st.session_state["raas_ultimate_search_deck"] = ""
+                st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
                 st.rerun()
         with act_col2:
             export_df = filtered_df.copy()
@@ -714,6 +720,7 @@ with right_pane:
             # Clear the search box state completely on click
             if "raas_ultimate_search_deck" in st.session_state:
                 st.session_state["raas_ultimate_search_deck"] = ""
+            st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
             st.rerun(scope="fragment")
                 
         btn_label = "Show All" if st.session_state.my_tasks_only else "My Tasks"
@@ -732,7 +739,7 @@ with right_pane:
         
         st.write("") 
         
-        live_tasks = requests.get(TASKS_URL, verify=False).json() or {}
+        live_tasks = st.session_state.cached_tasks
         live_df = pd.DataFrame.from_dict(live_tasks, orient='index')
         
         if not live_df.empty:
@@ -761,7 +768,7 @@ with right_pane:
             # -----------------------------------------------
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
-            f_df = f_df.sort_values(by='date_dt' if view_filter_right == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter_right == "All Tasks" else [True, False])
+            f_df = f_df.sort_values(by='date_dt', ascending=False)
             keys = list(f_df.index)
         else:
             keys = []
@@ -774,79 +781,125 @@ with right_pane:
             stat = tsk.get('status', 'Pending')
             prio_val = tsk.get('priority', 'Normal')
             
-            col_ind = "#FFC107"
-            if stat == "Completed": col_ind = "#28A745"
-            elif stat == "Hold": col_ind = "#E83E8C"
-            elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
+            # --- Status Line Color Configuration ---
+            col_ind = "#FFC107"  # Yellow for Pending
+            if stat == "Completed": col_ind = "#28A745"  # Green
+            elif stat == "Hold": col_ind = "#E83E8C"  # Pink/Magenta
+            elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"  # Red
+
+            bg_tint = col_ind + "12"  # 12% Opacity Tint for full card background
+
+            # --- HEAVY-DUTY CSS DIRECT OVERWRITE TARGETING THE STREAMLIT CONTAINER ---
+            st.markdown(f"""
+                <style>
+                    /* Target Streamlit's vertical border container block specifically for this task item */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
+                        background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
+                        background-color: {bg_tint} !important;
+                        border: 1px solid #DDE1E7 !important;
+                        border-radius: 6px !important;
+                        padding-left: 24px !important; /* Leaves precise breathing space for the accent strip */
+                        padding-right: 14px !important;
+                        padding-top: 8px !important;  /* Collapses vertical dead zones */
+                        padding-bottom: 8px !important;
+                        margin-bottom: 6px !important; /* Snaps adjacent cards closely together */
+                    }}
+                    
+                    /* Wipe out spacing and default colors on inner layout blocks */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
+                        background: transparent !important;
+                        background-color: transparent !important;
+                        gap: 0px !important; /* Drops space between header, toggle, and buttons to zero */
+                    }}
+
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
+                        background-color: transparent !important;
+                        background: transparent !important;
+                    }}
+                    
+                    /* Compress margin layouts on individual text strings */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) p,
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) h2 {{
+                        margin: 0px !important;
+                        padding: 0px !important;
+                    }}
+                </style>
+            """, unsafe_allow_html=True)
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER ---
             with st.container(border=True):
+                # This invisible tag hooks our heavy-duty CSS block straight onto this container frame
+                st.markdown(f'<div data-card-id="{tid}" style="display:none;"></div>', unsafe_allow_html=True)
+                
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
                 f_line = raw_txt.split('\n')[0]
                 if len(f_line) > 65: 
                     f_line = f_line[:62] + "..."
 
-                # Opens the full-width edge wrapper and injects the color bar directly on the absolute boundary line
-                st.markdown(f'<div class="full-card-wrapper"><div class="left-accent-strip" style="background-color: {col_ind};"></div><div class="right-card-content">', unsafe_allow_html=True)
-
-                # --- CARD HEADER BLOCK ---
-                hdr_left, hdr_right = st.columns([1.6, 1.1])
+                # Layout Header items cleanly inside columns 
+                c_left, c_right = st.columns([1.6, 1.1])
                 
-                with hdr_left:
+                
+                
+                
+                with c_left:
                     st.markdown(f"""
-                        <h2 style='margin: 0 0 4px 0; line-height: 1.1; font-size:{int(34 * scale_mod)}px; font-weight: 500; color: #1A1A1A;'>
+                        <h2 style='line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A; margin-bottom: 2px !important;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
                     
                     if app_name:
-                        st.markdown(f"""
-                            <span style='font-size: {int(22 * scale_mod)}px; color: #000000; display: block; margin-bottom: 4px;'>
-                                <b>Applicant:</b> {app_name}
-                            </span>
-                        """, unsafe_allow_html=True)
-                        
+                        st.markdown(f"<p style='font-size: {int(14 * scale_mod)}px; color: #000000; margin-bottom: 2px !important;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
+                
+                with c_right:
+        
+        
+        
+        
+                       
+                      
                     st.markdown(f"""
-                        <span style='font-size: {int(16 * scale_mod)}px; color: #4A4A4A;'>
-                            <b>LAN:</b> <code style='background-color: #F0F2F6; padding: 2px 6px; border-radius: 4px;'>{tsk.get('lan', 'N/A')}</code>
-                        </span>
-                    """, unsafe_allow_html=True)
-                    
-                with hdr_right:
-                    st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(20 * scale_mod)}px; color: #1A1A1A;'>
+                        <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2;'>
                             <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>Created: {tsk.get('assigned_at')}</span><br>
-                            <span style='color: #666666; font-size: {int(18 * scale_mod)}px;'>By: {tsk.get('assigner')}</span>
+                            <span style='color: #666666;'>Created: {tsk.get('assigned_at')}</span><br>
+                            <span style='color: #666666;'>By: {tsk.get('assigner')}</span>
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-                st.divider()
+                
+                
 
                 # --- DETAILS ACCORDION BLOCK ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
 
                 if show_details:
+                    img_state_key = f"view_photo_{tid}"
+                    if img_state_key not in st.session_state:
+                        st.session_state[img_state_key] = False
+                    
                     st.markdown(f"""
-                        <div style="padding: 10px 0px; font-size: {int(18 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="padding: 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 4px !important;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
                     
                     # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
                     if tsk.get("hold_reason"):
+                        h_by = tsk.get('hold_by', 'UNKNOWN')
+                        h_at = tsk.get('hold_at', 'N/A')
                         st.markdown(f"""
-                            <div style="
-                                background-color: #FFF0F5; 
-                                border-left: 5px solid #E83E8C; 
-                                padding: 8px 12px; 
-                                border-radius: 4px; 
-                                margin-bottom: 12px;
-                            ">
-                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HISTORICAL HOLD REASON:</span> 
-                                <span style="color: #1A1A1A;">{tsk.get("hold_reason")}</span>
+                            <div style="background-color: #FFF0F5; border-left: 4px solid #E83E8C; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: {int(13 * scale_mod)}px;">
+                                <span style="color: #E83E8C; font-weight: bold;">⏸️ HOLD LOG ENTRY:</span><br>
+                                <b>Reason:</b> {tsk.get("hold_reason")}<br>
+                                <span style="color: #555555; font-size: 11px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
+
+                                
+                            
+                                
+                                
                             </div>
                         """, unsafe_allow_html=True)
 
@@ -859,6 +912,9 @@ with right_pane:
                     
                     # --- ROW 1: OPERATIONS ACTION BUTTONS ---
                     if stat == "Completed":
+                        c_by = tsk.get('completed_by', 'UNKNOWN')
+                        c_at = tsk.get('finished_at', 'N/A')
+                        c_note = tsk.get('comment', 'N/A')
                         st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
                     else:
                         r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
@@ -919,7 +975,7 @@ with right_pane:
                         if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                             
-                        btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                        btn_img_label = " HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                         if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                             st.session_state[img_state_key] = not st.session_state[img_state_key]
                             st.rerun(scope="fragment")
@@ -936,6 +992,10 @@ with right_pane:
                                     st.rerun(scope="fragment")
 
                     # --- SCREENSHOT ENGINE ---
+                    
+                    
+                    
+                    
                     if st.session_state[img_state_key]:
                         st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
