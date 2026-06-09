@@ -715,7 +715,79 @@ with right_pane:
             "📂 View Filter Right", ["Today's", "All Tasks", "Pending", "Hold", "Completed", "Yesterday"], 
             key="view_filter_right", label_visibility="collapsed"
         )
+        # --- INITIALIZE SELECTION AND COMPRESSION STATES IN SESSION STATE ---
+if "selected_card_id" not in st.session_state:
+    st.session_state.selected_card_id = None
+
+# 1. Loop through your keys with an index counter
+for idx, tid in enumerate(keys[:150]):
+    tsk = live_tasks[tid]
+    stat = tsk.get('status', 'Pending')
+    prio_val = tsk.get('priority', 'Normal')
+    
+    # 2. Check if THIS specific card is currently selected
+    is_selected = (st.session_state.selected_card_id == tid)
+    
+    # --- DYNAMIC LAYOUT ENGINE (CHANGES MARGINS & THEMES ON THE FLY) ---
+    col_ind = "#FFC107"  # Default Pending Yellow
+    if stat == "Completed": col_ind = "#28A745"
+    elif stat == "Hold": col_ind = "#E83E8C"
+    elif prio_val == "High" and stat == "Pending": col_ind = "#DC3545"
+
+    # If selected, make the background card border highly pronounced
+    border_style = f"2px solid {col_ind}" if is_selected else "1px solid #DDE1E7"
+    bg_tint = col_ind + "25" if is_selected else col_ind + "12"  # Deepen tint on selection
+    
+    # Dynamic heights based on selection/resize mode
+    padding_top_bottom = "14px" if is_selected else "6px"  # 60% vertical compression for unselected cards
+    
+    st.markdown(f"""
+        <style>
+            div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
+                background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
+                background-color: {bg_tint} !important;
+                border: {border_style} !important;
+                border-radius: 6px !important;
+                padding-left: 24px !important; 
+                padding-right: 14px !important;
+                padding-top: {padding_top_bottom} !important;  
+                padding-bottom: {padding_top_bottom} !important;
+                margin-bottom: 6px !important; 
+                box-shadow: { '0px 4px 12px rgba(0,0,0,0.08)' if is_selected else 'none' } !important;
+                transition: all 0.2s ease-in-out;
+            }}
+        </style>
+    """, unsafe_allow_html=True)
+
+    # --- RENDER CARD FRAME ---
+    with st.container(border=True):
+        st.markdown(f'<div data-card-id="{tid}" style="display:none;"></div>', unsafe_allow_html=True)
+        
+        # Header Layout Elements...
+        c_left, c_right = st.columns([1.6, 1.1])
+        with c_left:
+            st.markdown(f"## {tsk.get('finance')}")
             
+        # 3. INTERACTION CONTROLLER: One-click to Select & Expand/Resize
+        # We replace the basic text line with an invisible click trigger or an action link
+        card_label = "⬇️ EXPAND WORKSPACE" if not is_selected else "⬆️ COMPACT VIEW"
+        
+        if st.button(card_label, key=f"select_trigger_{tid}_{idx}", use_container_width=True):
+            if is_selected:
+                # If clicking an already open card, collapse it entirely
+                st.session_state.selected_card_id = None
+            else:
+                # Select it and instantly open up its structural grid layout
+                st.session_state.selected_card_id = tid
+            st.rerun(scope="fragment")
+
+        # 4. CONDITIONAL RENDER WORKSPACE (The Resize Factor)
+        if is_selected:
+            st.markdown("---")
+            st.markdown(f"**Detailed Action Items:**\n\n{tsk.get('task')}")
+            
+            # Action items row (Comment input, Hold, Done buttons go here)
+            # This completely scales up the card size only when active.    
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
             # Clear the search box state completely on click
             if "raas_ultimate_search_deck" in st.session_state:
