@@ -987,7 +987,7 @@ with right_pane:
                             if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                                 st.session_state[img_state_key] = not st.session_state[img_state_key]
                                 st.rerun(scope="fragment")    
-                        with r2_col3:
+                            with r2_col3:
                                 del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
                             with r2_col4:
                                 if del_checked and st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
