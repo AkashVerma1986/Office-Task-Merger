@@ -811,9 +811,14 @@ for idx, tid in enumerate(keys[:150]):
         
         st.write("") 
         
+        # 1. Fetch your live data dictionary
         live_tasks = st.session_state.cached_tasks
         live_df = pd.DataFrame.from_dict(live_tasks, orient='index')
         
+        # 🔥 CRITICAL FIX: Always initialize keys to a safe empty list up front!
+        keys = [] 
+        
+        # 2. Proceed with data structuring and filtering if data exists
         if not live_df.empty:
             live_df['date_dt'] = pd.to_datetime(live_df['assigned_at'].str.strip(), format="%d/%b/%Y %H:%M:%S", errors='coerce')
             live_df['task_date'] = live_df['date_dt'].dt.date
@@ -826,10 +831,9 @@ for idx, tid in enumerate(keys[:150]):
             if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
             elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
-            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] # Updated
-            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] # Updated
+            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] 
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] 
 
-            # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
                 f_df = f_df[
                     (f_df['finance'].str.contains(search, case=False, na=False)) | 
@@ -837,19 +841,21 @@ for idx, tid in enumerate(keys[:150]):
                     (f_df['applicant_name'].str.contains(search, case=False, na=False)) | 
                     (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
                 ]
-            # -----------------------------------------------
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
             f_df = f_df.sort_values(by='date_dt', ascending=False)
+            
+            # Extract target keys safely
             keys = list(f_df.index)
-        else:
-            keys = []
 
+        # 3. Inform user if deck workspace is completely blank
         if not keys:
             st.info("No matching tasks found.")
         
+        # 4. Your card loop can now run smoothly without any chance of a NameError crash!
         for idx, tid in enumerate(keys[:150]):
             tsk = live_tasks[tid]
+            # ... rest of your layout tracking loops ...
             stat = tsk.get('status', 'Pending')
             prio_val = tsk.get('priority', 'Normal')
             
