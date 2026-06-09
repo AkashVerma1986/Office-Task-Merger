@@ -754,17 +754,18 @@ with right_pane:
             # --- FORCE CELL SPACE COLLAPSE & INNER TINT via clean raw CSS overrules ---
             st.markdown(f"""
                 <style>
-                    /* Kill Streamlit's forced container margins and outer box gaps */
-                    div[data-testid="stVerticalBlockBorderContainer"] {{
-                        margin-bottom: -14px !important;  /* Forces cards to snap tightly into each other */
+                    /* Complete clean wipe of Streamlit's outer structural frame */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-wrapper="{tid}"]) {{
+                        margin-bottom: -16px !important;  /* Snaps adjacent elements completely tight */
                         padding: 0px !important;
                         border: none !important;
+                        background: transparent !important;
+                        background-color: transparent !important;
                     }}
-                    div[data-testid="stVerticalBlockBorderContainer"] > div[data-testid="stVerticalBlock"] {{
-                        gap: 0px !important; /* Completely removes gap between nested elements */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-wrapper="{tid}"]) > div[data-testid="stVerticalBlock"] {{
+                        gap: 0px !important;
                         padding: 0px !important;
                     }}
-                    /* Tighten up the container block itself */
                     div[data-testid="stElementContainer"] {{
                         margin: 0px !important;
                         padding: 0px !important;
@@ -774,14 +775,15 @@ with right_pane:
 
             # --- SINGLE UNIFIED TASK CARD CONTAINER WITH ZERO WHITE SPACE ---
             with st.container():
-                # We inject an absolute HTML wrapper that handles padding and backgrounds perfectly
+                # Open the structural div wrapper with full styling properties
                 st.markdown(f"""
-                    <div style="
+                    <div data-card-wrapper="{tid}" style="
                         background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
+                        background-color: {bg_tint} !important;
                         border: 1px solid #DDE1E7;
                         border-radius: 6px;
-                        padding: 6px 14px 6px 24px; /* Tiny top/bottom padding to crush space */
-                        margin-bottom: 0px;
+                        padding: 10px 14px 8px 24px;
+                        margin-bottom: 4px;
                         width: 100%;
                     ">
                 """, unsafe_allow_html=True)
@@ -797,13 +799,13 @@ with right_pane:
                 
                 with c_left:
                     st.markdown(f"""
-                        <h2 style='margin: 0px 0px 2px 0px; padding: 0px; line-height: 1.1; font-size:{int(22 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
+                        <h2 style='margin: 0px 0px 2px 0px; padding: 0px; line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
                     if app_name:
                         st.markdown(f"<p style='margin: 0px 0px 2px 0px; padding: 0px; font-size: {int(14 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='margin: 0px; padding: 0px; font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='margin: 0px 0px 4px 0px; padding: 0px; font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
                 
                 with c_right:
                     st.markdown(f"""
@@ -814,39 +816,29 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown('</div>', unsafe_allow_html=True) # Closes the HTML card layout box
-
                 # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
-
+                
+                # --- RENDER EXPANDABLE DATA BLOCK INSIDE FRAME ---
                 if show_details:
-                    # FIX: Initialize the image toggle state immediately so it's available for ALL tasks
                     img_state_key = f"view_photo_{tid}"
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
 
                     st.markdown(f"""
-                        <div style="padding: 5px 0px 10px 0px; font-size: {int(16 * scale_mod)}px; color: #1A1A1A;">
+                        <div style="padding: 4px 0px 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 6px;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # --- 1. HISTORICAL / CURRENT HOLD LOG DETAILS ---
                     if tsk.get("hold_reason"):
                         h_by = tsk.get('hold_by', 'UNKNOWN')
                         h_at = tsk.get('hold_at', 'N/A')
                         st.markdown(f"""
-                            <div style="
-                                background-color: #FFF0F5; 
-                                border-left: 5px solid #E83E8C; 
-                                padding: 8px 12px; 
-                                border-radius: 4px; 
-                                margin-bottom: 12px;
-                                font-size: {int(14 * scale_mod)}px;
-                            ">
+                            <div style="background-color: #FFF0F5; border-left: 4px solid #E83E8C; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-size: {int(13 * scale_mod)}px;">
                                 <span style="color: #E83E8C; font-weight: bold;">⏸️ HOLD LOG ENTRY:</span><br>
                                 <b>Reason:</b> {tsk.get("hold_reason")}<br>
-                                <span style="color: #555555; font-size: 12px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
+                                <span style="color: #555555; font-size: 11px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
                             </div>
                         """, unsafe_allow_html=True)
 
@@ -865,47 +857,26 @@ with right_pane:
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    p_load = {
-                                        "status": "Hold", 
-                                        "comment": note, 
-                                        "hold_reason": note,  
-                                        "hold_by": user['name'], 
-                                        "hold_at": get_now_ist()
-                                    }
+                                    p_load = {"status": "Hold", "comment": note, "hold_reason": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                                 else:
-                                    p_load = {
-                                        "status": "Pending", 
-                                        "comment": note, 
-                                        "hold_by": "", 
-                                        "hold_at": "",
-                                        "hold_reason": ""
-                                    }
-                                
+                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": "", "hold_reason": ""}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                except: pass
+                                catch: pass
                                 st.rerun(scope="fragment")
                                 
                         if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
                             if not note.strip():
                                 r1_col1.error("🛑 Closing note is required.")
                             else:
-                                p_load = {
-                                    "status": "Completed", 
-                                    "completed_by": user['name'], 
-                                    "work_type": w_type, 
-                                    "comment": note, 
-                                    "finished_at": get_now_ist()
-                                }
+                                p_load = {"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                except: pass
+                                catch: pass
                                 st.rerun(scope="fragment")
 
-                    # Action row for ADMIN or Assigner (Works for both active and completed tasks now)
+                    # Administrative Context Actions
                     if user['role'] == "ADMIN" or tsk.get('assigner') == user['name']:
-                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                        
                         if stat == "Completed":
                             r2_col1, r2_col2 = st.columns([1.3, 1.3])
                             btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
@@ -914,36 +885,31 @@ with right_pane:
                                 st.rerun(scope="fragment")
                         else:
                             r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                            
                             if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                                 edit_task_dialog(tid, tsk)
-                                
                             btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                             if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                                 st.session_state[img_state_key] = not st.session_state[img_state_key]
                                 st.rerun(scope="fragment")
-                                
                             with r2_col3:
-                                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
                                 del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                                
                             with r2_col4:
-                                if del_checked:
-                                    if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                        try: 
-                                            requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                            if tid in st.session_state.cached_tasks:
-                                                del st.session_state.cached_tasks[tid]
-                                        except: pass
-                                        st.rerun(scope="fragment")
+                                if del_checked and st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    try: 
+                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
+                                        if tid in st.session_state.cached_tasks: del st.session_state.cached_tasks[tid]
+                                    except: pass
+                                    st.rerun(scope="fragment")
 
                     if st.session_state[img_state_key]:
-                        st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
                             except: st.caption("⚠️ Failed to display attachment image.")
                         else:
-                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
+                            st.info("ℹ️ No Guidance Screenshot attached.")
+
+                # This closes the custom border box wrapper perfectly below all component elements
+                st.markdown('</div>', unsafe_allow_html=True)
 
             st.write("")
     render_task_deck()
