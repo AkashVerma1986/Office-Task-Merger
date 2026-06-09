@@ -996,7 +996,7 @@ with right_pane:
                                         if tid in st.session_state.cached_tasks: del st.session_state.cached_tasks[tid]
                                     except: pass
                                     st.rerun(scope="fragment")
-                          if st.session_state[img_state_key]:
+                    if st.session_state[img_state_key]:
                         
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
