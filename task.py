@@ -776,7 +776,7 @@ with right_pane:
         if not keys:
             st.info("No matching tasks found.")
         
-        for tid in keys[:150]:
+        for idx, tid in enumerate(keys[:150]):
             tsk = live_tasks[tid]
             stat = tsk.get('status', 'Pending')
             prio_val = tsk.get('priority', 'Normal')
@@ -972,32 +972,32 @@ with right_pane:
                         st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
                         r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
                         
-                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
+                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}_{idx}", use_container_width=True):
                             edit_task_dialog(tid, tsk)
                             
                         btn_img_label = " HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                         if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                             st.session_state[img_state_key] = not st.session_state[img_state_key]
                             st.rerun(scope="fragment")
-                        else:
-                            r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                            if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                                edit_task_dialog(tid, tsk)
-                            btn_img_label = " HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                            if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                                st.session_state[img_state_key] = not st.session_state[img_state_key]
-                                st.rerun(scope="fragment")    
-                            with r2_col3:
-                                del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
-                            with r2_col4:
-                                if del_checked and st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
-                                    try: 
-                                        requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
-                                        if tid in st.session_state.cached_tasks: del st.session_state.cached_tasks[tid]
+                            
+                        with r2_col3:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
+                            
+                        with r2_col4:
+                            if del_checked:
+                                if st.button("CONFIRM", key=f"del_btn_{tid}", use_container_width=True):
+                                    try: requests.delete(f"{DB_BASE_URL}/tasks/{tid}.json", verify=False)
                                     except: pass
                                     st.rerun(scope="fragment")
+
+                    # --- SCREENSHOT ENGINE ---
+                    
+                    
+                    
+                    
                     if st.session_state[img_state_key]:
-                        
+                        st.write("")
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
                             except: st.caption("⚠️ Failed to display attachment image.")
