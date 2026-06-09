@@ -27,6 +27,7 @@ if "ui_scale" not in st.session_state:
 scale_mod = st.session_state.ui_scale / 100.0
 
 # --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
+# --- 2. THE ULTIMATE CSS (White Theme & High-Stability Grid) ---
 st.markdown(f"""
     <style>
     /* Complete wipeout of Streamlit's forced table frame and border rules */
@@ -73,7 +74,7 @@ st.markdown(f"""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         width: 100% !important;
-        gap: 1.0rem !important;
+        gap: 1.0rem !important; /* Shrunk from 1.5rem */
     }}
 
     /* Allow standard inputs INSIDE forms and panels to adapt gracefully */
@@ -82,27 +83,41 @@ st.markdown(f"""
     [data-testid="stElementContainer"] [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
         align-items: flex-end !important;
-        gap: 0.3rem !important;
+        gap: 0.3rem !important; /* Shrunk from 0.5rem */
     }}
 
     .stAppViewMain .block-container {{
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-        gap: 0.2rem !important; 
+        padding-top: 0.5rem !important; /* Shrunk from 1.0rem */
+        padding-bottom: 0.5rem !important; /* Shrunk from 1.0rem */
+        gap: 0.2rem !important; /* Shrunk from 0.5rem for tight vertical flow */
     }}
     
+    /* Remove Streamlit's internal container padding so the color bar hits the edge */ 
+    div[data-testid="stContainer"] {{ 
+        padding: 0px !important; 
+        margin: 0px !important;
+        overflow: hidden !important; 
+    }}
+
+    /* Force global element block spacing to collapse */
+    div[data-testid="stElementContainer"] {{
+        margin-top: 0px !important;
+        margin-bottom: 2px !important; /* Drops dead space between layout rows */
+        padding-bottom: 0px !important;
+    }}
+
     /* Robust Dynamic Buttons */
     .stButton > button {{
         background-color: #F0F2F6 !important; 
         color: #1A1A1A !important;
         border: 1px solid #DDE1E7 !important;
         border-radius: 6px !important;
-        padding: {int(4 * scale_mod)}px {int(10 * scale_mod)}px !important;
+        padding: {int(4 * scale_mod)}px {int(10 * scale_mod)}px !important; /* Shrunk padding */
         font-weight: 600 !important;
         width: 100%;
         text-transform: uppercase;
-        font-size: {int(14 * scale_mod)}px !important;
-        min-height: 40px;
+        font-size: {int(13 * scale_mod)}px !important;
+        min-height: 32px; /* Shrunk from 40px */
     }}
 
     .stButton > button:hover {{
@@ -112,38 +127,9 @@ st.markdown(f"""
     }}
 
     hr {{
-        margin: 0.3rem 0 !important;
+        margin: 0.2rem 0 !important; /* Tightened from 0.3rem */
     }}
 
-    /* Card Flexbox Structure */
-    .card-header-flex {{
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: flex-start !important;
-        flex-wrap: wrap !important;
-        gap: 12px !important;
-        width: 100% !important;
-    }}
-    
-    .card-header-left {{
-        flex: 1 1 55% !important;
-        min-width: 250px !important;
-    }}
-    
-    .card-header-right {{
-        flex: 1 1 35% !important;
-        min-width: 180px !important;
-        text-align: right !important;
-    }}
-
-    .gallocation-bar {{ width: 8px; flex-shrink: 0; }}
-    .card-body {{ 
-        flex-grow: 1; 
-        display: block; 
-        width: 100%; 
-        padding-bottom: 10px;
-    }}
-    
     .status-pending {{ background-color: #FFC107 !important; }}
     .status-completed {{ background-color: #28A745 !important; }}
     .status-hold {{ background-color: #E83E8C !important; }}
@@ -153,6 +139,7 @@ st.markdown(f"""
     div[data-testid="stMetricLabel"] > div {{ font-size: {int(12 * scale_mod)}px !important; }}
     </style>
 """, unsafe_allow_html=True)
+
 # --- 3. AUTH & DEVICE LOCK ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 if "edit_mode" not in st.session_state: st.session_state.edit_mode = False
@@ -270,7 +257,6 @@ if not st.session_state.authenticated:
 # --- 4. DATA FETCH (OPTIMIZED FOR SMOOTH REFRESH) ---
 user = st.session_state.user_data
 
-# Initialize memory storage if not present
 if "cached_tasks" not in st.session_state:
     st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {}
 tasks_dict = st.session_state.cached_tasks
@@ -280,7 +266,6 @@ all_cats = sorted([c for c in master_cat_data.keys()])
 all_fins = sorted([f.upper() for f in master_fin_data.keys()])
 
 df_all = pd.DataFrame.from_dict(tasks_dict, orient='index')
-# Pulls the right-pane search text globally so the left-pane filters don't crash
 search = st.session_state.get("raas_ultimate_search_deck", "").lower()
 
 @st.dialog("Edit Task Details", width="large")
@@ -295,7 +280,6 @@ def edit_task_dialog(tid, task):
     current_c = "---"
     clean_task_text = full_task_text
     
-    # Securely strip any existing category brackets so they don't compound
     if isinstance(full_task_text, str) and full_task_text.startswith("[") and "]" in full_task_text:
         try:
             parts = full_task_text.split("]", 1)
@@ -516,8 +500,6 @@ with left_pane:
                     time.sleep(0.4)
                     st.rerun()
         
-    
-    
     @st.dialog("✨ Task Registered Successfully", width="small")
     def show_success_popup(lan, user_name):
         st.write("") 
@@ -541,7 +523,7 @@ with left_pane:
 
     st.subheader("📝 Create New Task")
     with st.expander("Ledger Entry Form", expanded=True):
-        # The key dynamic binding ensures that when form_version increases, all inputs inside are wiped completely clean
+        # Using st.form stops all intermediate refreshes on selections
         with st.form("ledger_entry_form"):
             row1_col1, row1_col2 = st.columns(2)
             with row1_col1:
@@ -563,14 +545,13 @@ with left_pane:
             
             # This specific button type controls the unified execution pipeline
             submit_pressed = st.form_submit_button("SUBMIT", use_container_width=True, type="primary")
-                
             
             if submit_pressed:
                 if f_sel != "--- SELECT ---" and lan_no and dtl_main:
                     img_b64 = ""
                     if uploaded_file is not None:
                         img_b64 = base64.b64encode(uploaded_file.read()).decode("utf-8")
-                    
+
                     payload = {
                         "finance": f_sel, 
                         "lan": lan_no,
@@ -587,23 +568,15 @@ with left_pane:
                     res = requests.post(TASKS_URL, json=payload)
                     requests.patch(FINANCE_MASTER_URL, json={f_sel: True})
                     
-                    
-                    
                     st.session_state.cached_tasks = requests.get(TASKS_URL).json() or {}
-                    
                     st.session_state.last_sub_lan = lan_no
                     st.session_state.show_submit_popup = True
-
-                   
-                    
                     st.rerun()
                 elif not lan_no:
                     st.error("🛑 LAN No. is mandatory!")
                 else:
                     st.warning("⚠️ Please fill in Finance and Task Details.")
-            
 
-    
     st.markdown("<br>", unsafe_allow_html=True)
     st.divider()
 
@@ -628,9 +601,9 @@ with left_pane:
         if view_filter == "Pending": filtered_df = filtered_df[filtered_df['status'] == "Pending"]
         elif view_filter == "Hold": filtered_df = filtered_df[filtered_df['status'] == "Hold"]
         elif view_filter == "Completed": filtered_df = filtered_df[filtered_df['status'] == "Completed"]
-        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt] # Updated
+        elif view_filter == "Today's": filtered_df = filtered_df[filtered_df['task_date'] == today_dt]
         elif view_filter == "Yesterday":
-            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))] # Updated
+            filtered_df = filtered_df[filtered_df['task_date'] == (today_dt - pd.Timedelta(days=1))]
         if len(date_range) == 2:
             filtered_df = filtered_df[(filtered_df['date_dt'].dt.date >= date_range[0]) & (filtered_df['date_dt'].dt.date <= date_range[1])]
 
@@ -651,13 +624,11 @@ with left_pane:
         
         st.divider()
 
-        filtered_df['prio_num'] = filtered_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
-        filtered_df = filtered_df.sort_values(by='date_dt' if view_filter == "All Tasks" else ['prio_num', 'date_dt'], ascending=[False] if view_filter == "All Tasks" else [True, False])
+        filtered_df = filtered_df.sort_values(by='date_dt', ascending=False)
 
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True): 
-                # Clear the search box state completely on click
+            if st.button("🔄 Refresh Data", key="left_ops_refresh", use_container_width=True):
                 if "raas_ultimate_search_deck" in st.session_state:
                     st.session_state["raas_ultimate_search_deck"] = ""
                 st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
@@ -671,19 +642,15 @@ with left_pane:
             for col in required_cols:
                 if col not in export_df.columns: export_df[col] = ""
 
-            # --- Safely look up fields even if they don't exist in older database entries ---
             export_df['rt Done Comment'] = export_df.apply(lambda r: r.get('comment', "") if r.get('status') == 'Completed' else "", axis=1)
             
-            # Checks if any case has a hold_reason column; if not, initializes it as blank
             if 'hold_reason' in export_df.columns:
                 export_df['Hold Reason'] = export_df['hold_reason'].fillna("")
             else:
                 export_df['Hold Reason'] = ""
 
-            # Ensure all required final columns are mapped perfectly without crashing
             final_cols = ['assigned_at', 'assigner', 'finance', 'applicant_name', 'lan', 'Category', 'task', 'priority', 'work_type', 'rt Done Comment', 'completed_by', 'finished_at', 'status', 'hold_at', 'hold_by', 'Hold Reason']
             
-            # Create any missing columns dynamically so export_df[final_cols] doesn't trip a KeyError
             for col in final_cols:
                 if col not in export_df.columns:
                     export_df[col] = ""
@@ -717,7 +684,6 @@ with right_pane:
         )
             
         if hdr_btn1.button("REFRESH", key="right_pane_refresh", use_container_width=True):
-            # Clear the search box state completely on click
             if "raas_ultimate_search_deck" in st.session_state:
                 st.session_state["raas_ultimate_search_deck"] = ""
             st.session_state.cached_tasks = requests.get(TASKS_URL, verify=False).json() or {} # <-- ADD THIS LINE
@@ -728,8 +694,6 @@ with right_pane:
             st.session_state.my_tasks_only = not st.session_state.my_tasks_only
             st.rerun(scope="fragment")
         
-                
-        # New Position with an entirely unique key to eliminate conflicts
         search = st.text_input(
             "🔍 Search Tasks...", 
             key="raas_ultimate_search_deck", 
@@ -754,10 +718,9 @@ with right_pane:
             if view_filter_right == "Pending": f_df = f_df[f_df['status'] == "Pending"]
             elif view_filter_right == "Hold": f_df = f_df[f_df['status'] == "Hold"]
             elif view_filter_right == "Completed": f_df = f_df[f_df['status'] == "Completed"]
-            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt] # Updated
-            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))] # Updated
+            elif view_filter_right == "Today's": f_df = f_df[f_df['task_date'] == t_dt]
+            elif view_filter_right == "Yesterday": f_df = f_df[f_df['task_date'] == (t_dt - pd.Timedelta(days=1))]
 
-            # Filter the right deck cards instantly when typing
             if search and search.strip() != "":
                 f_df = f_df[
                     (f_df['finance'].str.contains(search, case=False, na=False)) | 
@@ -765,7 +728,6 @@ with right_pane:
                     (f_df['applicant_name'].str.contains(search, case=False, na=False)) | 
                     (f_df['lan'].astype(str).str.contains(search, case=False, na=False))
                 ]
-            # -----------------------------------------------
 
             f_df['prio_num'] = f_df['priority'].map({"High": 0, "Medium": 1, "Normal": 2})
             f_df = f_df.sort_values(by='date_dt', ascending=False)
@@ -840,27 +802,22 @@ with right_pane:
                 # Layout Header items cleanly inside columns 
                 c_left, c_right = st.columns([1.6, 1.1])
                 
-                
-                
-                
                 with c_left:
                     st.markdown(f"""
                         <h2 style='line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A; margin-bottom: 2px !important;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
-                    
                     if app_name:
                         st.markdown(f"<p style='font-size: {int(14 * scale_mod)}px; color: #000000; margin-bottom: 2px !important;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p style='font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
                 
                 with c_right:
-        
-        
-        
-        
-                       
-                      
+
+
+
+
+
                     st.markdown(f"""
                         <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2;'>
                             <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
@@ -869,24 +826,21 @@ with right_pane:
                         </div>
                     """, unsafe_allow_html=True)
 
-                
-                
-
-                # --- DETAILS ACCORDION BLOCK ---
+                # --- TRACKING TOGGLE KEY INSIDE CONTENT ---
                 show_details = st.toggle(f"🔍 Details: {f_line}", key=f"card_exp_state_{tid}")
-
+                
+                # --- RENDER EXPANDABLE DATA BLOCK INSIDE FRAME ---
                 if show_details:
                     img_state_key = f"view_photo_{tid}"
                     if img_state_key not in st.session_state:
                         st.session_state[img_state_key] = False
-                    
+
                     st.markdown(f"""
                         <div style="padding: 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 4px !important;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # --- NEW: PERMANENT HISTORICAL HOLD REASON BANNER ---
                     if tsk.get("hold_reason"):
                         h_by = tsk.get('hold_by', 'UNKNOWN')
                         h_at = tsk.get('hold_at', 'N/A')
@@ -895,27 +849,14 @@ with right_pane:
                                 <span style="color: #E83E8C; font-weight: bold;">⏸️ HOLD LOG ENTRY:</span><br>
                                 <b>Reason:</b> {tsk.get("hold_reason")}<br>
                                 <span style="color: #555555; font-size: 11px;">Put on Hold by <b>{h_by}</b> on {h_at}</span>
-
-                                
-                            
-                                
-                                
                             </div>
                         """, unsafe_allow_html=True)
 
-                    img_state_key = f"view_photo_{tid}"
-                    if img_state_key not in st.session_state:
-                        st.session_state[img_state_key] = False
-
-                    if stat == "Hold":
-                        st.markdown(f'<div style="color:#E83E8C; padding:0px 0px 10px 0px; font-weight: bold;"><b>⏸️ CURRENT HOLD REASON:</b> {tsk.get("comment")}</div>', unsafe_allow_html=True)
-                    
-                    # --- ROW 1: OPERATIONS ACTION BUTTONS ---
                     if stat == "Completed":
                         c_by = tsk.get('completed_by', 'UNKNOWN')
                         c_at = tsk.get('finished_at', 'N/A')
-                        c_note = tsk.get('comment', 'N/A')
-                        st.success(f"✅ Closed by {tsk.get('completed_by')} | Note: {tsk.get('comment', 'N/A')}")
+                        c_note = tsk.get('comment', 'N/A')                        
+                        st.success(f"✅ Closed by {c_by} on {c_at} | Note: {c_note}")
                     else:
                         r1_col1, r1_col2, r1_col3, r1_col4 = st.columns([1.5, 0.8, 0.8, 0.8])
                         note = r1_col1.text_input("Comment", key=f"n_{tid}", placeholder="Note...", label_visibility="collapsed")
@@ -926,26 +867,10 @@ with right_pane:
                                 r1_col1.error("🛑 Hold note is required.")
                             else:
                                 if stat != "Hold":
-                                    p_load = {
-                                        "status": "Hold", 
-                                        "comment": note, 
-                                        "hold_reason": note,  
-                                        "hold_by": user['name'], 
-                                        "hold_at": get_now_ist()
-                                    }
+                                    p_load = {"status": "Hold", "comment": note, "hold_reason": note, "hold_by": user['name'], "hold_at": get_now_ist()}
                                 else:
-                                    p_load = {
-                                        "status": "Pending", 
-                                        "comment": note, 
-                                        "hold_by": "", 
-                                        "hold_at": ""
-                                    }
-                                
-                                st.session_state.cached_tasks[tid]["status"] = p_load["status"]
-                                st.session_state.cached_tasks[tid]["comment"] = p_load["comment"]
-                                if "hold_reason" in p_load:
-                                    st.session_state.cached_tasks[tid]["hold_reason"] = p_load["hold_reason"]
-                                    
+                                    p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": "", "hold_reason": ""}
+                                st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
@@ -954,39 +879,31 @@ with right_pane:
                             if not note.strip():
                                 r1_col1.error("🛑 Closing note is required.")
                             else:
-                                p_load = {
-                                    "status": "Completed", 
-                                    "completed_by": user['name'], 
-                                    "work_type": w_type, 
-                                    "comment": note, 
-                                    "finished_at": get_now_ist(), 
-                                    "screenshot": None
-                                }
+                                p_load = {"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
                                 except: pass
                                 st.rerun(scope="fragment")
 
-                    # --- ROW 2: MANAGEMENT ACTION BUTTONS ---
-                    if (user['role'] == "ADMIN" or tsk.get('assigner') == user['name']) and stat != "Completed":
-                        st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
-                        r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
-                        
-                        if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
-                            edit_task_dialog(tid, tsk)
+                    # Administrative Context Actions
+                    if user['role'] == "ADMIN" or tsk.get('assigner') == user['name']:
+                        if stat == "Completed":
+                            r2_col1, r2_col2 = st.columns([1.3, 1.3])
                             
-                        btn_img_label = " HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
-                        if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
-                            st.session_state[img_state_key] = not st.session_state[img_state_key]
-                            st.rerun(scope="fragment")
+
+                            
+                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                            if r2_col1.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
+                                st.session_state[img_state_key] = not st.session_state[img_state_key]
+                                st.rerun(scope="fragment")
                         else:
                             r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1.3, 1.3, 0.6, 0.7])
                             if r2_col1.button("✏️ Modify Details", key=f"m_{tid}", use_container_width=True):
                                 edit_task_dialog(tid, tsk)
-                            btn_img_label = " HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
+                            btn_img_label = "🙈 HIDE PHOTO" if st.session_state[img_state_key] else "📸 VIEW PHOTO"
                             if r2_col2.button(btn_img_label, key=f"toggle_photo_btn_{tid}", use_container_width=True):
                                 st.session_state[img_state_key] = not st.session_state[img_state_key]
-                                st.rerun(scope="fragment")    
+                                st.rerun(scope="fragment")
                             with r2_col3:
                                 del_checked = st.checkbox("🗑️ Delete", key=f"del_chk_{tid}")
                             with r2_col4:
@@ -996,15 +913,11 @@ with right_pane:
                                         if tid in st.session_state.cached_tasks: del st.session_state.cached_tasks[tid]
                                     except: pass
                                     st.rerun(scope="fragment")
-                          if st.session_state[img_state_key]:
-                        
+                    if st.session_state[img_state_key]:
                         if tsk.get("screenshot") and str(tsk.get("screenshot")).strip() != "":
                             try: st.image(f"data:image/png;base64,{tsk.get('screenshot')}", use_container_width=True)
                             except: st.caption("⚠️ Failed to display attachment image.")
                         else:
-                            st.info("ℹ️ No Guidance Screenshot attached to this task.")
-
-                # Closes HTML wrapper containers cleanly
-                st.markdown('</div></div>', unsafe_allow_html=True)
+                            st.info("ℹ️ No Guidance Screenshot attached.")
             st.write("")
-    render_task_deck()
+    render_task_deck()            
