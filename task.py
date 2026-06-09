@@ -751,42 +751,47 @@ with right_pane:
 
             bg_tint = col_ind + "12"  # 12% Opacity Tint for full card background
 
-            # --- FORCE CELL SPACE COLLAPSE & INNER TINT via clean raw CSS overrules ---
+            # --- HEAVY-DUTY CSS DIRECT OVERWRITE TARGETING THE STREAMLIT CONTAINER ---
             st.markdown(f"""
                 <style>
-                    /* Complete clean wipe of Streamlit's outer structural frame */
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-wrapper="{tid}"]) {{
-                        margin-bottom: -16px !important;  /* Snaps adjacent elements completely tight */
-                        padding: 0px !important;
-                        border: none !important;
+                    /* Target Streamlit's vertical border container block specifically for this task item */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) {{
+                        background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
+                        background-color: {bg_tint} !important;
+                        border: 1px solid #DDE1E7 !important;
+                        border-radius: 6px !important;
+                        padding-left: 24px !important; /* Leaves precise breathing space for the accent strip */
+                        padding-right: 14px !important;
+                        padding-top: 8px !important;  /* Collapses vertical dead zones */
+                        padding-bottom: 8px !important;
+                        margin-bottom: 6px !important; /* Snaps adjacent cards closely together */
+                    }}
+                    
+                    /* Wipe out spacing and default colors on inner layout blocks */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) > div[data-testid="stVerticalBlock"] {{
                         background: transparent !important;
                         background-color: transparent !important;
+                        gap: 0px !important; /* Drops space between header, toggle, and buttons to zero */
                     }}
-                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-wrapper="{tid}"]) > div[data-testid="stVerticalBlock"] {{
-                        gap: 0px !important;
-                        padding: 0px !important;
+
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) div {{
+                        background-color: transparent !important;
+                        background: transparent !important;
                     }}
-                    div[data-testid="stElementContainer"] {{
+                    
+                    /* Compress margin layouts on individual text strings */
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) p,
+                    div[data-testid="stVerticalBlockBorderContainer"]:has(div[data-card-id="{tid}"]) h2 {{
                         margin: 0px !important;
                         padding: 0px !important;
                     }}
                 </style>
             """, unsafe_allow_html=True)
 
-            # --- SINGLE UNIFIED TASK CARD CONTAINER WITH ZERO WHITE SPACE ---
-            with st.container():
-                # Open the structural div wrapper with full styling properties
-                st.markdown(f"""
-                    <div data-card-wrapper="{tid}" style="
-                        background: linear-gradient(to right, {col_ind} 10px, {bg_tint} 10px) !important;
-                        background-color: {bg_tint} !important;
-                        border: 1px solid #DDE1E7;
-                        border-radius: 6px;
-                        padding: 10px 14px 8px 24px;
-                        margin-bottom: 4px;
-                        width: 100%;
-                    ">
-                """, unsafe_allow_html=True)
+            # --- SINGLE UNIFIED TASK CARD CONTAINER ---
+            with st.container(border=True):
+                # This invisible tag hooks our heavy-duty CSS block straight onto this container frame
+                st.markdown(f'<div data-card-id="{tid}" style="display:none;"></div>', unsafe_allow_html=True)
                 
                 app_name = tsk.get('applicant_name', '').strip()
                 raw_txt = str(tsk.get('task', ''))
@@ -799,17 +804,17 @@ with right_pane:
                 
                 with c_left:
                     st.markdown(f"""
-                        <h2 style='margin: 0px 0px 2px 0px; padding: 0px; line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A;'>
+                        <h2 style='line-height: 1.1; font-size:{int(21 * scale_mod)}px; font-weight: 700; color: #1A1A1A; margin-bottom: 2px !important;'>
                             {tsk.get('finance')}
                         </h2>
                     """, unsafe_allow_html=True)
                     if app_name:
-                        st.markdown(f"<p style='margin: 0px 0px 2px 0px; padding: 0px; font-size: {int(14 * scale_mod)}px; color: #000000;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p style='margin: 0px 0px 4px 0px; padding: 0px; font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='font-size: {int(14 * scale_mod)}px; color: #000000; margin-bottom: 2px !important;'><b>Applicant:</b> {app_name}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='font-size: {int(13 * scale_mod)}px; color: #4A4A4A;'><b>LAN:</b> <code style='background-color: #EBF0F5; padding: 1px 4px; border-radius: 3px;'>{tsk.get('lan', 'N/A')}</code></p>", unsafe_allow_html=True)
                 
                 with c_right:
                     st.markdown(f"""
-                        <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2; margin: 0px; padding: 0px;'>
+                        <div style='text-align: right; font-size: {int(13 * scale_mod)}px; color: #1A1A1A; line-height: 1.2;'>
                             <b>Status:</b> <span style='text-transform: uppercase; font-weight: bold; color: {col_ind};'>{stat}</span><br>
                             <span style='color: #666666;'>Created: {tsk.get('assigned_at')}</span><br>
                             <span style='color: #666666;'>By: {tsk.get('assigner')}</span>
@@ -826,7 +831,7 @@ with right_pane:
                         st.session_state[img_state_key] = False
 
                     st.markdown(f"""
-                        <div style="padding: 4px 0px 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 6px;">
+                        <div style="padding: 6px 0px; font-size: {int(15 * scale_mod)}px; color: #1A1A1A; border-top: 1px solid #DDE1E7; margin-top: 4px !important;">
                             <b>Full Task Description:</b><br>{raw_txt}
                         </div>
                     """, unsafe_allow_html=True)
@@ -907,9 +912,5 @@ with right_pane:
                             except: st.caption("⚠️ Failed to display attachment image.")
                         else:
                             st.info("ℹ️ No Guidance Screenshot attached.")
-
-                # This closes the custom border box wrapper perfectly below all component elements
-                st.markdown('</div>', unsafe_allow_html=True)
-
             st.write("")
     render_task_deck()
