@@ -862,7 +862,7 @@ with right_pane:
                                     p_load = {"status": "Pending", "comment": note, "hold_by": "", "hold_at": "", "hold_reason": ""}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                catch: pass
+                                except: pass
                                 st.rerun(scope="fragment")
                                 
                         if r1_col4.button("✅ Done", key=f"d_{tid}", use_container_width=True, type="primary"):
@@ -872,7 +872,7 @@ with right_pane:
                                 p_load = {"status": "Completed", "completed_by": user['name'], "work_type": w_type, "comment": note, "finished_at": get_now_ist()}
                                 st.session_state.cached_tasks[tid].update(p_load)
                                 try: requests.patch(f"{DB_BASE_URL}/tasks/{tid}.json", json=p_load, verify=False)
-                                catch: pass
+                                except: pass
                                 st.rerun(scope="fragment")
 
                     # Administrative Context Actions
